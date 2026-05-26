@@ -1341,6 +1341,7 @@ def require_waveform_seek_source_contract() -> None:
         '["phase list probe", waveformReady && Boolean(document.getElementById("phaseProbe"))]',
         '["phase jump preview", waveformReady && Boolean(document.querySelector("#waveformPhaseControls button"))]',
         '["phase parameter readout", parameterResyncContractIssue(manifest) === ""]',
+        '["phase preview target", waveformReady && Boolean(document.querySelector(".phase"))]',
         '["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0]',
         '["phase audio stats probe", waveformReady && Boolean(document.getElementById("phaseAudioStatsProbe"))]',
         '["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))]',

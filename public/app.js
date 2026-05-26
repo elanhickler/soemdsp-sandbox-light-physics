@@ -2665,6 +2665,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ],
     ["phase jump preview", waveformReady && Boolean(document.querySelector("#waveformPhaseControls button"))],
     ["phase list probe", waveformReady && Boolean(document.getElementById("phaseProbe"))],
+    ["phase preview target", waveformReady && Boolean(document.querySelector(".phase"))],
     ["phase parameter readout", parameterResyncContractIssue(manifest) === ""],
     ["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0],
     ["phase audio stats probe", waveformReady && Boolean(document.getElementById("phaseAudioStatsProbe"))],
