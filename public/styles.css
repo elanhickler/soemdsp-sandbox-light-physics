@@ -8,6 +8,7 @@
   --line: #343a40;
   --good: #71d49b;
   --warn: #f0c56f;
+  --bad-bg: #332a1d;
   --accent: #7fc7d9;
   --accent-2: #e2a86d;
 }
@@ -84,7 +85,7 @@ button:hover {
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1px;
   margin: 20px 0;
   background: var(--line);
@@ -110,6 +111,10 @@ button:hover {
   overflow-wrap: anywhere;
   color: var(--good);
   font-size: 0.95rem;
+}
+
+.status-strip strong.warn {
+  color: var(--warn);
 }
 
 .audio-panel {
@@ -189,6 +194,44 @@ dd.warn {
   margin-top: 16px;
 }
 
+.checklist {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+
+.check-row strong {
+  color: var(--good);
+  font-size: 0.8rem;
+}
+
+.check-row span {
+  overflow-wrap: anywhere;
+  text-align: right;
+  color: var(--muted);
+}
+
+.warn-row {
+  background: var(--bad-bg);
+}
+
+.warn-row strong {
+  color: var(--warn);
+}
+
 .artifact-row {
   display: grid;
   grid-template-columns: minmax(130px, 1fr) minmax(110px, 150px) minmax(0, 2fr);
@@ -230,6 +273,7 @@ code {
   .status-strip,
   .grid,
   .phase-list,
+  .checklist,
   .artifact-row {
     grid-template-columns: 1fr;
   }

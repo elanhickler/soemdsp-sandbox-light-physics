@@ -12,12 +12,22 @@ const requiredFlags = [
   ["ownsScheduler", false],
 ];
 
+const expectedContract = "soemdsp-demo-local-sandbox-handoff";
+const expectedContractVersion = 1;
+const expectedInspectionMode = "mouse-and-ears";
+
 function artifactUrl(path) {
   return `/artifact?path=${encodeURIComponent(path)}`;
 }
 
 function setText(id, value) {
   document.getElementById(id).textContent = value;
+}
+
+function setStatus(id, value, ok) {
+  const element = document.getElementById(id);
+  element.textContent = value;
+  element.className = ok ? "" : "warn";
 }
 
 function boolText(value) {
@@ -39,6 +49,54 @@ function renderKeyValue(container, rows) {
       dd.className = "warn";
     }
     container.append(dt, dd);
+  }
+}
+
+function hasArtifactKind(links, kind) {
+  return links.some((link) => link.kind === kind && Boolean(link.path));
+}
+
+function validateConsumerChecklist(manifest) {
+  const handoff = manifest.sandboxHandoff || {};
+  const links = manifest.artifactLinks || [];
+  const phases = manifest.phases || [];
+  const checks = [
+    ["allOk", manifest.allOk === true],
+    ["contract", handoff.contract === expectedContract],
+    ["contractVersion", handoff.contractVersion === expectedContractVersion],
+    ["inspectionMode", handoff.inspectionMode === expectedInspectionMode],
+    ["entryPoint", Boolean(handoff.entryPoint)],
+    ["primaryAudioArtifact", Boolean(handoff.primaryAudioArtifact)],
+    ...requiredFlags.map(([key, expected]) => [
+      key,
+      handoff[key] === expected,
+    ]),
+    ["entry-point link", hasArtifactKind(links, "entry-point")],
+    ["audio link", hasArtifactKind(links, "audio")],
+    ["phase report", phases.length > 0],
+  ];
+
+  return {
+    accepted: checks.every(([, ok]) => ok),
+    checks,
+  };
+}
+
+function renderChecklist(result) {
+  const list = document.getElementById("checklist");
+  list.replaceChildren();
+  for (const [label, ok] of result.checks) {
+    const item = document.createElement("div");
+    item.className = ok ? "check-row" : "check-row warn-row";
+
+    const marker = document.createElement("strong");
+    marker.textContent = ok ? "OK" : "Check";
+
+    const text = document.createElement("span");
+    text.textContent = label;
+
+    item.append(marker, text);
+    list.append(item);
   }
 }
 
@@ -96,11 +154,26 @@ function render(response) {
   state.response = response;
   const manifest = response.manifest;
   const handoff = manifest.sandboxHandoff;
+  const checklist = validateConsumerChecklist(manifest);
 
-  setText("manifestStatus", statusText(manifest.allOk));
-  setText("contractStatus", `${handoff.contract} v${handoff.contractVersion}`);
-  setText("inspectionMode", handoff.inspectionMode);
+  setStatus("manifestStatus", statusText(manifest.allOk), manifest.allOk);
+  setStatus(
+    "contractStatus",
+    `${handoff.contract} v${handoff.contractVersion}`,
+    handoff.contract === expectedContract &&
+      handoff.contractVersion === expectedContractVersion,
+  );
+  setStatus(
+    "inspectionMode",
+    handoff.inspectionMode,
+    handoff.inspectionMode === expectedInspectionMode,
+  );
   setText("frameCount", String(manifest.wav.frames));
+  setStatus(
+    "checklistStatus",
+    checklist.accepted ? "Accepted" : "Check",
+    checklist.accepted,
+  );
   setText("audioTitle", handoff.primaryAudioArtifact);
   setText("manifestPath", response.manifestPath);
   setText("artifactRoot", response.artifactRoot);
@@ -117,14 +190,16 @@ function render(response) {
     ]),
   );
   renderPhases(manifest.phases || []);
+  renderChecklist(checklist);
   renderArtifacts(manifest.artifactLinks || []);
 }
 
 function renderError(message) {
-  setText("manifestStatus", "Check");
-  setText("contractStatus", message);
-  setText("inspectionMode", "Unavailable");
+  setStatus("manifestStatus", "Check", false);
+  setStatus("contractStatus", message, false);
+  setStatus("inspectionMode", "Unavailable", false);
   setText("frameCount", "0");
+  setStatus("checklistStatus", "Check", false);
 }
 
 async function loadManifest() {
