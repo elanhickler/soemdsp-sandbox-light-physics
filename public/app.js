@@ -1832,6 +1832,7 @@ function renderInspectionCursor() {
   const hoverFrequency = activeParameterValue("frequency", hoverRegion);
   const hoverAmplitude = activeParameterValue("amplitude", hoverRegion);
   const hoverSource = hoverFrame === null ? "transport" : state.waveformProbeSource || "probe";
+  const hoverDeltaFrame = hoverFrame === null ? null : hoverFrame - transportFrame;
 
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
   setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
@@ -1845,6 +1846,14 @@ function renderInspectionCursor() {
     [
       "hover time",
       hoverFrame === null ? "none" : formatSeconds(hoverFrame / waveform.sampleRate),
+    ],
+    [
+      "hover delta",
+      hoverDeltaFrame === null
+        ? "none"
+        : `${hoverDeltaFrame >= 0 ? "+" : ""}${hoverDeltaFrame} frames / ${
+            hoverDeltaFrame >= 0 ? "+" : ""
+          }${formatSeconds(hoverDeltaFrame / waveform.sampleRate)}`,
     ],
     ["hover phase", hoverRegion?.name || "none"],
     ["hover sample", hoverSample === null ? "none" : formatCompactNumber(hoverSample)],
