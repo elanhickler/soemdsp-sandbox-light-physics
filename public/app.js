@@ -836,9 +836,9 @@ function renderPhaseAudioStatsProbe() {
   const frame = clampFrame(state.waveformProbeFrame, waveform);
   const region = waveformRegionAtFrame(frame);
   probe.textContent = region
-    ? `${probeSourceText()} ${region.name} / ${formatSeconds(
+    ? `${probeSourceText()} ${formatSeconds(
         frame / waveform.sampleRate,
-      )} / frame ${frame}`
+      )} / frame ${frame} / ${region.name}`
     : "probe";
   updatePhaseProbeTargets();
 }
@@ -3233,9 +3233,9 @@ function renderPhaseProbe() {
   const frame = clampFrame(state.waveformProbeFrame, waveform);
   const region = waveformRegionAtFrame(frame);
   probe.textContent = region
-    ? `${probeSourceText()} ${region.name} / ${formatSeconds(
+    ? `${probeSourceText()} ${formatSeconds(
         frame / waveform.sampleRate,
-      )} / frame ${frame}`
+      )} / frame ${frame} / ${region.name}`
     : "probe";
   updatePhaseProbeTargets();
 }
