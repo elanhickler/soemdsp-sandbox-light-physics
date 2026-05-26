@@ -1380,22 +1380,44 @@ function renderSignalPlotProbe() {
   const source = document.getElementById("signalPlotProbeSource");
   if (!state.waveform || !state.signalPlotProbe) {
     probe.textContent = "probe";
+    probe.dataset.probeSource = "none";
+    probe.dataset.probeFrame = "none";
+    probe.title = "Signal plot probe idle";
     source.textContent = "near frame";
+    source.dataset.probeSource = "none";
+    source.dataset.probeFrame = "none";
+    source.title = "Signal plot source probe idle";
     return;
   }
 
   const nearest = state.signalPlotProbe.nearest;
+  const probeSource = state.waveformProbeSource || "signal plot";
   const pointText = `x ${formatCompactNumber(
     state.signalPlotProbe.x,
   )} / y ${formatCompactNumber(state.signalPlotProbe.y)}`;
   probe.textContent = nearest
     ? `probe ${formatProbeFrame(nearest.frame, state.waveform)} / ${pointText}`
     : `probe ${pointText}`;
+  probe.dataset.probeSource = probeSource;
+  probe.dataset.probeFrame = nearest ? String(nearest.frame) : "none";
+  probe.title = nearest
+    ? `Signal plot probe ${probeSource} / ${formatProbeFrame(
+        nearest.frame,
+        state.waveform,
+      )} / ${pointText}`
+    : `Signal plot probe ${probeSource} / ${pointText}`;
   source.textContent = nearest
     ? `${probeSourceText()} / near frame ${nearest.frame} / ${formatSeconds(
         nearest.seconds,
       )} / ${nearest.phase}`
     : "near frame";
+  source.dataset.probeSource = probeSource;
+  source.dataset.probeFrame = nearest ? String(nearest.frame) : "none";
+  source.title = nearest
+    ? `Signal plot source ${probeSource} / near frame ${nearest.frame} / ${formatSeconds(
+        nearest.seconds,
+      )} / ${nearest.phase}`
+    : `Signal plot source ${probeSource} / no nearest frame`;
 }
 
 function probeSignalPlot(event) {
@@ -3336,6 +3358,19 @@ function phaseListProbeLabeled() {
   );
 }
 
+function signalPlotProbeLabeled() {
+  const probe = document.getElementById("signalPlotProbe");
+  const source = document.getElementById("signalPlotProbeSource");
+  return (
+    Boolean(probe?.dataset.probeSource) &&
+    Boolean(probe?.dataset.probeFrame) &&
+    Boolean(probe?.title) &&
+    Boolean(source?.dataset.probeSource) &&
+    Boolean(source?.dataset.probeFrame) &&
+    Boolean(source?.title)
+  );
+}
+
 function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform)) {
   const rows = [
     [
@@ -3377,6 +3412,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))],
     ["signal plot probe", waveformReady && Boolean(document.getElementById("signalPlotProbe"))],
     ["signal plot source probe", waveformReady && Boolean(document.getElementById("signalPlotProbeSource"))],
+    ["signal plot probe labels", waveformReady && signalPlotProbeLabeled()],
     ["waveform-to-signal probe", waveformReady && Boolean(signalPlotProbeAtFrame(0))],
     ["signal-to-waveform probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["inspection cursor", waveformReady && Boolean(document.getElementById("inspectionCursor"))],
