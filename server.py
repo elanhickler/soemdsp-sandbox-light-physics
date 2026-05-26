@@ -61,6 +61,9 @@ class SandboxServer(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:
         self.reject_mutation_method()
 
+    def do_OPTIONS(self) -> None:
+        self.reject_mutation_method()
+
     def reject_mutation_method(self) -> None:
         self.send_error(405, "Method not allowed")
 

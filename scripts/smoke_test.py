@@ -472,6 +472,7 @@ def require_read_only_method_rejections(base_url: str) -> None:
         ("PUT", "/artifact?path=runtime_dsp_object_bound_wav_resync_demo.wav"),
         ("PATCH", "/public/app.js"),
         ("DELETE", "/"),
+        ("OPTIONS", "/api/manifest"),
     ]:
         response = request(f"{base_url}{path}", method=method)
         label = f"{method} {path}"
@@ -582,6 +583,14 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         require(missing_path.status == 400, "missing artifact path did not return 400")
         require_no_store(missing_path, "missing artifact path")
 
+        missing_route = request(f"{base_url}/missing", method="HEAD")
+        require(missing_route.status == 404, "missing route did not return 404")
+        require_no_store(missing_route, "missing route")
+
+        missing_public = request(f"{base_url}/public/missing.js", method="HEAD")
+        require(missing_public.status == 404, "missing public file did not return 404")
+        require_no_store(missing_public, "missing public file")
+
         missing_artifact = request(
             f"{base_url}/artifact?path=missing.wav",
             method="HEAD",
@@ -595,6 +604,16 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         )
         require(forbidden_artifact.status == 403, "artifact traversal did not return 403")
         require_no_store(forbidden_artifact, "artifact traversal")
+
+        forbidden_encoded_artifact = request(
+            f"{base_url}/artifact?path=%2e%2e/server.py",
+            method="HEAD",
+        )
+        require(
+            forbidden_encoded_artifact.status == 403,
+            "encoded artifact traversal did not return 403",
+        )
+        require_no_store(forbidden_encoded_artifact, "encoded artifact traversal")
 
         forbidden_public = request(
             f"{base_url}/public/%2e%2e/server.py",
