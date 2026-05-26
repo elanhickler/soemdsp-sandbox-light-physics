@@ -1366,7 +1366,7 @@ def require_waveform_seek_source_contract() -> None:
         'setStatus("sandboxContractStatus", ok ? "Bounded" : "Check", ok)',
         'frequencyValue === null ? "freq" : `freq ${formatCompactNumber(frequencyValue)} Hz`',
         'amplitudeValue === null ? "amp" : `amp ${formatCompactNumber(amplitudeValue)}`',
-        'status.textContent = ok ? "params synced" : "params missing"',
+        'status.textContent = ok ? `params ${region?.name || "synced"}` : "params missing"',
         "function parameterTimelineRows(manifest)",
         "function renderParameterTimeline(manifest)",
         "function updateParameterTimelinePlayhead(region)",

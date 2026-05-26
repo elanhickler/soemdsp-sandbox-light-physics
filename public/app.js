@@ -1709,7 +1709,7 @@ function renderCurrentParameters(region) {
     frequencyValue === null ? "freq" : `freq ${formatCompactNumber(frequencyValue)} Hz`;
   amplitude.textContent =
     amplitudeValue === null ? "amp" : `amp ${formatCompactNumber(amplitudeValue)}`;
-  status.textContent = ok ? "params synced" : "params missing";
+  status.textContent = ok ? `params ${region?.name || "synced"}` : "params missing";
   status.className = `pill ${ok ? "good" : "warn"}`;
 }
 
