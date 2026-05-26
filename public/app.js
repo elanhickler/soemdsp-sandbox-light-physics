@@ -505,6 +505,8 @@ function renderSignalPlotControls() {
   const allButton = document.createElement("button");
   allButton.type = "button";
   allButton.className = "phase-button";
+  allButton.dataset.signalFocus = "all";
+  allButton.setAttribute("aria-label", "Signal plot focus all");
   allButton.textContent = "all";
   allButton.classList.toggle("active", state.signalPhaseFocusIndex === null);
   allButton.addEventListener("click", () => {
@@ -517,6 +519,8 @@ function renderSignalPlotControls() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "phase-button";
+    button.dataset.signalFocus = region.name;
+    button.setAttribute("aria-label", `Signal plot focus ${region.name}`);
     button.textContent = region.name;
     button.classList.toggle("active", index === state.signalPhaseFocusIndex);
     button.addEventListener("click", () => {
@@ -530,6 +534,8 @@ function renderSignalPlotControls() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "phase-button";
+    button.dataset.signalLagMs = String(lagMs);
+    button.setAttribute("aria-label", `Signal plot lag ${lagMs} ms`);
     button.textContent = `${lagMs} ms`;
     button.classList.toggle("active", lagMs === state.signalLagMs);
     button.addEventListener("click", () => {
