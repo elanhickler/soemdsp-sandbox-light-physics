@@ -3497,6 +3497,29 @@ function renderPhases(phases, wav) {
   renderPhaseProbe();
 }
 
+function renderUnavailablePhases() {
+  const list = document.getElementById("phaseList");
+  list.replaceChildren();
+
+  const item = document.createElement("div");
+  item.className = "phase warn-row";
+
+  const name = document.createElement("h3");
+  name.textContent = "Phases unavailable";
+
+  const body = document.createElement("dl");
+  body.className = "kv compact";
+  renderKeyValue(body, [
+    ["phase count", "unavailable", "present"],
+    ["frame ranges", "unavailable", "present"],
+    ["resync proof", "unavailable", "present"],
+  ]);
+
+  item.append(name, body);
+  list.append(item);
+  renderPhaseProbe();
+}
+
 function render(response) {
   state.response = response;
   const manifest = response.manifest;
@@ -3884,7 +3907,7 @@ function renderError(message, details = {}) {
   clearElement("signalPlotMeta");
   renderUnavailableBoundaryFlags();
   renderUnavailablePhaseCoverage();
-  clearElement("phaseList");
+  renderUnavailablePhases();
   renderUnavailableChecklist();
   renderUnavailableArtifactCoverage();
   renderUnavailableArtifacts();
