@@ -1296,6 +1296,8 @@ def require_waveform_seek_source_contract() -> None:
         "function togglePrimaryAudioPlayback()",
         "if (audio.ended) {",
         "audio.currentTime = 0;",
+        "if (state.followAudio && state.waveform) {",
+        "setPlayheadFrame(0);",
         "await audio.play();",
         "audio.pause();",
         "function syncWaveformToAudioEnd()",

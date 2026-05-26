@@ -2204,6 +2204,9 @@ async function togglePrimaryAudioPlayback() {
     if (audio.paused || audio.ended) {
       if (audio.ended) {
         audio.currentTime = 0;
+        if (state.followAudio && state.waveform) {
+          setPlayheadFrame(0);
+        }
       }
       await audio.play();
     } else {
