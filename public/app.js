@@ -29,6 +29,10 @@ function setText(id, value) {
   document.getElementById(id).textContent = value;
 }
 
+function clearElement(id) {
+  document.getElementById(id).replaceChildren();
+}
+
 function setStatus(id, value, ok) {
   const element = document.getElementById(id);
   const isPill = element.classList.contains("pill");
@@ -1031,24 +1035,49 @@ function render(response) {
 }
 
 function renderError(message) {
+  state.response = null;
+  state.waveform = null;
+  state.playheadFrame = 0;
+  state.reports = [];
+  state.activeReportIndex = 0;
+
   setStatus("manifestStatus", "Check", false);
   setStatus("contractStatus", message, false);
   setStatus("inspectionMode", "Unavailable", false);
   setText("frameCount", "0");
   setStatus("checklistStatus", "Check", false);
+  setStatus("producerStatus", "Check", false);
+  setStatus("parameterSummaryStatus", "Check", false);
+  setStatus("waveformStatus", "Check", false);
   setStatus("phaseCoverageStatus", "Check", false);
   setStatus("phaseStatus", "Check", false);
   setStatus("artifactCoverageStatus", "Check", false);
   setStatus("reportStatus", "Check", false);
+  setStatus("artifactStatus", "Check", false);
   setStatus("sourceStatus", "Check", false);
+  setText("audioTitle", "Unavailable");
   setText("manifestPath", "Unavailable");
   setText("manifestBytes", "Unavailable");
   setText("manifestModified", "Unavailable");
   setText("artifactRoot", "Unavailable");
-  state.reports = [];
-  state.activeReportIndex = 0;
+
+  const audio = document.getElementById("audioPlayer");
+  audio.removeAttribute("src");
+  audio.load();
+
+  clearElement("producerProof");
+  clearElement("parameterSummary");
   renderReportControls();
   renderActiveReport();
+  renderWaveformPhaseControls();
+  renderWaveformPosition();
+  clearElement("waveformMeta");
+  clearElement("boundaryFlags");
+  clearElement("phaseCoverage");
+  clearElement("phaseList");
+  clearElement("checklist");
+  clearElement("artifactCoverage");
+  clearElement("artifactList");
 }
 
 async function loadManifest() {
