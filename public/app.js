@@ -1162,7 +1162,7 @@ async function loadManifest() {
     }
     const shapeError = manifestShapeError(payload);
     if (shapeError) {
-      renderError(shapeError);
+      renderError(shapeError, payload);
       return;
     }
     payload.responseHeaders = {
