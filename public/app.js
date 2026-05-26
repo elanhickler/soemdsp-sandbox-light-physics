@@ -804,8 +804,10 @@ function renderProducerProof(manifest) {
 
 function renderArtifactCoverage(links, phases) {
   const phaseReportCount = countArtifactKind(links, "phase-report");
+  const missingPathCount = links.filter((link) => !link.path).length;
   const rows = [
     ["total links", String(links.length)],
+    ["missing paths", String(missingPathCount), 0],
     ["reachability method", "HEAD", "HEAD"],
     ["entry point", String(countArtifactKind(links, "entry-point")), 1],
     ["audio", String(countArtifactKind(links, "audio")), 1],
@@ -816,6 +818,7 @@ function renderArtifactCoverage(links, phases) {
   ];
   const ok =
     links.length > 0 &&
+    missingPathCount === 0 &&
     countArtifactKind(links, "entry-point") >= 1 &&
     countArtifactKind(links, "audio") >= 1 &&
     countArtifactKind(links, "manifest") >= 1 &&
@@ -884,20 +887,22 @@ function renderArtifacts(links) {
 
   const checks = [];
   for (const link of links) {
-    const anchor = document.createElement("a");
-    anchor.className = "artifact-row";
-    anchor.href = artifactUrl(link.path);
-    anchor.target = "_blank";
-    anchor.rel = "noreferrer";
+    const row = document.createElement(link.path ? "a" : "div");
+    row.className = "artifact-row";
+    if (link.path) {
+      row.href = artifactUrl(link.path);
+      row.target = "_blank";
+      row.rel = "noreferrer";
+    }
 
     const label = document.createElement("span");
-    label.textContent = link.label;
+    label.textContent = link.label || "missing";
 
     const kind = document.createElement("strong");
-    kind.textContent = link.kind;
+    kind.textContent = link.kind || "missing";
 
     const path = document.createElement("code");
-    path.textContent = link.path;
+    path.textContent = link.path || "missing";
 
     const status = document.createElement("span");
     status.className = "artifact-status";
@@ -907,8 +912,8 @@ function renderArtifacts(links) {
     modified.className = "artifact-modified";
     modified.textContent = "Modified";
 
-    anchor.append(label, kind, path, modified, status);
-    list.append(anchor);
+    row.append(label, kind, path, modified, status);
+    list.append(row);
     checks.push(checkArtifactAvailability(link, status, modified));
   }
 
