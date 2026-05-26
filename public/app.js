@@ -908,6 +908,7 @@ function renderPhaseAudioStats() {
   const waveform = state.waveform;
   const regions = waveform?.regions || [];
   if (!waveform || !regions.length) {
+    renderUnavailablePhaseAudioStats();
     renderPhaseAudioStatsProbe();
     status.textContent = "Check";
     status.className = "pill warn";
@@ -1009,6 +1010,28 @@ function renderPhaseAudioStats() {
   status.className = `pill ${allOk ? "good" : "warn"}`;
   updatePhaseAudioStatsActive(activeWaveformRegion());
   renderPhaseAudioStatsProbe();
+}
+
+function renderUnavailablePhaseAudioStats() {
+  const list = document.getElementById("phaseAudioStats");
+  list.replaceChildren();
+
+  const item = document.createElement("div");
+  item.className = "phase-stat warn-row";
+
+  const name = document.createElement("h3");
+  name.textContent = "Phase audio stats unavailable";
+
+  const body = document.createElement("dl");
+  body.className = "kv compact";
+  renderKeyValue(body, [
+    ["decoded waveform", "unavailable", "present"],
+    ["phase ranges", "unavailable", "present"],
+    ["producer compare", "unavailable", "present"],
+  ]);
+
+  item.append(name, body);
+  list.append(item);
 }
 
 function signalPlotLagFrames(waveform) {
@@ -1388,7 +1411,7 @@ function renderSignalPlot() {
   if (!waveform) {
     status.textContent = "Check";
     status.className = "pill warn";
-    meta.replaceChildren();
+    renderUnavailableSignalPlotMeta();
     return;
   }
 
@@ -1415,6 +1438,17 @@ function renderSignalPlot() {
   ]);
   status.textContent = "Drawn";
   status.className = "pill good";
+}
+
+function renderUnavailableSignalPlotMeta() {
+  renderKeyValue(document.getElementById("signalPlotMeta"), [
+    ["focus", "unavailable", "present"],
+    ["mode", state.signalPlotMode],
+    ["window", "unavailable", "present"],
+    ["lag", `${state.signalLagMs} ms`],
+    ["points", "unavailable", "present"],
+    ["source", "manifest/audio required", "decoded primary WAV"],
+  ]);
 }
 
 function renderSignalPlotSummary() {
@@ -3922,10 +3956,10 @@ function renderError(message, details = {}) {
   renderUnavailableWaveformMeta();
   renderUnavailableLevelEnvelopeMeta();
   renderLevelEnvelopeProbe();
-  clearElement("phaseAudioStats");
+  renderUnavailablePhaseAudioStats();
   renderSignalPlotControls();
   clearSignalPlotProbe();
-  clearElement("signalPlotMeta");
+  renderUnavailableSignalPlotMeta();
   renderUnavailableBoundaryFlags();
   renderUnavailablePhaseCoverage();
   renderUnavailablePhases();
