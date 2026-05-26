@@ -216,7 +216,9 @@ function setInspectionCursorDivergence(transportRegion, targetRegion) {
       targetRegion &&
       transportRegion.name !== targetRegion.name,
   );
-  divergence.textContent = diverged ? "phase diverged" : "phase aligned";
+  divergence.textContent = diverged
+    ? `phase diverged ${transportRegion.name} -> ${targetRegion.name}`
+    : "phase aligned";
   divergence.className = `pill inspection-divergence ${diverged ? "diverged" : "aligned"}`;
 }
 
