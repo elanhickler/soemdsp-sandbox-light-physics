@@ -9,6 +9,7 @@ const state = {
   signalLagMs: 1,
   signalPhaseFocusIndex: null,
   signalPlotMode: "trace",
+  signalPlotScale: 1,
   signalPlotWindow: "full",
   signalPlotWindowMs: 80,
 };
@@ -481,7 +482,7 @@ function drawSignalPlot() {
 
   const centerX = width / 2;
   const centerY = height / 2;
-  const scale = Math.min(width, height) * 0.44;
+  const scale = Math.min(width, height) * 0.44 * state.signalPlotScale;
 
   context.strokeStyle = "rgba(243,241,236,0.16)";
   context.lineWidth = Math.max(1, pixelRatio);
@@ -567,6 +568,7 @@ function renderSignalPlot() {
   renderKeyValue(meta, [
     ["focus", signalPlotFocusName(waveform)],
     ["mode", state.signalPlotMode],
+    ["scale", `x${state.signalPlotScale}`],
     ["window", signalPlotWindowName(waveform, drawableFrames)],
     ["window size", `${state.signalPlotWindowMs} ms`],
     ["x", "sample[n]"],
@@ -613,6 +615,9 @@ function renderSignalPlotControls() {
   const modeGroup = document.createElement("div");
   modeGroup.className = "control-group";
   modeGroup.setAttribute("aria-label", "Signal plot mode");
+  const scaleGroup = document.createElement("div");
+  scaleGroup.className = "control-group";
+  scaleGroup.setAttribute("aria-label", "Signal plot scale");
   const windowGroup = document.createElement("div");
   windowGroup.className = "control-group";
   windowGroup.setAttribute("aria-label", "Signal plot window");
@@ -666,6 +671,21 @@ function renderSignalPlotControls() {
     modeGroup.append(button);
   }
 
+  for (const scale of [1, 2, 4]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "phase-button";
+    button.dataset.signalScale = String(scale);
+    button.setAttribute("aria-label", `Signal plot scale x${scale}`);
+    button.textContent = `x${scale}`;
+    button.classList.toggle("active", scale === state.signalPlotScale);
+    button.addEventListener("click", () => {
+      state.signalPlotScale = scale;
+      renderSignalPlot();
+    });
+    scaleGroup.append(button);
+  }
+
   for (const windowMode of ["full", "cursor"]) {
     const button = document.createElement("button");
     button.type = "button";
@@ -711,7 +731,14 @@ function renderSignalPlotControls() {
     lagGroup.append(button);
   }
 
-  container.append(focusGroup, modeGroup, windowGroup, windowSizeGroup, lagGroup);
+  container.append(
+    focusGroup,
+    modeGroup,
+    scaleGroup,
+    windowGroup,
+    windowSizeGroup,
+    lagGroup,
+  );
 }
 
 function renderWaveformPhaseControls() {
