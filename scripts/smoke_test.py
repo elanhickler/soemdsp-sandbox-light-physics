@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from html.parser import HTMLParser
 import json
 import socket
 import subprocess
@@ -54,6 +55,78 @@ SUMMARY_PARAMETER_KEYS = (
     "second half frequency",
     "second half amplitude",
 )
+REQUIRED_SHELL_IDS = {
+    "artifactCoverage",
+    "artifactCoverageStatus",
+    "artifactList",
+    "artifactRoot",
+    "artifactStatus",
+    "audioPlayer",
+    "audioTitle",
+    "boundaryFlags",
+    "checklist",
+    "checklistStatus",
+    "contractStatus",
+    "followAudioButton",
+    "frameCount",
+    "inspectionMode",
+    "manifestBytes",
+    "manifestCacheControl",
+    "manifestExpires",
+    "manifestHttpStatus",
+    "manifestLoadedAt",
+    "manifestModified",
+    "manifestPath",
+    "manifestPragma",
+    "manifestStatus",
+    "parameterSummary",
+    "parameterSummaryStatus",
+    "phaseCoverage",
+    "phaseCoverageStatus",
+    "phaseList",
+    "phaseStatus",
+    "producerProof",
+    "producerStatus",
+    "refreshButton",
+    "reportControls",
+    "reportStatus",
+    "reportViewer",
+    "sourceDetail",
+    "sourceError",
+    "sourceStatus",
+    "waveformCanvas",
+    "waveformMeta",
+    "waveformPhase",
+    "waveformPhaseControls",
+    "waveformPosition",
+    "waveformSample",
+    "waveformScrubber",
+    "waveformStatus",
+}
+
+
+class ShellContractParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: set[str] = set()
+        self.scripts: set[str] = set()
+        self.stylesheets: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        element_id = attributes.get("id")
+        if element_id:
+            self.ids.add(element_id)
+
+        if tag == "script":
+            src = attributes.get("src")
+            if src:
+                self.scripts.add(src)
+
+        if tag == "link" and attributes.get("rel") == "stylesheet":
+            href = attributes.get("href")
+            if href:
+                self.stylesheets.add(href)
 
 
 @dataclass
@@ -136,6 +209,19 @@ def require_content_type(response: Response, expected: str | tuple[str, ...], la
     require(
         any(content_type.startswith(value) for value in expected_values),
         f"{label} content-type was {content_type!r}, expected {expected_values!r}",
+    )
+
+
+def require_shell_contract(html: str) -> None:
+    parser = ShellContractParser()
+    parser.feed(html)
+
+    missing_ids = sorted(REQUIRED_SHELL_IDS - parser.ids)
+    require(not missing_ids, f"shell missing required ids: {missing_ids}")
+    require("/public/app.js" in parser.scripts, "shell missing app.js script")
+    require(
+        "/public/styles.css" in parser.stylesheets,
+        "shell missing styles.css stylesheet",
     )
 
 
@@ -433,10 +519,11 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
     try:
         wait_for_server(base_url, process)
 
-        root_response = request(f"{base_url}/", method="HEAD")
+        root_response = request(f"{base_url}/")
         require(root_response.status == 200, "root shell did not return 200")
         require_no_store(root_response, "root shell")
         require_content_type(root_response, "text/html", "root shell")
+        require_shell_contract(root_response.body.decode("utf-8"))
 
         for path, content_type in [
             ("/public/app.js", ("application/javascript", "text/javascript")),
