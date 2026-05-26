@@ -562,6 +562,105 @@ def require_parameter_summary(base_url: str, payload: dict[str, object]) -> None
     )
 
 
+def decode_mono_float_samples(
+    frames: bytes,
+    channels: int,
+    sample_width: int,
+) -> list[float]:
+    require(sample_width == 2, "WAV sample width was not 16-bit")
+    samples: list[float] = []
+    frame_width = channels * sample_width
+    frame_count = len(frames) // frame_width
+    for frame_index in range(frame_count):
+        total = 0.0
+        for channel in range(channels):
+            offset = frame_index * frame_width + channel * sample_width
+            total += int.from_bytes(
+                frames[offset : offset + sample_width],
+                byteorder="little",
+                signed=True,
+            ) / 32768
+        samples.append(total / channels)
+    return samples
+
+
+def estimate_positive_crossing_frequency(
+    samples: list[float],
+    start_frame: int,
+    end_frame: int,
+    sample_rate: int,
+) -> float | None:
+    start = max(0, min(len(samples), start_frame))
+    end = max(start, min(len(samples), end_frame))
+    if end - start < 2 or sample_rate <= 0:
+        return None
+
+    crossings: list[float] = []
+    previous = samples[start]
+    for frame in range(start + 1, end):
+        current = samples[frame]
+        if previous < 0 <= current:
+            span = current - previous
+            offset = 0 if span == 0 else -previous / span
+            crossings.append(frame - 1 + offset)
+        previous = current
+
+    if len(crossings) < 2:
+        return None
+
+    seconds = (crossings[-1] - crossings[0]) / sample_rate
+    if seconds <= 0:
+        return None
+    return (len(crossings) - 1) / seconds
+
+
+def require_phase_audio_measurements(
+    manifest: dict[str, object],
+    samples: list[float],
+    sample_rate: int,
+) -> None:
+    phases = manifest.get("phases")
+    require(isinstance(phases, list), "phase measurement phases missing")
+    resync = manifest.get("parameterResync")
+    require(isinstance(resync, dict), "phase measurement resync missing")
+    frequency = resync.get("frequency")
+    amplitude = resync.get("amplitude")
+    require(isinstance(frequency, dict), "phase measurement frequency missing")
+    require(isinstance(amplitude, dict), "phase measurement amplitude missing")
+
+    for index, phase in enumerate(phases):
+        require(isinstance(phase, dict), f"phase measurement {index} not object")
+        name = phase.get("name")
+        require(isinstance(name, str) and name, f"phase measurement {index} name missing")
+        start_frame = int(phase.get("startFrame", -1))
+        end_frame = int(phase.get("endFrame", -1))
+        require(start_frame >= 0 and end_frame > start_frame, f"{name} range invalid")
+
+        target_frequency = float(frequency.get(name, 0))
+        target_amplitude = float(amplitude.get(name, 0))
+        require(target_frequency > 0, f"{name} target frequency missing")
+        require(target_amplitude > 0, f"{name} target amplitude missing")
+
+        measured_frequency = estimate_positive_crossing_frequency(
+            samples,
+            start_frame,
+            end_frame,
+            sample_rate,
+        )
+        require(measured_frequency is not None, f"{name} measured frequency missing")
+        require(
+            abs(measured_frequency - target_frequency) < 0.5,
+            f"{name} measured frequency {measured_frequency} did not match {target_frequency}",
+        )
+
+        phase_samples = samples[start_frame:end_frame]
+        peak = max(abs(sample) for sample in phase_samples)
+        require(
+            abs(peak - target_amplitude) < 0.001,
+            f"{name} peak {peak} did not match target amplitude {target_amplitude}",
+        )
+
+
 def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
@@ -646,6 +745,18 @@ def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None
                     expected_frames * expected_channels * wave_file.getsampwidth()
                     == expected_data_bytes,
                     "WAV data byte count mismatch",
+                )
+                wave_file.rewind()
+                samples = decode_mono_float_samples(
+                    wave_file.readframes(expected_frames),
+                    expected_channels,
+                    wave_file.getsampwidth(),
+                )
+                require(len(samples) == expected_frames, "decoded WAV sample count mismatch")
+                require_phase_audio_measurements(
+                    manifest,
+                    samples,
+                    expected_sample_rate,
                 )
     except WaveError as error:
         raise AssertionError(f"primary audio WAV parse failed: {error}") from error
