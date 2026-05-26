@@ -1302,6 +1302,7 @@ async function renderWaveform(path) {
     renderPhaseAudioStats();
     renderSignalPlot();
     renderWaveformPhaseControls();
+    renderHandsOnReadiness(state.response?.manifest, true);
     const wav = state.response?.manifest?.wav || {};
     const stats = state.waveform.stats;
     renderKeyValue(meta, [
@@ -1329,6 +1330,7 @@ async function renderWaveform(path) {
     renderLevelEnvelope();
     renderPhaseAudioStats();
     renderSignalPlot();
+    renderHandsOnReadiness(state.response?.manifest, false);
     status.textContent = "Check";
     status.className = "pill warn";
     renderWaveformPosition();
@@ -1955,8 +1957,12 @@ function validateConsumerChecklist(manifest) {
 
 function renderChecklist(result) {
   const list = document.getElementById("checklist");
-  list.replaceChildren();
-  for (const [label, ok] of result.checks) {
+  renderCheckRows(list, result.checks);
+}
+
+function renderCheckRows(container, rows) {
+  container.replaceChildren();
+  for (const [label, ok] of rows) {
     const item = document.createElement("div");
     item.className = ok ? "check-row" : "check-row warn-row";
 
@@ -1967,8 +1973,35 @@ function renderChecklist(result) {
     text.textContent = label;
 
     item.append(marker, text);
-    list.append(item);
+    container.append(item);
   }
+}
+
+function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform)) {
+  const rows = [
+    [
+      "native audio",
+      hasArtifactKind(manifest?.artifactLinks || [], "audio") &&
+        Boolean(manifest?.sandboxHandoff?.primaryAudioArtifact),
+    ],
+    ["decoded waveform", waveformReady],
+    ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
+    ["follow/free view", Boolean(document.getElementById("followAudioButton"))],
+    [
+      "phase jump controls",
+      Array.isArray(manifest?.phases) &&
+        manifest.phases.length > 0 &&
+        phaseReportCoverageIssue(manifest) === "",
+    ],
+    ["phase parameter readout", parameterResyncContractIssue(manifest) === ""],
+    ["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0],
+    ["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))],
+    ["read-only boundary", validateConsumerChecklist(manifest).accepted],
+  ];
+  const ok = rows.every(([_label, rowOk]) => rowOk);
+
+  setStatus("handsOnReadinessStatus", ok ? "Ready" : "Check", ok);
+  renderCheckRows(document.getElementById("handsOnReadiness"), rows);
 }
 
 function renderProducerProof(manifest) {
@@ -2312,6 +2345,7 @@ function render(response) {
   );
   setText("audioTitle", handoff.primaryAudioArtifact);
   renderSource(response);
+  renderHandsOnReadiness(manifest, false);
 
   const audio = document.getElementById("audioPlayer");
   audio.src = artifactUrl(handoff.primaryAudioArtifact);
@@ -2585,6 +2619,7 @@ function renderError(message, details = {}) {
   setText("frameCount", "0");
   setStatus("checklistStatus", "Check", false);
   setStatus("producerStatus", "Check", false);
+  setStatus("handsOnReadinessStatus", "Check", false);
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
@@ -2630,6 +2665,7 @@ function renderError(message, details = {}) {
   renderAudioPosition();
 
   clearElement("producerProof");
+  clearElement("handsOnReadiness");
   clearElement("sandboxContract");
   clearElement("parameterSummary");
   clearElement("parameterTimeline");

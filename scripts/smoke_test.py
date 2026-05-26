@@ -74,6 +74,8 @@ REQUIRED_SHELL_IDS = {
     "currentParameterStatus",
     "followAudioButton",
     "frameCount",
+    "handsOnReadiness",
+    "handsOnReadinessStatus",
     "inspectionMode",
     "levelEnvelopeCanvas",
     "levelEnvelopeMeta",
@@ -1284,6 +1286,16 @@ def require_waveform_seek_source_contract() -> None:
         'return `${key} resync changed flag missing`',
         'return `${key} did not resync upward`',
         '["phase audio measurements", phaseAudioIssues.length === 0]',
+        "function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform))",
+        'setStatus("handsOnReadinessStatus", ok ? "Ready" : "Check", ok)',
+        '"native audio",',
+        '["decoded waveform", waveformReady]',
+        '["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0]',
+        '["follow/free view", Boolean(document.getElementById("followAudioButton"))]',
+        '["phase parameter readout", parameterResyncContractIssue(manifest) === ""]',
+        '["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0]',
+        '["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))]',
+        '["read-only boundary", validateConsumerChecklist(manifest).accepted]',
         "function phaseReportCoverageIssue(manifest)",
         'return "phase report phase missing"',
         'return "phase report phase unknown"',
@@ -1383,6 +1395,7 @@ def require_waveform_seek_source_contract() -> None:
         ".phase-stat.active",
         ".contract-list",
         ".contract-row",
+        ".readiness-list",
     ]:
         require(snippet in style_source, f"waveform drag style missing {snippet}")
     require(

@@ -486,6 +486,13 @@ dd.warn {
   margin-top: 16px;
 }
 
+.readiness-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .check-row {
   display: flex;
   align-items: center;
@@ -642,6 +649,7 @@ code {
   .grid,
   .phase-list,
   .checklist,
+  .readiness-list,
   .parameter-summary,
   .artifact-row {
     grid-template-columns: 1fr;
