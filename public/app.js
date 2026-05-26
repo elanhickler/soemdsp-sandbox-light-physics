@@ -265,16 +265,32 @@ function renderWaveformPhaseControls() {
     return;
   }
 
-  for (const region of waveform.regions || []) {
+  for (const [index, region] of (waveform.regions || []).entries()) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "phase-button";
+    button.dataset.phaseIndex = String(index);
     button.textContent = region.name;
     button.addEventListener("click", () => {
       setPlayheadFrame(region.startFrame, true);
     });
     container.append(button);
   }
+}
+
+function activeWaveformRegion() {
+  const waveform = state.waveform;
+  if (!waveform) {
+    return null;
+  }
+
+  return (
+    (waveform.regions || []).find(
+      (region) =>
+        state.playheadFrame >= region.startFrame &&
+        state.playheadFrame < region.endFrame,
+    ) || waveform.regions?.at(-1) || null
+  );
 }
 
 function setPlayheadFrame(frame, syncAudio) {
@@ -336,18 +352,30 @@ async function renderWaveform(path) {
 
 function renderWaveformPosition() {
   const position = document.getElementById("waveformPosition");
+  const phase = document.getElementById("waveformPhase");
   const scrubber = document.getElementById("waveformScrubber");
   const waveform = state.waveform;
   if (!waveform) {
     position.textContent = "0.000s";
+    phase.textContent = "phase";
     scrubber.value = "0";
+    updateActivePhaseButtons(null);
     return;
   }
 
+  const activeRegion = activeWaveformRegion();
   position.textContent = formatSeconds(state.playheadFrame / waveform.sampleRate);
+  phase.textContent = activeRegion ? activeRegion.name : "phase";
   scrubber.value = String(
     waveform.frames > 0 ? state.playheadFrame / waveform.frames : 0,
   );
+  updateActivePhaseButtons(activeRegion);
+}
+
+function updateActivePhaseButtons(activeRegion) {
+  for (const button of document.querySelectorAll("#waveformPhaseControls button")) {
+    button.classList.toggle("active", button.textContent === activeRegion?.name);
+  }
 }
 
 function syncWaveformToAudio() {

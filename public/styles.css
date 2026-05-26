@@ -239,6 +239,12 @@ audio {
   padding: 0 12px;
 }
 
+.phase-button.active {
+  border-color: var(--accent);
+  background: rgba(127, 199, 217, 0.16);
+  color: var(--text);
+}
+
 .grid .panel {
   margin-top: 0;
 }
