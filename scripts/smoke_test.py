@@ -378,6 +378,7 @@ def require_phase_contract(payload: dict[str, object]) -> None:
     require(phases, "phases empty")
 
     total_phase_frames = 0
+    expected_start_frame = 0
     for index, phase in enumerate(phases):
         require(isinstance(phase, dict), f"phase {index} not object")
         require(phase.get("name"), f"phase {index} name missing")
@@ -386,6 +387,17 @@ def require_phase_contract(payload: dict[str, object]) -> None:
         require(phase.get("processOk") is True, f"phase {index} process failed")
         samples = int(phase.get("samplesProcessed", 0))
         require(samples > 0, f"phase {index} samples missing")
+        start_frame = int(phase.get("startFrame", -1))
+        end_frame = int(phase.get("endFrame", -1))
+        require(
+            start_frame == expected_start_frame,
+            f"phase {index} start frame mismatch",
+        )
+        require(
+            end_frame == start_frame + samples,
+            f"phase {index} end frame mismatch",
+        )
+        expected_start_frame = end_frame
         total_phase_frames += samples
 
     require(
