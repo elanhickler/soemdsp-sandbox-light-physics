@@ -1317,14 +1317,31 @@ def require_root_shell(base_url: str) -> None:
 
 
 def require_static_assets(base_url: str) -> None:
-    for path, content_type in [
-        ("/public/app.js", ("application/javascript", "text/javascript")),
-        ("/public/styles.css", "text/css"),
+    for path, content_type, source_path in [
+        ("/public/app.js", ("application/javascript", "text/javascript"), PUBLIC / "app.js"),
+        ("/public/styles.css", "text/css", PUBLIC / "styles.css"),
     ]:
-        static_response = request(f"{base_url}{path}", method="HEAD")
-        require(static_response.status == 200, f"{path} did not return 200")
-        require_no_store(static_response, path)
-        require_content_type(static_response, content_type, path)
+        expected = source_path.read_bytes()
+        expected_size = str(len(expected))
+        head_response = request(f"{base_url}{path}", method="HEAD")
+        require(head_response.status == 200, f"{path} HEAD did not return 200")
+        require(head_response.body == b"", f"{path} HEAD returned a body")
+        require_no_store(head_response, f"{path} HEAD")
+        require_content_type(head_response, content_type, f"{path} HEAD")
+        require(
+            head_response.headers.get("content-length") == expected_size,
+            f"{path} HEAD content-length mismatch",
+        )
+
+        get_response = request(f"{base_url}{path}")
+        require(get_response.status == 200, f"{path} GET did not return 200")
+        require_no_store(get_response, f"{path} GET")
+        require_content_type(get_response, content_type, f"{path} GET")
+        require(
+            get_response.headers.get("content-length") == expected_size,
+            f"{path} GET content-length mismatch",
+        )
+        require(get_response.body == expected, f"{path} GET did not match local file bytes")
 
 
 def require_waveform_seek_source_contract() -> None:
