@@ -1476,11 +1476,63 @@ function renderWaveformPhaseControls() {
     button.className = "phase-button";
     button.dataset.phaseIndex = String(index);
     button.textContent = region.name;
+    button.addEventListener("pointermove", () => probePhaseButton(index));
+    button.addEventListener("pointerleave", clearPhaseButtonProbe);
     button.addEventListener("click", () => {
       seekPrimaryAudioToFrame(region.startFrame);
     });
     container.append(button);
   }
+}
+
+function setSharedProbeFrame(frame) {
+  const waveform = state.waveform;
+  if (!waveform) {
+    return;
+  }
+
+  state.waveformProbeFrame = clampFrame(frame, waveform);
+  state.signalPlotProbe = signalPlotProbeAtFrame(state.waveformProbeFrame);
+  renderWaveformProbe();
+  renderLevelEnvelopeProbe();
+  renderPhaseProbe();
+  renderPhaseAudioStatsProbe();
+  renderParameterTimelineProbe();
+  drawWaveform();
+  drawLevelEnvelope();
+  drawSignalPlot();
+  renderSignalPlotProbe();
+}
+
+function clearSharedProbeFrame() {
+  state.waveformProbeFrame = null;
+  state.signalPlotProbe = null;
+  renderWaveformProbe();
+  renderLevelEnvelopeProbe();
+  renderPhaseProbe();
+  renderPhaseAudioStatsProbe();
+  renderParameterTimelineProbe();
+  drawWaveform();
+  drawLevelEnvelope();
+  drawSignalPlot();
+  renderSignalPlotProbe();
+}
+
+function probePhaseButton(index) {
+  const region = state.waveform?.regions?.[index];
+  if (!region) {
+    return;
+  }
+
+  setSharedProbeFrame(region.startFrame);
+}
+
+function clearPhaseButtonProbe() {
+  if (state.waveformPointerActive) {
+    return;
+  }
+
+  clearSharedProbeFrame();
 }
 
 function activeWaveformRegion() {
@@ -2567,6 +2619,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
         manifest.phases.length > 0 &&
         phaseReportCoverageIssue(manifest) === "",
     ],
+    ["phase jump preview", waveformReady && Boolean(document.querySelector("#waveformPhaseControls button"))],
     ["phase list probe", waveformReady && Boolean(document.getElementById("phaseProbe"))],
     ["phase parameter readout", parameterResyncContractIssue(manifest) === ""],
     ["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0],

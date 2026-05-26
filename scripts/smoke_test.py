@@ -1326,6 +1326,7 @@ def require_waveform_seek_source_contract() -> None:
         '["parameter timeline probe", waveformReady && Boolean(document.getElementById("parameterTimelineProbe"))]',
         '["follow/free view", Boolean(document.getElementById("followAudioButton"))]',
         '["phase list probe", waveformReady && Boolean(document.getElementById("phaseProbe"))]',
+        '["phase jump preview", waveformReady && Boolean(document.querySelector("#waveformPhaseControls button"))]',
         '["phase parameter readout", parameterResyncContractIssue(manifest) === ""]',
         '["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0]',
         '["phase audio stats probe", waveformReady && Boolean(document.getElementById("phaseAudioStatsProbe"))]',
@@ -1428,6 +1429,10 @@ def require_waveform_seek_source_contract() -> None:
         "function beginWaveformDrag(event)",
         "function dragWaveform(event)",
         "function endWaveformDrag(event)",
+        "function setSharedProbeFrame(frame)",
+        "function clearSharedProbeFrame()",
+        "function probePhaseButton(index)",
+        "function clearPhaseButtonProbe()",
         "function waveformFrameAtClientX(clientX)",
         "function probeWaveformAtClientX(clientX)",
         "function renderWaveformProbe()",
@@ -1447,6 +1452,7 @@ def require_waveform_seek_source_contract() -> None:
         '.addEventListener("pointermove", dragWaveform)',
         '.addEventListener("pointerleave", clearWaveformProbe)',
         '.addEventListener("pointerup", endWaveformDrag)',
+        '.addEventListener("pointermove", () => probePhaseButton(index))',
     ]:
         require(snippet in app_source, f"waveform drag source missing {snippet}")
     for snippet in [
