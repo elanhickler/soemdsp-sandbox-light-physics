@@ -988,6 +988,9 @@ def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> 
 def require_report_documents(base_url: str, payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
+    artifact_root = payload.get("artifactRoot")
+    require(isinstance(artifact_root, str) and artifact_root, "artifact root missing")
+    artifact_root_path = Path(artifact_root).resolve()
     links = manifest.get("artifactLinks")
     require(isinstance(links, list), "artifact links missing")
 
@@ -1002,9 +1005,20 @@ def require_report_documents(base_url: str, payload: dict[str, object]) -> None:
         path = link.get("path")
         kind = link.get("kind")
         require(isinstance(path, str) and path, f"report link {index} path missing")
+        local_path = (artifact_root_path / path).resolve()
+        require(
+            local_path.is_relative_to(artifact_root_path),
+            f"report link {index} escapes artifact root",
+        )
+        expected = local_path.read_bytes()
         response = request(f"{base_url}/artifact?path={urllib.parse.quote(path)}")
         require(response.status == 200, f"report link {index} did not return 200")
         require_no_store(response, f"report link {index}")
+        require(
+            response.headers.get("content-length") == str(len(expected)),
+            f"report link {index} content-length mismatch",
+        )
+        require(response.body == expected, f"report link {index} did not match local bytes")
         text = response.body.decode("utf-8")
         require(text.strip(), f"report link {index} was empty")
         if kind == "manifest":
