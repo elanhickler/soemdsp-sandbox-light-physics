@@ -267,6 +267,16 @@ audio {
   color: var(--good);
 }
 
+.pill.inspection-seek-target.none {
+  color: var(--muted);
+}
+
+.pill.inspection-seek-target.active {
+  border-color: rgba(127, 199, 217, 0.48);
+  background: rgba(127, 199, 217, 0.1);
+  color: var(--accent);
+}
+
 .pill.inspection-seek-sync.none {
   color: var(--muted);
 }

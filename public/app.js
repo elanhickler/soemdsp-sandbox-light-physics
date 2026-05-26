@@ -171,6 +171,15 @@ function setInspectionCursorSeek(sourceName) {
   seek.className = `pill inspection-seek ${sourceName ? "active" : "idle"}`;
 }
 
+function setInspectionCursorSeekTarget(region, frame, sampleRate) {
+  const target = document.getElementById("inspectionCursorSeekTarget");
+  const hasTarget = region && frame !== null && Number.isFinite(sampleRate) && sampleRate > 0;
+  target.textContent = hasTarget
+    ? `seek target ${region.name} / ${formatSeconds(frame / sampleRate)} / frame ${frame}`
+    : "seek target none";
+  target.className = `pill inspection-seek-target ${hasTarget ? "active" : "none"}`;
+}
+
 function setInspectionCursorSeekSync(match) {
   const sync = document.getElementById("inspectionCursorSeekSync");
   sync.textContent =
@@ -1938,6 +1947,7 @@ function renderInspectionCursor() {
     setInspectionCursorDelta(null, 1);
     setInspectionCursorPreview(false);
     setInspectionCursorSeek(null);
+    setInspectionCursorSeekTarget(null, null, 1);
     setInspectionCursorSeekSync("none");
     setInspectionCursorTransport(null);
     setInspectionCursorTarget(null);
@@ -2006,6 +2016,7 @@ function renderInspectionCursor() {
   setInspectionCursorDelta(hoverDeltaFrame, waveform.sampleRate);
   setInspectionCursorPreview(hoverFrame !== null);
   setInspectionCursorSeek(state.lastSeekSource);
+  setInspectionCursorSeekTarget(lastSeekRegion, lastSeekFrame, waveform.sampleRate);
   setInspectionCursorSeekSync(lastSeekTransportMatch);
   setInspectionCursorTransport(transportRegion);
   setInspectionCursorTarget(hoverRegion);
@@ -2910,6 +2921,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection view pill", waveformReady && Boolean(document.getElementById("inspectionCursorView"))],
     ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
     ["inspection seek pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeek"))],
+    ["inspection seek target pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeekTarget"))],
     ["inspection seek sync pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeekSync"))],
     ["inspection transport pill", waveformReady && Boolean(document.getElementById("inspectionCursorTransport"))],
     ["inspection target pill", waveformReady && Boolean(document.getElementById("inspectionCursorTarget"))],
@@ -3624,6 +3636,7 @@ function renderError(message, details = {}) {
   setInspectionCursorPlayback(null);
   setInspectionCursorPreview(false);
   setInspectionCursorSeek(null);
+  setInspectionCursorSeekTarget(null, null, 1);
   setInspectionCursorSeekSync("none");
   setInspectionCursorTransport(null);
   setInspectionCursorTarget(null);
