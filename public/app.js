@@ -1666,6 +1666,7 @@ function renderInspectionCursor() {
       ? waveform.samples[Math.max(0, Math.min(waveform.samples.length - 1, hoverFrame))] || 0
       : null;
   const hoverSignal = hoverFrame !== null ? signalPlotProbeAtFrame(hoverFrame) : null;
+  const hoverEnvelope = hoverFrame !== null ? levelEnvelopeWindowAtFrame(hoverFrame) : null;
   const hoverFrequency = activeParameterValue("frequency", hoverRegion);
   const hoverAmplitude = activeParameterValue("amplitude", hoverRegion);
 
@@ -1689,6 +1690,14 @@ function renderInspectionCursor() {
     [
       "hover amplitude",
       hoverAmplitude === null ? "none" : formatCompactNumber(hoverAmplitude),
+    ],
+    [
+      "hover envelope peak",
+      hoverEnvelope ? formatCompactNumber(hoverEnvelope.peak) : "none",
+    ],
+    [
+      "hover envelope rms",
+      hoverEnvelope ? formatCompactNumber(hoverEnvelope.rms) : "none",
     ],
     [
       "hover signal",
