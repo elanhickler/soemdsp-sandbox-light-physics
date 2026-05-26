@@ -4,6 +4,7 @@ const state = {
   playheadFrame: 0,
   waveformProbeFrame: null,
   waveformPointerActive: false,
+  phaseJumpPreviewIndex: null,
   followAudio: true,
   reports: [],
   activeReportIndex: 0,
@@ -1476,6 +1477,7 @@ function renderWaveformPhaseControls() {
     button.className = "phase-button";
     button.dataset.phaseIndex = String(index);
     button.textContent = region.name;
+    button.classList.toggle("preview", index === state.phaseJumpPreviewIndex);
     button.addEventListener("pointermove", () => probePhaseButton(index));
     button.addEventListener("pointerleave", clearPhaseButtonProbe);
     button.addEventListener("focus", () => probePhaseButton(index));
@@ -1526,6 +1528,8 @@ function probePhaseButton(index) {
     return;
   }
 
+  state.phaseJumpPreviewIndex = index;
+  updateActivePhaseButtons(activeWaveformRegion());
   setSharedProbeFrame(region.startFrame);
 }
 
@@ -1534,6 +1538,8 @@ function clearPhaseButtonProbe() {
     return;
   }
 
+  state.phaseJumpPreviewIndex = null;
+  updateActivePhaseButtons(activeWaveformRegion());
   clearSharedProbeFrame();
 }
 
@@ -1857,6 +1863,10 @@ function renderFollowAudioControl() {
 function updateActivePhaseButtons(activeRegion) {
   for (const button of document.querySelectorAll("#waveformPhaseControls button")) {
     button.classList.toggle("active", button.textContent === activeRegion?.name);
+    button.classList.toggle(
+      "preview",
+      button.dataset.phaseIndex === String(state.phaseJumpPreviewIndex),
+    );
   }
 }
 

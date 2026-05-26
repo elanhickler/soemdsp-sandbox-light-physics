@@ -1433,6 +1433,8 @@ def require_waveform_seek_source_contract() -> None:
         "function clearSharedProbeFrame()",
         "function probePhaseButton(index)",
         "function clearPhaseButtonProbe()",
+        "phaseJumpPreviewIndex: null",
+        'button.classList.toggle("preview", index === state.phaseJumpPreviewIndex)',
         "function waveformFrameAtClientX(clientX)",
         "function probeWaveformAtClientX(clientX)",
         "function renderWaveformProbe()",
@@ -1455,6 +1457,7 @@ def require_waveform_seek_source_contract() -> None:
         '.addEventListener("pointermove", () => probePhaseButton(index))',
         '.addEventListener("focus", () => probePhaseButton(index))',
         '.addEventListener("blur", clearPhaseButtonProbe)',
+        'button.dataset.phaseIndex === String(state.phaseJumpPreviewIndex)',
     ]:
         require(snippet in app_source, f"waveform drag source missing {snippet}")
     for snippet in [
@@ -1473,6 +1476,7 @@ def require_waveform_seek_source_contract() -> None:
         ".parameter-timeline-marker.probe",
         ".phase-stat-list",
         ".phase-stat.active",
+        ".phase-button.preview",
         ".contract-list",
         ".contract-row",
         ".readiness-list",

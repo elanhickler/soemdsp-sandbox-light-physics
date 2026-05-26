@@ -416,6 +416,12 @@ audio {
   color: var(--text);
 }
 
+.phase-button.preview {
+  border-color: rgba(255, 211, 119, 0.62);
+  background: rgba(255, 211, 119, 0.12);
+  color: var(--text);
+}
+
 .grid .panel {
   margin-top: 0;
 }
