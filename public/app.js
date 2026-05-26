@@ -1072,6 +1072,36 @@ function render(response) {
   renderArtifacts(manifest.artifactLinks || []);
 }
 
+function manifestShapeError(payload) {
+  const manifest = payload.manifest;
+  if (!manifest || typeof manifest !== "object") {
+    return "manifest object missing";
+  }
+
+  const handoff = manifest.sandboxHandoff;
+  if (!handoff || typeof handoff !== "object") {
+    return "sandbox handoff missing";
+  }
+
+  if (!manifest.wav || typeof manifest.wav !== "object") {
+    return "wav metadata missing";
+  }
+
+  if (!Number.isFinite(Number(manifest.wav.frames))) {
+    return "wav frame count missing";
+  }
+
+  if (!Array.isArray(manifest.artifactLinks)) {
+    return "artifact links missing";
+  }
+
+  if (!Array.isArray(manifest.phases)) {
+    return "phases missing";
+  }
+
+  return "";
+}
+
 function renderError(message) {
   state.response = null;
   state.waveform = null;
@@ -1128,6 +1158,11 @@ async function loadManifest() {
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
       renderError(payload.error || "Manifest failed");
+      return;
+    }
+    const shapeError = manifestShapeError(payload);
+    if (shapeError) {
+      renderError(shapeError);
       return;
     }
     payload.responseHeaders = {
