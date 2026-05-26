@@ -1102,7 +1102,7 @@ function manifestShapeError(payload) {
   return "";
 }
 
-function renderError(message) {
+function renderError(message, details = {}) {
   state.response = null;
   state.waveform = null;
   state.playheadFrame = 0;
@@ -1124,14 +1124,14 @@ function renderError(message) {
   setStatus("artifactStatus", "Check", false);
   setStatus("sourceStatus", "Check", false);
   setText("audioTitle", "Unavailable");
-  setText("manifestPath", "Unavailable");
+  setText("manifestPath", details.path || details.manifestPath || "Unavailable");
   setText("manifestBytes", "Unavailable");
   setText("manifestModified", "Unavailable");
   setText("manifestLoadedAt", "Unavailable");
   setText("manifestCacheControl", "Unavailable");
   setText("manifestPragma", "Unavailable");
   setText("manifestExpires", "Unavailable");
-  setText("artifactRoot", "Unavailable");
+  setText("artifactRoot", details.artifactRoot || "Unavailable");
 
   const audio = document.getElementById("audioPlayer");
   audio.removeAttribute("src");
@@ -1157,7 +1157,7 @@ async function loadManifest() {
     const response = await fetch("/api/manifest", { cache: "no-store" });
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
-      renderError(payload.error || "Manifest failed");
+      renderError(payload.error || "Manifest failed", payload);
       return;
     }
     const shapeError = manifestShapeError(payload);
