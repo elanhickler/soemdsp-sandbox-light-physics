@@ -44,6 +44,20 @@ function formatSeconds(seconds) {
   return `${seconds.toFixed(3)}s`;
 }
 
+function formatPhaseRange(span, sampleRate) {
+  if (!sampleRate) {
+    return "unavailable";
+  }
+
+  return `${formatSeconds(span.startFrame / sampleRate)}-${formatSeconds(
+    span.endFrame / sampleRate,
+  )}`;
+}
+
+function formatPercent(value) {
+  return `${Number(value.toFixed(1)).toString()}%`;
+}
+
 function readAscii(view, offset, length) {
   let value = "";
   for (let index = 0; index < length; index += 1) {
@@ -122,6 +136,21 @@ function buildPhaseRegions(phases, totalFrames) {
     };
     startFrame = endFrame;
     return region;
+  });
+}
+
+function buildPhaseSpans(phases, totalFrames) {
+  let startFrame = 0;
+  return phases.map((phase) => {
+    const frames = Number(phase.samplesProcessed || 0);
+    const endFrame = Math.min(totalFrames, startFrame + frames);
+    const span = {
+      endFrame,
+      frames,
+      startFrame,
+    };
+    startFrame = endFrame;
+    return span;
   });
 }
 
@@ -553,10 +582,21 @@ function renderArtifacts(links) {
   }
 }
 
-function renderPhases(phases) {
+function renderPhases(phases, wav) {
   const list = document.getElementById("phaseList");
   list.replaceChildren();
-  for (const phase of phases) {
+  const sampleRate = Number(wav?.sampleRate || 0);
+  const totalFrames = Number(wav?.frames || 0);
+  const spans = buildPhaseSpans(phases, totalFrames);
+
+  for (const [index, phase] of phases.entries()) {
+    const span = spans[index];
+    const duration =
+      sampleRate > 0 ? formatSeconds(span.frames / sampleRate) : "unavailable";
+    const share =
+      totalFrames > 0
+        ? formatPercent((span.frames / totalFrames) * 100)
+        : "unavailable";
     const item = document.createElement("div");
     item.className = "phase";
 
@@ -572,6 +612,9 @@ function renderPhases(phases) {
       ["bindings", String(phase.bindingsChecked)],
       ["parameters", String(phase.parametersApplied)],
       ["samples", String(phase.samplesProcessed)],
+      ["time range", formatPhaseRange(span, sampleRate)],
+      ["duration", duration],
+      ["wav share", share],
     ]);
 
     item.append(name, body);
@@ -619,7 +662,7 @@ function render(response) {
       expected,
     ]),
   );
-  renderPhases(manifest.phases || []);
+  renderPhases(manifest.phases || [], manifest.wav);
   renderChecklist(checklist);
   renderParameterSummary(manifest.artifactLinks || []);
   renderArtifacts(manifest.artifactLinks || []);
