@@ -1792,10 +1792,12 @@ function renderWaveformProbe() {
 
 function renderInspectionCursor() {
   const status = document.getElementById("inspectionCursorStatus");
+  const source = document.getElementById("inspectionCursorSource");
   const cursor = document.getElementById("inspectionCursor");
   const waveform = state.waveform;
   if (!waveform) {
     setStatus("inspectionCursorStatus", "Check", false);
+    source.textContent = "source none";
     renderKeyValue(cursor, [
       ["transport frame", "0"],
       ["transport time", "0.000s"],
@@ -1824,14 +1826,16 @@ function renderInspectionCursor() {
   const hoverEnvelope = hoverFrame !== null ? levelEnvelopeWindowAtFrame(hoverFrame) : null;
   const hoverFrequency = activeParameterValue("frequency", hoverRegion);
   const hoverAmplitude = activeParameterValue("amplitude", hoverRegion);
+  const hoverSource = hoverFrame === null ? "transport" : state.waveformProbeSource || "probe";
 
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
+  source.textContent = `source ${hoverSource}`;
   renderKeyValue(cursor, [
     ["transport frame", String(transportFrame)],
     ["transport time", formatSeconds(transportFrame / waveform.sampleRate)],
     ["transport phase", transportRegion?.name || "phase"],
     ["transport sample", formatCompactNumber(transportSample)],
-    ["hover source", hoverFrame === null ? "none" : state.waveformProbeSource || "probe"],
+    ["hover source", hoverFrame === null ? "none" : hoverSource],
     ["hover frame", hoverFrame === null ? "none" : String(hoverFrame)],
     [
       "hover time",
@@ -2684,6 +2688,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["waveform-to-signal probe", waveformReady && Boolean(signalPlotProbeAtFrame(0))],
     ["signal-to-waveform probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["inspection cursor", waveformReady && Boolean(document.getElementById("inspectionCursor"))],
+    ["inspection source pill", waveformReady && Boolean(document.getElementById("inspectionCursorSource"))],
     ["read-only boundary", validateConsumerChecklist(manifest).accepted],
   ];
   const ok = rows.every(([_label, rowOk]) => rowOk);
@@ -3380,6 +3385,7 @@ function renderError(message, details = {}) {
   setStatus("checklistStatus", "Check", false);
   setStatus("producerStatus", "Check", false);
   setStatus("handsOnReadinessStatus", "Check", false);
+  setText("inspectionCursorSource", "source none");
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
