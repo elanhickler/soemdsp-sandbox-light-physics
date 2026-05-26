@@ -644,6 +644,9 @@ function renderPhaseAudioStats() {
       region.endFrame,
       waveform.sampleRate,
     );
+    const producerMeasurement = producerPhaseAudioMeasurement(region);
+    const producerFrequency = Number(producerMeasurement?.measuredFrequency);
+    const producerPeak = Number(producerMeasurement?.peak);
     const item = document.createElement("div");
     item.className = "phase-stat";
     item.dataset.phaseName = region.name;
@@ -657,15 +660,27 @@ function renderPhaseAudioStats() {
       measuredFrequency === null || frequencyValue === null
         ? "missing"
         : formatSignedNumber(measuredFrequency - frequencyValue);
+    const producerFrequencyDelta =
+      measuredFrequency === null || !Number.isFinite(producerFrequency)
+        ? "missing"
+        : formatSignedNumber(measuredFrequency - producerFrequency);
     const peakDelta =
       amplitudeValue === null ? "missing" : formatSignedNumber(stats.peak - amplitudeValue);
+    const producerPeakDelta =
+      !Number.isFinite(producerPeak)
+        ? "missing"
+        : formatSignedNumber(stats.peak - producerPeak);
     renderKeyValue(body, [
       ["target freq", frequencyValue === null ? "missing" : `${formatCompactNumber(frequencyValue)} Hz`],
       ["measured freq", measuredFrequency === null ? "missing" : `${formatCompactNumber(measuredFrequency)} Hz`],
       ["freq delta", frequencyDelta],
+      ["producer freq", Number.isFinite(producerFrequency) ? `${formatCompactNumber(producerFrequency)} Hz` : "missing"],
+      ["producer freq delta", producerFrequencyDelta],
       ["target amp", amplitudeValue === null ? "missing" : formatCompactNumber(amplitudeValue)],
       ["peak", formatCompactNumber(stats.peak)],
       ["peak delta", peakDelta],
+      ["producer peak", Number.isFinite(producerPeak) ? formatCompactNumber(producerPeak) : "missing"],
+      ["producer peak delta", producerPeakDelta],
       ["rms", formatCompactNumber(stats.rms)],
       ["min", formatCompactNumber(stats.min)],
       ["max", formatCompactNumber(stats.max)],
@@ -1179,6 +1194,17 @@ function activeParameterValue(name, region) {
   const values = resync[name] || {};
   const number = Number(values[region?.name]);
   return Number.isFinite(number) ? number : null;
+}
+
+function producerPhaseAudioMeasurement(region) {
+  const measurements = state.response?.manifest?.phaseAudioMeasurements || [];
+  if (!Array.isArray(measurements) || !region) {
+    return null;
+  }
+
+  return (
+    measurements.find((measurement) => measurement?.name === region.name) || null
+  );
 }
 
 function renderCurrentParameters(region) {

@@ -440,6 +440,42 @@ def require_phase_contract(payload: dict[str, object]) -> None:
         f"phase frames {total_phase_frames} did not match wav frames {wav_frames}",
     )
 
+    measurements = manifest.get("phaseAudioMeasurements")
+    require(isinstance(measurements, list), "phase audio measurements missing")
+    require(
+        len(measurements) == len(phases),
+        "phase audio measurement count did not match phase count",
+    )
+    measurements_by_name = {
+        measurement.get("name"): measurement
+        for measurement in measurements
+        if isinstance(measurement, dict)
+    }
+    resync = manifest.get("parameterResync")
+    require(isinstance(resync, dict), "parameter resync missing")
+    frequency = resync.get("frequency")
+    amplitude = resync.get("amplitude")
+    require(isinstance(frequency, dict), "frequency resync missing")
+    require(isinstance(amplitude, dict), "amplitude resync missing")
+    for phase in phases:
+        require(isinstance(phase, dict), "phase not object")
+        name = phase.get("name")
+        require(isinstance(name, str) and name, "phase name missing")
+        measurement = measurements_by_name.get(name)
+        require(isinstance(measurement, dict), f"{name} measurement missing")
+        measured_frequency = float(measurement.get("measuredFrequency", 0))
+        peak = float(measurement.get("peak", 0))
+        rms = float(measurement.get("rms", 0))
+        require(
+            abs(measured_frequency - float(frequency.get(name, 0))) < 0.5,
+            f"{name} producer measured frequency mismatch",
+        )
+        require(
+            abs(peak - float(amplitude.get(name, 0))) < 0.001,
+            f"{name} producer measured peak mismatch",
+        )
+        require(rms > 0, f"{name} producer measured rms missing")
+
 
 def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
@@ -814,6 +850,7 @@ def require_waveform_seek_source_contract() -> None:
         "function analyzeSampleRange(samples, startFrame, endFrame)",
         "function estimateZeroCrossingFrequency(samples, startFrame, endFrame, sampleRate)",
         "function activeParameterValue(name, region)",
+        "function producerPhaseAudioMeasurement(region)",
         "function renderCurrentParameters(region)",
         "function renderSandboxContract(manifest)",
         '["allowed", "display manifest artifacts", Boolean(handoff.entryPoint)]',
@@ -844,8 +881,12 @@ def require_waveform_seek_source_contract() -> None:
         '["target freq", frequencyValue === null ? "missing" : `${formatCompactNumber(frequencyValue)} Hz`]',
         '["measured freq", measuredFrequency === null ? "missing" : `${formatCompactNumber(measuredFrequency)} Hz`]',
         '["freq delta", frequencyDelta]',
+        '["producer freq", Number.isFinite(producerFrequency) ? `${formatCompactNumber(producerFrequency)} Hz` : "missing"]',
+        '["producer freq delta", producerFrequencyDelta]',
         '["target amp", amplitudeValue === null ? "missing" : formatCompactNumber(amplitudeValue)]',
         '["peak delta", peakDelta]',
+        '["producer peak", Number.isFinite(producerPeak) ? formatCompactNumber(producerPeak) : "missing"]',
+        '["producer peak delta", producerPeakDelta]',
         "function drawSignalPlot()",
         "function renderSignalPlotControls()",
         "function signalPlotWindowFrameRange(waveform, drawableFrames)",
