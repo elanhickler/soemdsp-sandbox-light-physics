@@ -152,6 +152,13 @@ function setInspectionCursorPlayback(audio) {
   playback.className = `pill inspection-playback ${stateName}`;
 }
 
+function setInspectionCursorView(followAudio) {
+  const view = document.getElementById("inspectionCursorView");
+  const stateName = followAudio ? "follow" : "free";
+  view.textContent = `view ${stateName}`;
+  view.className = `pill inspection-view ${stateName}`;
+}
+
 function setInspectionCursorPreview(active) {
   const preview = document.getElementById("inspectionCursorPreview");
   preview.textContent = active ? "preview only" : "preview idle";
@@ -2045,6 +2052,7 @@ function renderFollowAudioControl() {
   button.textContent = state.followAudio ? "Follow Audio" : "Free View";
   button.setAttribute("aria-pressed", String(state.followAudio));
   button.classList.toggle("active", state.followAudio);
+  setInspectionCursorView(state.followAudio);
 }
 
 function updateActivePhaseButtons(activeRegion) {
@@ -2851,6 +2859,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
     ["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))],
     ["inspection playback pill", waveformReady && Boolean(document.getElementById("inspectionCursorPlayback"))],
+    ["inspection view pill", waveformReady && Boolean(document.getElementById("inspectionCursorView"))],
     ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
     ["inspection seek pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeek"))],
     ["inspection seek sync pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeekSync"))],

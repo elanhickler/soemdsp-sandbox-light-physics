@@ -235,6 +235,18 @@ audio {
   color: var(--accent-2);
 }
 
+.pill.inspection-view.follow {
+  border-color: rgba(113, 212, 155, 0.42);
+  background: rgba(113, 212, 155, 0.09);
+  color: var(--good);
+}
+
+.pill.inspection-view.free {
+  border-color: rgba(127, 199, 217, 0.48);
+  background: rgba(127, 199, 217, 0.1);
+  color: var(--accent);
+}
+
 .pill.inspection-preview.idle {
   color: var(--muted);
 }
