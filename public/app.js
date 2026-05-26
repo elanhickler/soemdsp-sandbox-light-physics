@@ -793,7 +793,7 @@ function renderLevelEnvelope() {
     renderLevelEnvelopeProbe();
     status.textContent = "Check";
     status.className = "pill warn";
-    meta.replaceChildren();
+    renderUnavailableLevelEnvelopeMeta();
     return;
   }
 
@@ -811,6 +811,16 @@ function renderLevelEnvelope() {
   drawLevelEnvelope();
   status.textContent = "Drawn";
   status.className = "pill good";
+}
+
+function renderUnavailableLevelEnvelopeMeta() {
+  renderKeyValue(document.getElementById("levelEnvelopeMeta"), [
+    ["window", "unavailable", "present"],
+    ["windows", "unavailable", "present"],
+    ["peak", "unavailable", "present"],
+    ["rms", "unavailable", "present"],
+    ["source", "manifest/audio required", "decoded primary WAV"],
+  ]);
 }
 
 function updatePhaseAudioStatsActive(region) {
@@ -1864,7 +1874,7 @@ async function renderWaveform(path) {
     state.lastSeekFrame = null;
     state.signalPlotProbe = null;
     state.playheadFrame = 0;
-    meta.replaceChildren();
+    renderUnavailableWaveformMeta();
     renderWaveformPhaseControls();
     renderLevelEnvelope();
     renderPhaseAudioStats();
@@ -1876,6 +1886,17 @@ async function renderWaveform(path) {
     renderFollowAudioControl();
     console.error(error);
   }
+}
+
+function renderUnavailableWaveformMeta() {
+  renderKeyValue(document.getElementById("waveformMeta"), [
+    ["sample rate", "unavailable", "present"],
+    ["channels", "unavailable", "present"],
+    ["bit depth", "unavailable", "present"],
+    ["frames", "unavailable", "present"],
+    ["data bytes", "unavailable", "present"],
+    ["source", "manifest/audio required", "decoded primary WAV"],
+  ]);
 }
 
 function renderWaveformPosition() {
@@ -3898,8 +3919,8 @@ function renderError(message, details = {}) {
   renderActiveReport();
   renderWaveformPhaseControls();
   renderWaveformPosition();
-  clearElement("waveformMeta");
-  clearElement("levelEnvelopeMeta");
+  renderUnavailableWaveformMeta();
+  renderUnavailableLevelEnvelopeMeta();
   renderLevelEnvelopeProbe();
   clearElement("phaseAudioStats");
   renderSignalPlotControls();
