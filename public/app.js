@@ -1648,6 +1648,7 @@ async function renderWaveform(path) {
     state.waveform = parsePcm16Wav(await response.arrayBuffer());
     state.waveformProbeFrame = null;
     state.waveformProbeSource = null;
+    state.phaseJumpPreviewIndex = null;
     state.signalPlotProbe = null;
     state.waveform.stats = analyzeWaveform(state.waveform.samples);
     state.waveform.envelope = buildLevelEnvelope(state.waveform);
@@ -1685,6 +1686,7 @@ async function renderWaveform(path) {
     state.waveform = null;
     state.waveformProbeFrame = null;
     state.waveformProbeSource = null;
+    state.phaseJumpPreviewIndex = null;
     state.signalPlotProbe = null;
     state.playheadFrame = 0;
     meta.replaceChildren();
@@ -3340,6 +3342,7 @@ function renderError(message, details = {}) {
   state.playheadFrame = 0;
   state.waveformProbeFrame = null;
   state.waveformProbeSource = null;
+  state.phaseJumpPreviewIndex = null;
   state.signalPlotProbe = null;
   state.reports = [];
   state.activeReportIndex = 0;

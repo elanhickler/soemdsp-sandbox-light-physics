@@ -1443,6 +1443,7 @@ def require_waveform_seek_source_contract() -> None:
         "function probePhaseButton(index)",
         "function clearPhaseButtonProbe()",
         "phaseJumpPreviewIndex: null",
+        "state.phaseJumpPreviewIndex = null",
         'button.classList.toggle("preview", index === state.phaseJumpPreviewIndex)',
         "function waveformFrameAtClientX(clientX)",
         "function probeWaveformAtClientX(clientX)",
