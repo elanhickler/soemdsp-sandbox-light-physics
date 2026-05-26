@@ -3299,6 +3299,15 @@ function renderPhaseCoverage(phases, wav) {
   ]);
 }
 
+function renderUnavailablePhaseCoverage() {
+  renderKeyValue(document.getElementById("phaseCoverage"), [
+    ["phase count", "unavailable", "present"],
+    ["phase frames", "unavailable", "present"],
+    ["wav frames", "unavailable", "present"],
+    ["delta", "unavailable", "0"],
+  ]);
+}
+
 function renderPhaseProbe() {
   const probe = document.getElementById("phaseProbe");
   const waveform = state.waveform;
@@ -3797,7 +3806,7 @@ function renderError(message, details = {}) {
   clearSignalPlotProbe();
   clearElement("signalPlotMeta");
   renderUnavailableBoundaryFlags();
-  clearElement("phaseCoverage");
+  renderUnavailablePhaseCoverage();
   clearElement("phaseList");
   renderUnavailableChecklist();
   renderUnavailableArtifactCoverage();
