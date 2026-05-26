@@ -139,6 +139,12 @@ function setInspectionCursorAudio(time) {
   audio.textContent = `audio ${formatSeconds(Number.isFinite(time) ? time : 0)}`;
 }
 
+function setInspectionCursorPreview(active) {
+  const preview = document.getElementById("inspectionCursorPreview");
+  preview.textContent = active ? "preview only" : "preview idle";
+  preview.className = `pill inspection-preview ${active ? "active" : "idle"}`;
+}
+
 function boolText(value) {
   return value ? "true" : "false";
 }
@@ -1824,6 +1830,7 @@ function renderInspectionCursor() {
     setStatus("inspectionCursorStatus", "Check", false);
     setInspectionCursorSource("none", "none");
     setInspectionCursorDelta(null, 1);
+    setInspectionCursorPreview(false);
     renderKeyValue(cursor, [
       ["transport frame", "0"],
       ["transport time", "0.000s"],
@@ -1858,6 +1865,7 @@ function renderInspectionCursor() {
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
   setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
   setInspectionCursorDelta(hoverDeltaFrame, waveform.sampleRate);
+  setInspectionCursorPreview(hoverFrame !== null);
   renderKeyValue(cursor, [
     ["transport frame", String(transportFrame)],
     ["transport time", formatSeconds(transportFrame / waveform.sampleRate)],
@@ -2724,6 +2732,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection source pill", waveformReady && Boolean(document.getElementById("inspectionCursorSource"))],
     ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
     ["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))],
+    ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
     [
       "inspection hover delta",
       waveformReady && document.getElementById("inspectionCursor")?.textContent.includes("hover delta"),
@@ -3427,6 +3436,7 @@ function renderError(message, details = {}) {
   setInspectionCursorSource("none", "none");
   setInspectionCursorDelta(null, 1);
   setInspectionCursorAudio(0);
+  setInspectionCursorPreview(false);
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
