@@ -352,11 +352,13 @@ async function renderWaveform(path) {
 
 function renderWaveformPosition() {
   const position = document.getElementById("waveformPosition");
+  const sample = document.getElementById("waveformSample");
   const phase = document.getElementById("waveformPhase");
   const scrubber = document.getElementById("waveformScrubber");
   const waveform = state.waveform;
   if (!waveform) {
     position.textContent = "0.000s";
+    sample.textContent = "frame 0 / sample 0";
     phase.textContent = "phase";
     scrubber.value = "0";
     updateActivePhaseButtons(null);
@@ -364,7 +366,15 @@ function renderWaveformPosition() {
   }
 
   const activeRegion = activeWaveformRegion();
+  const sampleFrame = Math.max(
+    0,
+    Math.min(waveform.samples.length - 1, state.playheadFrame),
+  );
+  const sampleValue = waveform.samples[sampleFrame] || 0;
   position.textContent = formatSeconds(state.playheadFrame / waveform.sampleRate);
+  sample.textContent = `frame ${state.playheadFrame} / sample ${formatCompactNumber(
+    sampleValue,
+  )}`;
   phase.textContent = activeRegion ? activeRegion.name : "phase";
   scrubber.value = String(
     waveform.frames > 0 ? state.playheadFrame / waveform.frames : 0,
