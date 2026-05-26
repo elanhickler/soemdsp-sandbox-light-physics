@@ -400,6 +400,21 @@ def require_artifact_contract(payload: dict[str, object]) -> None:
         phase_report_count == len(phases),
         "phase report count did not match phase count",
     )
+    phase_names = {
+        str(phase.get("name"))
+        for phase in phases
+        if isinstance(phase, dict) and phase.get("name")
+    }
+    report_phases: set[str] = set()
+    for index, link in enumerate(links):
+        if link.get("kind") != "phase-report":
+            continue
+        phase = link.get("phase")
+        require(isinstance(phase, str) and phase, f"phase report {index} phase missing")
+        require(phase in phase_names, f"phase report {index} phase unknown")
+        require(phase not in report_phases, f"phase report {index} phase duplicate")
+        report_phases.add(phase)
+    require(report_phases == phase_names, "phase report phases did not match phases")
 
 
 def artifact_contract_fixture() -> dict[str, object]:
@@ -439,6 +454,7 @@ def artifact_contract_fixture() -> dict[str, object]:
                     "label": "Phase report",
                     "kind": "phase-report",
                     "path": "runtime_dsp_object_bound_wav_resync_demo_first_phase.txt",
+                    "phase": "first",
                 },
             ],
             "wav": {
@@ -509,6 +525,31 @@ def require_artifact_contract_negative_cases() -> None:
             },
         ),
         "audio artifact link count mismatch",
+    )
+    require_artifact_contract_failure(
+        "phase report phase missing",
+        lambda manifest: manifest["artifactLinks"][-1].pop("phase"),
+        "phase report 5 phase missing",
+    )
+    require_artifact_contract_failure(
+        "phase report phase unknown",
+        lambda manifest: manifest["artifactLinks"][-1].update({"phase": "other"}),
+        "phase report 5 phase unknown",
+    )
+    require_artifact_contract_failure(
+        "phase report phase duplicate",
+        lambda manifest: (
+            manifest["phases"].append({"name": "second"}),
+            manifest["artifactLinks"].append(
+                {
+                    "label": "Second phase report",
+                    "kind": "phase-report",
+                    "path": "runtime_dsp_object_bound_wav_resync_demo.second.txt",
+                    "phase": "first",
+                },
+            ),
+        ),
+        "phase report 6 phase duplicate",
     )
 
 
@@ -1148,7 +1189,13 @@ def require_waveform_seek_source_contract() -> None:
         'status.textContent = allOk ? "Verified" : "Check"',
         '["entry-point matches handoff", entryPointPath === handoff.entryPoint]',
         '["audio matches handoff", primaryAudioPath === handoff.primaryAudioArtifact]',
+        '["phase report coverage", phaseReportIssue === "" ? "match" : phaseReportIssue, "match"]',
+        '["phase report coverage", phaseReportIssue === ""]',
         '["phase audio measurements", phaseAudioIssues.length === 0]',
+        "function phaseReportCoverageIssue(manifest)",
+        'return "phase report phase missing"',
+        'return "phase report phase unknown"',
+        'return "phase report phase duplicate"',
         '["entry point path", entryPointMatches ? "match" : "mismatch", "match"]',
         '["audio path", primaryAudioMatches ? "match" : "mismatch", "match"]',
         'countArtifactKind(links, "entry-point") === 1',

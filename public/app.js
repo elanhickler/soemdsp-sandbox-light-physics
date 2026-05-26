@@ -1922,6 +1922,7 @@ function validateConsumerChecklist(manifest) {
   const links = manifest.artifactLinks || [];
   const phases = manifest.phases || [];
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
+  const phaseReportIssue = phaseReportCoverageIssue(manifest);
   const entryPointPath = findArtifactPath(links, "entry-point");
   const primaryAudioPath = findArtifactPath(links, "audio");
   const checks = [
@@ -1940,6 +1941,7 @@ function validateConsumerChecklist(manifest) {
     ["audio link", hasArtifactKind(links, "audio")],
     ["audio matches handoff", primaryAudioPath === handoff.primaryAudioArtifact],
     ["phase report", phases.length > 0],
+    ["phase report coverage", phaseReportIssue === ""],
     ["phase audio measurements", phaseAudioIssues.length === 0],
   ];
 
@@ -2037,6 +2039,7 @@ function renderArtifactCoverage(manifest) {
   const primaryAudioPath = findArtifactPath(links, "audio");
   const entryPointMatches = entryPointPath === handoff.entryPoint;
   const primaryAudioMatches = primaryAudioPath === handoff.primaryAudioArtifact;
+  const phaseReportIssue = phaseReportCoverageIssue(manifest);
   const rows = [
     ["total links", String(links.length)],
     ["missing paths", String(missingPathCount), 0],
@@ -2049,6 +2052,7 @@ function renderArtifactCoverage(manifest) {
     ["text summary", String(countArtifactKind(links, "text-summary")), 1],
     ["wav report", String(countArtifactKind(links, "wav-report")), 1],
     ["phase reports", String(phaseReportCount), phases.length],
+    ["phase report coverage", phaseReportIssue === "" ? "match" : phaseReportIssue, "match"],
   ];
   const ok =
     links.length > 0 &&
@@ -2060,7 +2064,8 @@ function renderArtifactCoverage(manifest) {
     countArtifactKind(links, "manifest") === 1 &&
     countArtifactKind(links, "text-summary") === 1 &&
     countArtifactKind(links, "wav-report") === 1 &&
-    phaseReportCount === phases.length;
+    phaseReportCount === phases.length &&
+    phaseReportIssue === "";
 
   setStatus("artifactCoverageStatus", ok ? "Complete" : "Check", ok);
   renderKeyValue(document.getElementById("artifactCoverage"), rows);
@@ -2397,9 +2402,56 @@ function manifestShapeError(payload) {
     return "phases missing";
   }
 
+  const phaseReportIssue = phaseReportCoverageIssue(manifest);
+  if (phaseReportIssue) {
+    return phaseReportIssue;
+  }
+
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
   if (phaseAudioIssues.length) {
     return phaseAudioIssues[0];
+  }
+
+  return "";
+}
+
+function phaseReportCoverageIssue(manifest) {
+  const phases = Array.isArray(manifest?.phases) ? manifest.phases : [];
+  const links = Array.isArray(manifest?.artifactLinks) ? manifest.artifactLinks : [];
+  const phaseReports = links.filter(
+    (link) => link?.kind === "phase-report" && Boolean(link.path),
+  );
+
+  if (phaseReports.length !== phases.length) {
+    return "phase report count mismatch";
+  }
+
+  const phaseNames = new Set();
+  for (const phase of phases) {
+    if (typeof phase?.name !== "string" || !phase.name) {
+      return "phase name missing";
+    }
+    phaseNames.add(phase.name);
+  }
+
+  const reportPhases = new Set();
+  for (const link of phaseReports) {
+    if (typeof link.phase !== "string" || !link.phase) {
+      return "phase report phase missing";
+    }
+    if (!phaseNames.has(link.phase)) {
+      return "phase report phase unknown";
+    }
+    if (reportPhases.has(link.phase)) {
+      return "phase report phase duplicate";
+    }
+    reportPhases.add(link.phase);
+  }
+
+  for (const name of phaseNames) {
+    if (!reportPhases.has(name)) {
+      return "phase report phase missing";
+    }
   }
 
   return "";
