@@ -3034,6 +3034,30 @@ function renderSandboxContract(manifest) {
   setStatus("sandboxContractStatus", ok ? "Bounded" : "Check", ok);
 }
 
+function renderUnavailableSandboxContract() {
+  const list = document.getElementById("sandboxContract");
+  const rows = [
+    ["check", "sandbox handoff"],
+    ["check", "read-only boundary"],
+    ["check", "caller-owned processing order"],
+  ];
+
+  list.replaceChildren();
+  for (const [kind, label] of rows) {
+    const item = document.createElement("div");
+    item.className = "contract-row warn-row";
+
+    const marker = document.createElement("strong");
+    marker.textContent = kind;
+
+    const text = document.createElement("span");
+    text.textContent = label;
+
+    item.append(marker, text);
+    list.append(item);
+  }
+}
+
 function renderArtifactCoverage(manifest) {
   const links = manifest.artifactLinks || [];
   const phases = manifest.phases || [];
@@ -3728,7 +3752,7 @@ function renderError(message, details = {}) {
 
   clearElement("producerProof");
   renderUnavailableHandsOnReadiness();
-  clearElement("sandboxContract");
+  renderUnavailableSandboxContract();
   clearElement("parameterSummary");
   clearElement("parameterTimeline");
   renderReportControls();
