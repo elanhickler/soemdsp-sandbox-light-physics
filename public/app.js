@@ -247,6 +247,12 @@ function probeSourceText() {
   return state.waveformProbeSource ? `probe ${state.waveformProbeSource}` : "probe";
 }
 
+function formatProbeFrame(frame, waveform, region = waveformRegionAtFrame(frame)) {
+  return `${formatSeconds(frame / waveform.sampleRate)} / frame ${frame} / ${
+    region?.name || "phase"
+  }`;
+}
+
 function formatPhaseRange(span, sampleRate) {
   if (!sampleRate) {
     return "unavailable";
@@ -767,9 +773,9 @@ function renderLevelEnvelopeProbe() {
   const entry = levelEnvelopeWindowAtFrame(frame);
   const region = waveformRegionAtFrame(frame);
   probe.textContent = entry
-    ? `${probeSourceText()} ${formatSeconds(frame / waveform.sampleRate)} / frame ${frame} / peak ${formatCompactNumber(
+    ? `${probeSourceText()} ${formatProbeFrame(frame, waveform, region)} / peak ${formatCompactNumber(
         entry.peak,
-      )} / rms ${formatCompactNumber(entry.rms)} / ${region?.name || "phase"}`
+      )} / rms ${formatCompactNumber(entry.rms)}`
     : "probe";
 }
 
@@ -836,9 +842,7 @@ function renderPhaseAudioStatsProbe() {
   const frame = clampFrame(state.waveformProbeFrame, waveform);
   const region = waveformRegionAtFrame(frame);
   probe.textContent = region
-    ? `${probeSourceText()} ${formatSeconds(
-        frame / waveform.sampleRate,
-      )} / frame ${frame} / ${region.name}`
+    ? `${probeSourceText()} ${formatProbeFrame(frame, waveform, region)}`
     : "probe";
   updatePhaseProbeTargets();
 }
@@ -1326,7 +1330,7 @@ function renderSignalPlotProbe() {
     state.signalPlotProbe.x,
   )} / y ${formatCompactNumber(state.signalPlotProbe.y)}`;
   probe.textContent = nearest
-    ? `probe frame ${nearest.frame} / ${formatSeconds(nearest.seconds)} / ${nearest.phase} / ${pointText}`
+    ? `probe ${formatProbeFrame(nearest.frame, state.waveform)} / ${pointText}`
     : `probe ${pointText}`;
   source.textContent = nearest
     ? `${probeSourceText()} / near frame ${nearest.frame} / ${formatSeconds(
@@ -2581,9 +2585,9 @@ function renderParameterTimelineProbe() {
   const region = waveformRegionAtFrame(frame);
   const frequency = activeParameterValue("frequency", region);
   const amplitude = activeParameterValue("amplitude", region);
-  probe.textContent = `${probeSourceText()} ${formatSeconds(frame / waveform.sampleRate)} / frame ${frame} / ${
-    region?.name || "phase"
-  } / freq ${frequency === null ? "missing" : `${formatCompactNumber(frequency)} Hz`} / amp ${
+  probe.textContent = `${probeSourceText()} ${formatProbeFrame(frame, waveform, region)} / freq ${
+    frequency === null ? "missing" : `${formatCompactNumber(frequency)} Hz`
+  } / amp ${
     amplitude === null ? "missing" : formatCompactNumber(amplitude)
   }`;
   updateParameterTimelinePreview(region);
@@ -3233,9 +3237,7 @@ function renderPhaseProbe() {
   const frame = clampFrame(state.waveformProbeFrame, waveform);
   const region = waveformRegionAtFrame(frame);
   probe.textContent = region
-    ? `${probeSourceText()} ${formatSeconds(
-        frame / waveform.sampleRate,
-      )} / frame ${frame} / ${region.name}`
+    ? `${probeSourceText()} ${formatProbeFrame(frame, waveform, region)}`
     : "probe";
   updatePhaseProbeTargets();
 }
