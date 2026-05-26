@@ -1160,6 +1160,7 @@ function renderWaveformPosition() {
     phaseRange.textContent = "range";
     scrubber.value = "0";
     renderCurrentParameters(null);
+    updateParameterTimelinePlayhead(null);
     updateActivePhaseButtons(null);
     return;
   }
@@ -1177,6 +1178,7 @@ function renderWaveformPosition() {
   phase.textContent = activeRegion ? activeRegion.name : "phase";
   phaseRange.textContent = formatRegionRange(activeRegion, waveform.sampleRate);
   renderCurrentParameters(activeRegion);
+  updateParameterTimelinePlayhead(activeRegion);
   scrubber.value = String(
     waveform.frames > 0 ? state.playheadFrame / waveform.frames : 0,
   );
@@ -1499,6 +1501,93 @@ function renderParameterSummaryCards(pairs) {
     item.append(title, body);
     container.append(item);
   }
+}
+
+function parameterTimelineRows(manifest) {
+  const resync = manifest?.parameterResync || {};
+  return Object.entries(resync)
+    .filter(([_name, values]) => values && typeof values === "object")
+    .map(([name, values]) => [name, values]);
+}
+
+function updateParameterTimelinePlayhead(region) {
+  const timeline = document.getElementById("parameterTimeline");
+  const phase = document.getElementById("parameterTimelinePhase");
+  const marker = document.getElementById("parameterTimelinePlayhead");
+  const waveform = state.waveform;
+
+  phase.textContent = region ? region.name : "phase";
+  for (const segment of timeline.querySelectorAll(".parameter-segment")) {
+    segment.classList.toggle("active", segment.dataset.phaseName === region?.name);
+  }
+
+  if (!marker || !waveform || waveform.frames <= 0) {
+    return;
+  }
+
+  const labelWidth = timeline.querySelector(".parameter-track-label")?.offsetWidth || 0;
+  const trackGap = 12;
+  const timelinePadding = 12;
+  const railLeft = timelinePadding + labelWidth + trackGap;
+  const railWidth = Math.max(1, timeline.clientWidth - railLeft - timelinePadding);
+  const ratio = Math.max(0, Math.min(1, state.playheadFrame / waveform.frames));
+  marker.style.left = `${railLeft + ratio * railWidth}px`;
+}
+
+function renderParameterTimeline(manifest) {
+  const timeline = document.getElementById("parameterTimeline");
+  const status = document.getElementById("parameterTimelineStatus");
+  timeline.replaceChildren();
+
+  const phases = manifest?.phases || [];
+  const totalFrames = Number(manifest?.wav?.frames || 0);
+  const rows = parameterTimelineRows(manifest);
+  if (!phases.length || totalFrames <= 0 || !rows.length) {
+    status.textContent = "Check";
+    status.className = "pill warn";
+    updateParameterTimelinePlayhead(null);
+    return;
+  }
+
+  for (const [name, values] of rows) {
+    const track = document.createElement("div");
+    track.className = "parameter-track";
+
+    const label = document.createElement("div");
+    label.className = "parameter-track-label";
+    label.textContent = name;
+
+    const rail = document.createElement("div");
+    rail.className = "parameter-track-rail";
+
+    for (const phase of phases) {
+      const frames = Number(phase.samplesProcessed || 0);
+      const segment = document.createElement("div");
+      segment.className = "parameter-segment";
+      segment.dataset.phaseName = phase.name || "";
+      segment.style.flexBasis = `${Math.max(1, (frames / totalFrames) * 100)}%`;
+
+      const phaseLabel = document.createElement("span");
+      phaseLabel.textContent = phase.name || "phase";
+
+      const value = document.createElement("strong");
+      value.textContent = manifestValueText(values[phase.name]) || "missing";
+
+      segment.append(phaseLabel, value);
+      rail.append(segment);
+    }
+
+    track.append(label, rail);
+    timeline.append(track);
+  }
+
+  const marker = document.createElement("div");
+  marker.id = "parameterTimelinePlayhead";
+  marker.className = "parameter-timeline-marker";
+  timeline.append(marker);
+  status.textContent = `${rows.length} params`;
+  status.className = "pill good";
+  updateParameterTimelinePlayhead(activeWaveformRegion());
 }
 
 function parameterResyncPairs(manifest) {
@@ -1983,6 +2072,7 @@ function render(response) {
     ]),
   );
   renderProducerProof(manifest);
+  renderParameterTimeline(manifest);
   renderPhaseCoverage(manifest.phases || [], manifest.wav);
   renderPhases(manifest.phases || [], manifest.wav);
   renderChecklist(checklist);
@@ -2059,6 +2149,8 @@ function renderError(message, details = {}) {
   setStatus("checklistStatus", "Check", false);
   setStatus("producerStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
+  setStatus("parameterTimelineStatus", "Check", false);
+  setText("parameterTimelinePhase", "phase");
   setStatus("waveformStatus", "Check", false);
   setStatus("levelEnvelopeStatus", "Check", false);
   setText("levelEnvelopePeak", "peak 0");
@@ -2100,6 +2192,7 @@ function renderError(message, details = {}) {
 
   clearElement("producerProof");
   clearElement("parameterSummary");
+  clearElement("parameterTimeline");
   renderReportControls();
   renderActiveReport();
   renderWaveformPhaseControls();
@@ -2190,6 +2283,7 @@ window.addEventListener("resize", () => {
   drawWaveform();
   drawLevelEnvelope();
   drawSignalPlot();
+  updateParameterTimelinePlayhead(activeWaveformRegion());
 });
 
 loadSignalPlotSettings();

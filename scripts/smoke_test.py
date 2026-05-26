@@ -91,6 +91,9 @@ REQUIRED_SHELL_IDS = {
     "manifestStatus",
     "parameterSummary",
     "parameterSummaryStatus",
+    "parameterTimeline",
+    "parameterTimelinePhase",
+    "parameterTimelineStatus",
     "phaseCoverage",
     "phaseCoverageStatus",
     "phaseList",
@@ -698,6 +701,11 @@ def require_waveform_seek_source_contract() -> None:
         'frequencyValue === null ? "freq" : `freq ${formatCompactNumber(frequencyValue)} Hz`',
         'amplitudeValue === null ? "amp" : `amp ${formatCompactNumber(amplitudeValue)}`',
         'status.textContent = ok ? "params synced" : "params missing"',
+        "function parameterTimelineRows(manifest)",
+        "function renderParameterTimeline(manifest)",
+        "function updateParameterTimelinePlayhead(region)",
+        'marker.id = "parameterTimelinePlayhead"',
+        'segment.dataset.phaseName = phase.name || ""',
         "function buildLevelEnvelope(waveform)",
         "function drawLevelEnvelope()",
         "function renderLevelEnvelope()",
@@ -781,6 +789,9 @@ def require_waveform_seek_source_contract() -> None:
         "user-select: none;",
         ".waveform.dragging",
         ".control-group",
+        ".parameter-timeline",
+        ".parameter-segment.active",
+        ".parameter-timeline-marker",
     ]:
         require(snippet in style_source, f"waveform drag style missing {snippet}")
     require(
