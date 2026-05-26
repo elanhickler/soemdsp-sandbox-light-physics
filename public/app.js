@@ -1420,7 +1420,7 @@ function renderSignalPlotPoint() {
   const point = document.getElementById("signalPlotPoint");
   const waveform = state.waveform;
   if (!waveform) {
-    point.textContent = "x 0 / y 0";
+    point.textContent = "frame 0 / phase none / x 0 / y 0";
     return;
   }
 
@@ -1432,7 +1432,8 @@ function renderSignalPlotPoint() {
   );
   const x = waveform.samples[pointFrame] || 0;
   const y = waveform.samples[pointFrame + lagFrames] || 0;
-  point.textContent = `x ${formatCompactNumber(x)} / y ${formatCompactNumber(y)}`;
+  const region = waveformRegionAtFrame(pointFrame);
+  point.textContent = `frame ${pointFrame} / ${formatSeconds(pointFrame / waveform.sampleRate)} / ${region?.name || "phase"} / x ${formatCompactNumber(x)} / y ${formatCompactNumber(y)}`;
 }
 
 function renderSignalPlotControls() {
@@ -3667,7 +3668,7 @@ function renderError(message, details = {}) {
   setText("signalPlotModeSummary", "all / trace / x1");
   setText("signalPlotWindowSummary", "window full");
   setText("signalPlotLagSummary", "lag 1 ms");
-  setText("signalPlotPoint", "x 0 / y 0");
+  setText("signalPlotPoint", "frame 0 / phase none / x 0 / y 0");
   setText("signalPlotProbe", "probe");
   setText("signalPlotProbeSource", "near frame");
   setStatus("phaseCoverageStatus", "Check", false);

@@ -1568,7 +1568,7 @@ def require_waveform_seek_source_contract() -> None:
         '["scale", `x${state.signalPlotScale}`]',
         '["window", signalPlotWindowName(waveform, drawableFrames)]',
         '["window size", `${state.signalPlotWindowMs} ms`]',
-        "x ${formatCompactNumber(x)} / y ${formatCompactNumber(y)}",
+        "frame ${pointFrame} / ${formatSeconds(pointFrame / waveform.sampleRate)} / ${region?.name || \"phase\"} / x ${formatCompactNumber(x)} / y ${formatCompactNumber(y)}",
         '["x", "sample[n]"]',
         '["y", "sample[n + lag]"]',
         '["focus peak", formatCompactNumber(focusStats.peak)]',
