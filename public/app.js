@@ -1592,6 +1592,13 @@ function renderSignalPlotPoint() {
   point.textContent = `frame ${pointFrame} / ${formatSeconds(pointFrame / waveform.sampleRate)} / ${region?.name || "phase"} / x ${formatCompactNumber(x)} / y ${formatCompactNumber(y)}`;
 }
 
+function labelSignalPlotButton(button, label, active = false) {
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-pressed", String(active));
+  button.title = label;
+  button.classList.toggle("active", active);
+}
+
 function renderSignalPlotControls() {
   const container = document.getElementById("signalPlotControls");
   container.replaceChildren();
@@ -1623,9 +1630,12 @@ function renderSignalPlotControls() {
   allButton.type = "button";
   allButton.className = "phase-button";
   allButton.dataset.signalFocus = "all";
-  allButton.setAttribute("aria-label", "Signal plot focus all");
   allButton.textContent = "all";
-  allButton.classList.toggle("active", state.signalPhaseFocusIndex === null);
+  labelSignalPlotButton(
+    allButton,
+    "Signal plot focus all",
+    state.signalPhaseFocusIndex === null,
+  );
   allButton.addEventListener("click", () => {
     state.signalPhaseFocusIndex = null;
     state.signalPhaseFocusName = "all";
@@ -1639,9 +1649,12 @@ function renderSignalPlotControls() {
     button.type = "button";
     button.className = "phase-button";
     button.dataset.signalFocus = region.name;
-    button.setAttribute("aria-label", `Signal plot focus ${region.name}`);
     button.textContent = region.name;
-    button.classList.toggle("active", index === state.signalPhaseFocusIndex);
+    labelSignalPlotButton(
+      button,
+      `Signal plot focus ${region.name}`,
+      index === state.signalPhaseFocusIndex,
+    );
     button.addEventListener("click", () => {
       state.signalPhaseFocusIndex = index;
       state.signalPhaseFocusName = region.name;
@@ -1656,9 +1669,8 @@ function renderSignalPlotControls() {
     button.type = "button";
     button.className = "phase-button";
     button.dataset.signalMode = mode;
-    button.setAttribute("aria-label", `Signal plot mode ${mode}`);
     button.textContent = mode;
-    button.classList.toggle("active", mode === state.signalPlotMode);
+    labelSignalPlotButton(button, `Signal plot mode ${mode}`, mode === state.signalPlotMode);
     button.addEventListener("click", () => {
       state.signalPlotMode = mode;
       saveSignalPlotSettings();
@@ -1672,9 +1684,12 @@ function renderSignalPlotControls() {
     button.type = "button";
     button.className = "phase-button";
     button.dataset.signalScale = String(scale);
-    button.setAttribute("aria-label", `Signal plot scale x${scale}`);
     button.textContent = `x${scale}`;
-    button.classList.toggle("active", scale === state.signalPlotScale);
+    labelSignalPlotButton(
+      button,
+      `Signal plot scale x${scale}`,
+      scale === state.signalPlotScale,
+    );
     button.addEventListener("click", () => {
       state.signalPlotScale = scale;
       saveSignalPlotSettings();
@@ -1688,9 +1703,12 @@ function renderSignalPlotControls() {
     button.type = "button";
     button.className = "phase-button";
     button.dataset.signalWindow = windowMode;
-    button.setAttribute("aria-label", `Signal plot window ${windowMode}`);
     button.textContent = windowMode;
-    button.classList.toggle("active", windowMode === state.signalPlotWindow);
+    labelSignalPlotButton(
+      button,
+      `Signal plot window ${windowMode}`,
+      windowMode === state.signalPlotWindow,
+    );
     button.addEventListener("click", () => {
       state.signalPlotWindow = windowMode;
       saveSignalPlotSettings();
@@ -1704,9 +1722,12 @@ function renderSignalPlotControls() {
     button.type = "button";
     button.className = "phase-button";
     button.dataset.signalWindowMs = String(windowMs);
-    button.setAttribute("aria-label", `Signal plot window size ${windowMs} ms`);
     button.textContent = `${windowMs} ms`;
-    button.classList.toggle("active", windowMs === state.signalPlotWindowMs);
+    labelSignalPlotButton(
+      button,
+      `Signal plot window size ${windowMs} ms`,
+      windowMs === state.signalPlotWindowMs,
+    );
     button.addEventListener("click", () => {
       state.signalPlotWindowMs = windowMs;
       saveSignalPlotSettings();
@@ -1720,9 +1741,8 @@ function renderSignalPlotControls() {
     button.type = "button";
     button.className = "phase-button";
     button.dataset.signalLagMs = String(lagMs);
-    button.setAttribute("aria-label", `Signal plot lag ${lagMs} ms`);
     button.textContent = `${lagMs} ms`;
-    button.classList.toggle("active", lagMs === state.signalLagMs);
+    labelSignalPlotButton(button, `Signal plot lag ${lagMs} ms`, lagMs === state.signalLagMs);
     button.addEventListener("click", () => {
       state.signalLagMs = lagMs;
       saveSignalPlotSettings();
@@ -1735,8 +1755,8 @@ function renderSignalPlotControls() {
   resetButton.type = "button";
   resetButton.className = "phase-button";
   resetButton.dataset.signalReset = "settings";
-  resetButton.setAttribute("aria-label", "Signal plot reset settings");
   resetButton.textContent = "reset";
+  labelSignalPlotButton(resetButton, "Signal plot reset settings");
   resetButton.addEventListener("click", () => {
     resetSignalPlotSettings();
     renderSignalPlot();
@@ -3395,6 +3415,24 @@ function artifactRowsLabeled() {
   );
 }
 
+function signalPlotControlsLabeled() {
+  const groups = [...document.querySelectorAll("#signalPlotControls .control-group")];
+  const buttons = [...document.querySelectorAll("#signalPlotControls button")];
+  return (
+    groups.length === 7 &&
+    groups.every((group) => (group.getAttribute("aria-label") || "").startsWith("Signal plot ")) &&
+    buttons.length > 0 &&
+    buttons.every((button) => {
+      const label = button.getAttribute("aria-label") || "";
+      return (
+        label.startsWith("Signal plot ") &&
+        button.title === label &&
+        ["true", "false"].includes(button.getAttribute("aria-pressed"))
+      );
+    })
+  );
+}
+
 function probePillLabeled(id) {
   const probe = document.getElementById(id);
   return (
@@ -3476,6 +3514,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["signal plot probe", waveformReady && Boolean(document.getElementById("signalPlotProbe"))],
     ["signal plot source probe", waveformReady && Boolean(document.getElementById("signalPlotProbeSource"))],
     ["signal plot probe labels", waveformReady && signalPlotProbeLabeled()],
+    ["signal plot control labels", waveformReady && signalPlotControlsLabeled()],
     ["waveform-to-signal probe", waveformReady && Boolean(signalPlotProbeAtFrame(0))],
     ["signal-to-waveform probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["inspection cursor", waveformReady && Boolean(document.getElementById("inspectionCursor"))],
