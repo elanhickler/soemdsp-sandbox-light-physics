@@ -4,6 +4,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -75,9 +76,8 @@ def wait_for_server(base_url: str) -> None:
     raise RuntimeError(f"sandbox server did not become ready: {last_status}")
 
 
-def run_smoke(port: int, manifest: Path) -> None:
-    base_url = f"http://127.0.0.1:{port}"
-    process = subprocess.Popen(
+def start_server(port: int, manifest: Path) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(
         [
             sys.executable,
             str(ROOT / "server.py"),
@@ -90,6 +90,20 @@ def run_smoke(port: int, manifest: Path) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def stop_server(process: subprocess.Popen[bytes]) -> None:
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
+def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
+    base_url = f"http://127.0.0.1:{port}"
+    process = start_server(port, manifest)
 
     try:
         wait_for_server(base_url)
@@ -127,12 +141,52 @@ def run_smoke(port: int, manifest: Path) -> None:
         require(manifest_head.status == 405, "manifest HEAD did not return 405")
         require_no_store(manifest_head, "manifest HEAD")
     finally:
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+        stop_server(process)
+
+
+def run_manifest_error_smoke(port: int) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        fixture_root = Path(directory)
+        missing_manifest = fixture_root / "missing_manifest.json"
+        invalid_manifest = fixture_root / "invalid_manifest.json"
+        invalid_manifest.write_text('{ "ok": true, ', encoding="utf-8")
+
+        cases = [
+            (missing_manifest, 404, "manifest not found", ""),
+            (
+                invalid_manifest,
+                500,
+                "manifest JSON parse failed",
+                "Expecting property name",
+            ),
+        ]
+
+        for index, (path, status, error, detail) in enumerate(cases):
+            case_port = port + index
+            base_url = f"http://127.0.0.1:{case_port}"
+            process = start_server(case_port, path)
+            try:
+                wait_for_server(base_url)
+                response = request(f"{base_url}/api/manifest")
+                require(response.status == status, f"{error} status mismatch")
+                require_no_store(response, error)
+                payload = json.loads(response.body.decode("utf-8"))
+                require(payload.get("ok") is False, f"{error} payload was not false")
+                require(payload.get("error") == error, f"{error} payload mismatch")
+                require(payload.get("path") == str(path.resolve()), f"{error} path missing")
+                require(
+                    payload.get("artifactRoot") == str(fixture_root.resolve()),
+                    f"{error} artifact root mismatch",
+                )
+                if detail:
+                    require(detail in payload.get("message", ""), f"{error} detail missing")
+            finally:
+                stop_server(process)
+
+
+def run_smoke(port: int, manifest: Path) -> None:
+    run_valid_manifest_smoke(port, manifest)
+    run_manifest_error_smoke(port + 1)
 
 
 def main() -> None:
