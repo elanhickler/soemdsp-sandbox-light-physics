@@ -1276,6 +1276,7 @@ def require_waveform_seek_source_contract() -> None:
         "function setInspectionCursorSeekSync(match)",
         'match === "aligned"',
         'match === "diverged"',
+        '"seek drift"',
         '"seek sync idle"',
         'sync.className = `pill inspection-seek-sync ${match}`',
         "setInspectionCursorSeek(state.lastSeekSource)",
