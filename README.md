@@ -11,13 +11,13 @@ It also applies the current read-only consumer checklist in the browser, so unsu
 Generate the current artifact packet from `soemdsp` first:
 
 ```powershell
-C:\Users\argit\Desktop\soemdsp\build\examples\Debug\runtime_dsp_object_bound_wav_resync_demo.exe
+C:\Users\argit\Documents\_PROGRAMMING\soemdsp\build\examples\Debug\runtime_dsp_object_bound_wav_resync_demo.exe
 ```
 
 Start the sandbox:
 
 ```powershell
-python C:\Users\argit\Desktop\soemdsp-sandbox\server.py
+python C:\Users\argit\Documents\_PROGRAMMING\soemdsp-sandbox\server.py
 ```
 
 Open:
@@ -31,7 +31,7 @@ http://127.0.0.1:8765
 After generating the current `soemdsp` artifact packet, run:
 
 ```powershell
-python C:\Users\argit\Desktop\soemdsp-sandbox\scripts\smoke_test.py
+python C:\Users\argit\Documents\_PROGRAMMING\soemdsp-sandbox\scripts\smoke_test.py
 ```
 
 The smoke test starts isolated local servers on automatic temporary ports, checks
