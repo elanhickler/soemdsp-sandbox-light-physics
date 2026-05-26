@@ -272,7 +272,7 @@ function renderWaveformPhaseControls() {
     button.dataset.phaseIndex = String(index);
     button.textContent = region.name;
     button.addEventListener("click", () => {
-      setPlayheadFrame(region.startFrame, true);
+      setPlayheadFrame(region.startFrame);
     });
     container.append(button);
   }
@@ -293,7 +293,7 @@ function activeWaveformRegion() {
   );
 }
 
-function setPlayheadFrame(frame, syncAudio) {
+function setPlayheadFrame(frame) {
   const waveform = state.waveform;
   if (!waveform) {
     state.playheadFrame = 0;
@@ -301,10 +301,6 @@ function setPlayheadFrame(frame, syncAudio) {
   }
 
   state.playheadFrame = Math.min(waveform.frames, Math.max(0, frame));
-  if (syncAudio) {
-    document.getElementById("audioPlayer").currentTime =
-      state.playheadFrame / waveform.sampleRate;
-  }
   renderWaveformPosition();
   drawWaveform();
 }
@@ -326,7 +322,7 @@ async function renderWaveform(path) {
       state.response?.manifest?.phases || [],
       state.waveform.frames,
     );
-    setPlayheadFrame(0, false);
+    setPlayheadFrame(0);
     drawWaveform();
     renderWaveformPhaseControls();
     renderKeyValue(meta, [
@@ -384,7 +380,7 @@ function syncWaveformToAudio() {
     return;
   }
 
-  setPlayheadFrame(Math.round(audio.currentTime * state.waveform.sampleRate), false);
+  setPlayheadFrame(Math.round(audio.currentTime * state.waveform.sampleRate));
 }
 
 function seekWaveform(event) {
@@ -396,7 +392,7 @@ function seekWaveform(event) {
   const canvas = document.getElementById("waveformCanvas");
   const rect = canvas.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-  setPlayheadFrame(Math.round(ratio * waveform.frames), true);
+  setPlayheadFrame(Math.round(ratio * waveform.frames));
 }
 
 function scrubWaveform(event) {
@@ -406,7 +402,7 @@ function scrubWaveform(event) {
   }
 
   const ratio = Number(event.currentTarget.value);
-  setPlayheadFrame(Math.round(ratio * waveform.frames), true);
+  setPlayheadFrame(Math.round(ratio * waveform.frames));
 }
 
 function hasArtifactKind(links, kind) {
