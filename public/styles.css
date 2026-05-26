@@ -202,6 +202,12 @@ audio {
   border-radius: 6px;
   background: #14171a;
   cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+.waveform.dragging {
+  cursor: grabbing;
 }
 
 .parameter-summary {

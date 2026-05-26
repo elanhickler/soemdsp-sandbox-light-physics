@@ -500,6 +500,7 @@ function seekWaveform(event) {
 
 function beginWaveformDrag(event) {
   state.waveformPointerActive = true;
+  event.currentTarget.classList.add("dragging");
   event.currentTarget.setPointerCapture(event.pointerId);
   seekWaveformAtClientX(event.clientX);
 }
@@ -514,6 +515,7 @@ function dragWaveform(event) {
 
 function endWaveformDrag(event) {
   state.waveformPointerActive = false;
+  event.currentTarget.classList.remove("dragging");
   if (event.currentTarget.hasPointerCapture(event.pointerId)) {
     event.currentTarget.releasePointerCapture(event.pointerId);
   }

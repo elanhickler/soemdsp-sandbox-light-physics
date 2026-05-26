@@ -609,6 +609,7 @@ def require_static_assets(base_url: str) -> None:
 
 def require_waveform_seek_source_contract() -> None:
     app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
+    style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     require(
         "function seekPrimaryAudioToFrame(frame)" in app_source,
         "waveform seek helper missing",
@@ -626,6 +627,17 @@ def require_waveform_seek_source_contract() -> None:
         '.addEventListener("pointerup", endWaveformDrag)',
     ]:
         require(snippet in app_source, f"waveform drag source missing {snippet}")
+    for snippet in [
+        'classList.add("dragging")',
+        'classList.remove("dragging")',
+    ]:
+        require(snippet in app_source, f"waveform drag state missing {snippet}")
+    for snippet in [
+        "touch-action: none;",
+        "user-select: none;",
+        ".waveform.dragging",
+    ]:
+        require(snippet in style_source, f"waveform drag style missing {snippet}")
     require(
         "setFollowAudio(false, false);" not in app_source,
         "waveform controls still force free-view mode",
