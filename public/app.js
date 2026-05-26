@@ -1885,6 +1885,41 @@ function renderProducerProof(manifest) {
   renderKeyValue(document.getElementById("producerProof"), rows);
 }
 
+function renderSandboxContract(manifest) {
+  const status = document.getElementById("sandboxContractStatus");
+  const list = document.getElementById("sandboxContract");
+  const handoff = manifest.sandboxHandoff || {};
+  const rows = [
+    ["allowed", "display manifest artifacts", Boolean(handoff.entryPoint)],
+    ["allowed", "play browser-native WAV", Boolean(handoff.primaryAudioArtifact)],
+    ["allowed", "inspect decoded WAV data", handoff.inspectionMode === expectedInspectionMode],
+    ["forbidden", "own DSP objects", handoff.circuitOwnsDspObjects === false],
+    ["forbidden", "make DSP know Circuit", handoff.dspObjectsKnowCircuit === false],
+    ["forbidden", "own scheduler", handoff.ownsScheduler === false],
+    ["forbidden", "own audio engine", handoff.ownsAudioEngine === false],
+    ["forbidden", "serialize patches", handoff.serializesPatch === false],
+    ["required", "caller owns processing order", handoff.callerOwnsProcessingOrder === true],
+  ];
+  const ok = rows.every(([_kind, _label, rowOk]) => rowOk);
+
+  list.replaceChildren();
+  for (const [kind, label, rowOk] of rows) {
+    const item = document.createElement("div");
+    item.className = rowOk ? "contract-row" : "contract-row warn-row";
+
+    const marker = document.createElement("strong");
+    marker.textContent = rowOk ? kind : "check";
+
+    const text = document.createElement("span");
+    text.textContent = label;
+
+    item.append(marker, text);
+    list.append(item);
+  }
+
+  setStatus("sandboxContractStatus", ok ? "Bounded" : "Check", ok);
+}
+
 function renderArtifactCoverage(links, phases) {
   const phaseReportCount = countArtifactKind(links, "phase-report");
   const missingPathCount = links.filter((link) => !link.path).length;
@@ -2166,6 +2201,7 @@ function render(response) {
     ]),
   );
   renderProducerProof(manifest);
+  renderSandboxContract(manifest);
   renderParameterTimeline(manifest);
   renderPhaseCoverage(manifest.phases || [], manifest.wav);
   renderPhases(manifest.phases || [], manifest.wav);
@@ -2242,6 +2278,7 @@ function renderError(message, details = {}) {
   setText("frameCount", "0");
   setStatus("checklistStatus", "Check", false);
   setStatus("producerStatus", "Check", false);
+  setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
   setText("parameterTimelinePhase", "phase");
@@ -2286,6 +2323,7 @@ function renderError(message, details = {}) {
   renderAudioPosition();
 
   clearElement("producerProof");
+  clearElement("sandboxContract");
   clearElement("parameterSummary");
   clearElement("parameterTimeline");
   renderReportControls();

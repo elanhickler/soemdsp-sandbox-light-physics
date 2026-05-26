@@ -106,6 +106,8 @@ REQUIRED_SHELL_IDS = {
     "reportControls",
     "reportStatus",
     "reportViewer",
+    "sandboxContract",
+    "sandboxContractStatus",
     "sourceDetail",
     "sourceError",
     "sourceStatus",
@@ -701,6 +703,10 @@ def require_waveform_seek_source_contract() -> None:
         "function analyzeSampleRange(samples, startFrame, endFrame)",
         "function activeParameterValue(name, region)",
         "function renderCurrentParameters(region)",
+        "function renderSandboxContract(manifest)",
+        '["forbidden", "own DSP objects", handoff.circuitOwnsDspObjects === false]',
+        '["forbidden", "own scheduler", handoff.ownsScheduler === false]',
+        '["required", "caller owns processing order", handoff.callerOwnsProcessingOrder === true]',
         'frequencyValue === null ? "freq" : `freq ${formatCompactNumber(frequencyValue)} Hz`',
         'amplitudeValue === null ? "amp" : `amp ${formatCompactNumber(amplitudeValue)}`',
         'status.textContent = ok ? "params synced" : "params missing"',
@@ -801,6 +807,8 @@ def require_waveform_seek_source_contract() -> None:
         ".parameter-timeline-marker",
         ".phase-stat-list",
         ".phase-stat.active",
+        ".contract-list",
+        ".contract-row",
     ]:
         require(snippet in style_source, f"waveform drag style missing {snippet}")
     require(
