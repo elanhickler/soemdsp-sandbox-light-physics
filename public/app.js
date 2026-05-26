@@ -602,6 +602,60 @@ function drawLevelEnvelope() {
   context.moveTo(playheadX, 0);
   context.lineTo(playheadX, height);
   context.stroke();
+
+  if (state.waveformProbeFrame !== null) {
+    const probeFrame = clampFrame(state.waveformProbeFrame, waveform);
+    const probeRatio = waveform.frames > 0 ? probeFrame / waveform.frames : 0;
+    const probeX = Math.max(0, Math.min(width, probeRatio * width));
+    const probeWindow = levelEnvelopeWindowAtFrame(probeFrame);
+    const probeY = probeWindow
+      ? bottom - Math.min(1, probeWindow.rms) * graphHeight
+      : centerYForEnvelope(top, bottom);
+    context.strokeStyle = "#f6c96d";
+    context.lineWidth = Math.max(2, 2 * pixelRatio);
+    context.beginPath();
+    context.moveTo(probeX, 0);
+    context.lineTo(probeX, height);
+    context.stroke();
+    context.fillStyle = "#f6c96d";
+    context.beginPath();
+    context.arc(probeX, probeY, Math.max(4, 4 * pixelRatio), 0, Math.PI * 2);
+    context.fill();
+  }
+}
+
+function centerYForEnvelope(top, bottom) {
+  return top + (bottom - top) / 2;
+}
+
+function levelEnvelopeWindowAtFrame(frame) {
+  const windows = state.waveform?.envelope?.windows || [];
+  if (windows.length === 0) {
+    return null;
+  }
+
+  return (
+    windows.find((entry) => frame >= entry.startFrame && frame < entry.endFrame) ||
+    windows.at(-1)
+  );
+}
+
+function renderLevelEnvelopeProbe() {
+  const probe = document.getElementById("levelEnvelopeProbe");
+  const waveform = state.waveform;
+  if (!waveform || state.waveformProbeFrame === null) {
+    probe.textContent = "probe";
+    return;
+  }
+
+  const frame = clampFrame(state.waveformProbeFrame, waveform);
+  const entry = levelEnvelopeWindowAtFrame(frame);
+  const region = waveformRegionAtFrame(frame);
+  probe.textContent = entry
+    ? `probe ${formatSeconds(frame / waveform.sampleRate)} / peak ${formatCompactNumber(
+        entry.peak,
+      )} / rms ${formatCompactNumber(entry.rms)} / ${region?.name || "phase"}`
+    : "probe";
 }
 
 function renderLevelEnvelope() {
@@ -615,6 +669,7 @@ function renderLevelEnvelope() {
   if (!waveform || !envelope) {
     peak.textContent = "peak 0";
     rms.textContent = "rms 0";
+    renderLevelEnvelopeProbe();
     status.textContent = "Check";
     status.className = "pill warn";
     meta.replaceChildren();
@@ -623,6 +678,7 @@ function renderLevelEnvelope() {
 
   peak.textContent = `peak ${formatCompactNumber(envelope.peak)}`;
   rms.textContent = `rms ${formatCompactNumber(envelope.rms)}`;
+  renderLevelEnvelopeProbe();
   renderKeyValue(meta, [
     ["window", `${formatCompactNumber(envelope.windowMs)} ms`],
     ["window frames", String(envelope.windowFrames)],
@@ -1091,6 +1147,8 @@ function probeSignalPlot(event) {
   renderSignalPlotProbe();
   drawWaveform();
   renderWaveformProbe();
+  drawLevelEnvelope();
+  renderLevelEnvelopeProbe();
 }
 
 function clearSignalPlotProbe() {
@@ -1100,6 +1158,8 @@ function clearSignalPlotProbe() {
   renderSignalPlotProbe();
   drawWaveform();
   renderWaveformProbe();
+  drawLevelEnvelope();
+  renderLevelEnvelopeProbe();
 }
 
 function renderSignalPlot() {
@@ -1706,12 +1766,16 @@ function seekWaveformAtClientX(clientX) {
 }
 
 function waveformFrameAtClientX(clientX) {
+  return waveformFrameAtClientXForCanvas(clientX, "waveformCanvas");
+}
+
+function waveformFrameAtClientXForCanvas(clientX, canvasId) {
   const waveform = state.waveform;
   if (!waveform) {
     return 0;
   }
 
-  const canvas = document.getElementById("waveformCanvas");
+  const canvas = document.getElementById(canvasId);
   const rect = canvas.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   return clampFrame(Math.round(ratio * waveform.frames), waveform);
@@ -1727,6 +1791,22 @@ function probeWaveformAtClientX(clientX) {
   renderWaveformProbe();
   drawSignalPlot();
   renderSignalPlotProbe();
+  drawLevelEnvelope();
+}
+
+function probeLevelEnvelopeAtClientX(clientX) {
+  if (!state.waveform) {
+    return;
+  }
+
+  state.waveformProbeFrame = waveformFrameAtClientXForCanvas(clientX, "levelEnvelopeCanvas");
+  state.signalPlotProbe = signalPlotProbeAtFrame(state.waveformProbeFrame);
+  renderWaveformProbe();
+  drawWaveform();
+  drawLevelEnvelope();
+  drawSignalPlot();
+  renderSignalPlotProbe();
+  renderLevelEnvelopeProbe();
 }
 
 function seekWaveform(event) {
@@ -1767,6 +1847,23 @@ function clearWaveformProbe() {
   state.waveformProbeFrame = null;
   state.signalPlotProbe = null;
   renderWaveformProbe();
+  drawSignalPlot();
+  renderSignalPlotProbe();
+  drawLevelEnvelope();
+  renderLevelEnvelopeProbe();
+}
+
+function clearLevelEnvelopeProbe() {
+  if (state.waveformPointerActive) {
+    return;
+  }
+
+  state.waveformProbeFrame = null;
+  state.signalPlotProbe = null;
+  renderWaveformProbe();
+  renderLevelEnvelopeProbe();
+  drawWaveform();
+  drawLevelEnvelope();
   drawSignalPlot();
   renderSignalPlotProbe();
 }
@@ -2282,6 +2379,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
     ["waveform hover probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
+    ["level envelope probe", waveformReady && Boolean(document.getElementById("levelEnvelopeProbe"))],
     ["follow/free view", Boolean(document.getElementById("followAudioButton"))],
     [
       "phase jump controls",
@@ -2931,6 +3029,7 @@ function renderError(message, details = {}) {
   setStatus("levelEnvelopeStatus", "Check", false);
   setText("levelEnvelopePeak", "peak 0");
   setText("levelEnvelopeRms", "rms 0");
+  setText("levelEnvelopeProbe", "probe");
   setStatus("currentParameterStatus", "Check", false);
   setText("currentFrequency", "freq");
   setText("currentAmplitude", "amp");
@@ -2980,6 +3079,7 @@ function renderError(message, details = {}) {
   renderWaveformPosition();
   clearElement("waveformMeta");
   clearElement("levelEnvelopeMeta");
+  renderLevelEnvelopeProbe();
   clearElement("phaseAudioStats");
   renderSignalPlotControls();
   clearSignalPlotProbe();
@@ -3049,6 +3149,14 @@ document
 document
   .getElementById("waveformScrubber")
   .addEventListener("input", scrubWaveform);
+
+document
+  .getElementById("levelEnvelopeCanvas")
+  .addEventListener("pointermove", (event) => probeLevelEnvelopeAtClientX(event.clientX));
+
+document
+  .getElementById("levelEnvelopeCanvas")
+  .addEventListener("pointerleave", clearLevelEnvelopeProbe);
 
 document
   .getElementById("signalPlotCanvas")
