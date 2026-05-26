@@ -1761,6 +1761,30 @@ def require_manifest_error_surface_contract() -> None:
     )
 
 
+def require_follow_free_seek_contract() -> None:
+    app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
+    start = app_source.index('function seekPrimaryAudioToFrame(frame, source = "waveform")')
+    end = app_source.index("function seekWaveformAtClientX(clientX)", start)
+    seek_function = app_source[start:end]
+    require(
+        "if (state.followAudio) {" in seek_function,
+        "waveform seek no longer gates native audio seeking behind follow mode",
+    )
+    require(
+        "audio.currentTime = targetTime;" in seek_function,
+        "waveform seek no longer updates native audio in follow mode",
+    )
+    require(
+        "setPlayheadFrame(targetFrame);" in seek_function,
+        "waveform seek no longer updates local inspection playhead",
+    )
+    require(
+        seek_function.index("audio.currentTime = targetTime;") <
+        seek_function.index("setPlayheadFrame(targetFrame);"),
+        "waveform seek updates local playhead before native audio",
+    )
+
+
 def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
     manifest_response = request(f"{base_url}/api/manifest")
     require(manifest_response.status == 200, "manifest endpoint did not return 200")
@@ -1917,6 +1941,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         run_step("static assets", lambda: require_static_assets(base_url))
         run_step("waveform seek source contract", require_waveform_seek_source_contract)
         run_step("manifest error surface contract", require_manifest_error_surface_contract)
+        run_step("follow/free seek contract", require_follow_free_seek_contract)
 
         payload: dict[str, object] = {}
 
