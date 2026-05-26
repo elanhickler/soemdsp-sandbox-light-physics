@@ -542,6 +542,18 @@ function formatCompactNumber(value) {
   return Number(value.toFixed(3)).toString();
 }
 
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) {
+    return "";
+  }
+
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  return `${formatCompactNumber(bytes / 1024)} KB`;
+}
+
 async function renderParameterSummary(links) {
   const status = document.getElementById("parameterSummaryStatus");
   const path = findArtifactPath(links, "text-summary");
@@ -636,8 +648,39 @@ function renderArtifacts(links) {
     const path = document.createElement("code");
     path.textContent = link.path;
 
-    anchor.append(label, kind, path);
+    const status = document.createElement("span");
+    status.className = "artifact-status";
+    status.textContent = "Checking";
+
+    anchor.append(label, kind, path, status);
     list.append(anchor);
+    checkArtifactAvailability(link, status);
+  }
+}
+
+async function checkArtifactAvailability(link, status) {
+  if (!link.path) {
+    status.textContent = "Check";
+    status.className = "artifact-status warn";
+    return;
+  }
+
+  try {
+    const response = await fetch(artifactUrl(link.path), { cache: "no-store" });
+    if (!response.ok) {
+      status.textContent = `Check ${response.status}`;
+      status.className = "artifact-status warn";
+      return;
+    }
+
+    const bytes = Number(response.headers.get("content-length"));
+    const size = formatBytes(bytes);
+    status.textContent = size ? `OK ${size}` : "OK";
+    status.className = "artifact-status good";
+  } catch (error) {
+    status.textContent = "Check";
+    status.className = "artifact-status warn";
+    console.error(error);
   }
 }
 

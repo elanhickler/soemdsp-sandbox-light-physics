@@ -350,7 +350,11 @@ dd.warn {
 
 .artifact-row {
   display: grid;
-  grid-template-columns: minmax(130px, 1fr) minmax(110px, 150px) minmax(0, 2fr);
+  grid-template-columns:
+    minmax(130px, 1fr)
+    minmax(110px, 150px)
+    minmax(0, 2fr)
+    minmax(90px, 120px);
   gap: 12px;
   align-items: center;
   padding: 12px;
@@ -368,6 +372,22 @@ dd.warn {
 .artifact-row strong {
   color: var(--accent-2);
   font-size: 0.85rem;
+}
+
+.artifact-status {
+  justify-self: end;
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.artifact-status.good {
+  color: var(--good);
+}
+
+.artifact-status.warn {
+  color: var(--warn);
 }
 
 code {
