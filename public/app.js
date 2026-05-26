@@ -2,6 +2,7 @@ const state = {
   response: null,
   waveform: null,
   playheadFrame: 0,
+  followAudio: true,
 };
 
 const requiredFlags = [
@@ -272,6 +273,7 @@ function renderWaveformPhaseControls() {
     button.dataset.phaseIndex = String(index);
     button.textContent = region.name;
     button.addEventListener("click", () => {
+      setFollowAudio(false, false);
       setPlayheadFrame(region.startFrame);
     });
     container.append(button);
@@ -334,6 +336,7 @@ async function renderWaveform(path) {
     status.textContent = "Drawn";
     status.className = "pill good";
     renderWaveformPosition();
+    renderFollowAudioControl();
   } catch (error) {
     state.waveform = null;
     state.playheadFrame = 0;
@@ -342,6 +345,7 @@ async function renderWaveform(path) {
     status.textContent = "Check";
     status.className = "pill warn";
     renderWaveformPosition();
+    renderFollowAudioControl();
     console.error(error);
   }
 }
@@ -368,6 +372,21 @@ function renderWaveformPosition() {
   updateActivePhaseButtons(activeRegion);
 }
 
+function setFollowAudio(enabled, syncNow) {
+  state.followAudio = enabled;
+  renderFollowAudioControl();
+  if (enabled && syncNow) {
+    syncWaveformToAudio();
+  }
+}
+
+function renderFollowAudioControl() {
+  const button = document.getElementById("followAudioButton");
+  button.textContent = state.followAudio ? "Follow Audio" : "Free View";
+  button.setAttribute("aria-pressed", String(state.followAudio));
+  button.classList.toggle("active", state.followAudio);
+}
+
 function updateActivePhaseButtons(activeRegion) {
   for (const button of document.querySelectorAll("#waveformPhaseControls button")) {
     button.classList.toggle("active", button.textContent === activeRegion?.name);
@@ -376,7 +395,7 @@ function updateActivePhaseButtons(activeRegion) {
 
 function syncWaveformToAudio() {
   const audio = document.getElementById("audioPlayer");
-  if (!state.waveform || Number.isNaN(audio.currentTime)) {
+  if (!state.followAudio || !state.waveform || Number.isNaN(audio.currentTime)) {
     return;
   }
 
@@ -392,6 +411,7 @@ function seekWaveform(event) {
   const canvas = document.getElementById("waveformCanvas");
   const rect = canvas.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  setFollowAudio(false, false);
   setPlayheadFrame(Math.round(ratio * waveform.frames));
 }
 
@@ -402,7 +422,12 @@ function scrubWaveform(event) {
   }
 
   const ratio = Number(event.currentTarget.value);
+  setFollowAudio(false, false);
   setPlayheadFrame(Math.round(ratio * waveform.frames));
+}
+
+function toggleFollowAudio() {
+  setFollowAudio(!state.followAudio, true);
 }
 
 function hasArtifactKind(links, kind) {
@@ -725,6 +750,10 @@ document
 document
   .getElementById("waveformScrubber")
   .addEventListener("input", scrubWaveform);
+
+document
+  .getElementById("followAudioButton")
+  .addEventListener("click", toggleFollowAudio);
 
 document
   .getElementById("audioPlayer")

@@ -149,13 +149,29 @@ audio {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 14px;
 }
 
 .panel-heading-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.view-toggle {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.view-toggle.active {
+  border-color: rgba(120, 209, 255, 0.48);
+  background: rgba(127, 199, 217, 0.14);
+  color: var(--good);
 }
 
 .pill {
