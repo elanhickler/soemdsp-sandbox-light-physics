@@ -3,6 +3,8 @@ const state = {
   waveform: null,
   playheadFrame: 0,
   followAudio: true,
+  reports: [],
+  activeReportIndex: 0,
 };
 
 const requiredFlags = [
@@ -29,8 +31,9 @@ function setText(id, value) {
 
 function setStatus(id, value, ok) {
   const element = document.getElementById(id);
+  const isPill = element.classList.contains("pill");
   element.textContent = value;
-  element.className = ok ? "" : "warn";
+  element.className = isPill ? `pill ${ok ? "good" : "warn"}` : ok ? "" : "warn";
 }
 
 function boolText(value) {
@@ -480,6 +483,103 @@ function parseSummaryText(text) {
   return pairs;
 }
 
+function reportLinks(links) {
+  return links.filter((link) =>
+    ["text-summary", "wav-report", "phase-report"].includes(link.kind),
+  );
+}
+
+function setActiveReport(index) {
+  state.activeReportIndex = index;
+  renderReportControls();
+  renderActiveReport();
+}
+
+function renderReportControls() {
+  const container = document.getElementById("reportControls");
+  container.replaceChildren();
+
+  for (const [index, report] of state.reports.entries()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "report-button";
+    button.classList.toggle("active", index === state.activeReportIndex);
+    button.textContent = report.label;
+    button.addEventListener("click", () => setActiveReport(index));
+    container.append(button);
+  }
+}
+
+function renderActiveReport() {
+  const viewer = document.getElementById("reportViewer");
+  const report = state.reports[state.activeReportIndex];
+  if (!report) {
+    viewer.textContent = "";
+    return;
+  }
+
+  viewer.textContent = report.ok
+    ? report.text
+    : `${report.label}\n${report.error || "Report unavailable"}`;
+}
+
+async function renderReports(links) {
+  const status = document.getElementById("reportStatus");
+  const linksToLoad = reportLinks(links);
+  status.textContent = "Loading";
+  status.className = "pill";
+  state.reports = [];
+  state.activeReportIndex = 0;
+  renderReportControls();
+  renderActiveReport();
+
+  if (linksToLoad.length === 0) {
+    status.textContent = "Check";
+    status.className = "pill warn";
+    return;
+  }
+
+  state.reports = await Promise.all(
+    linksToLoad.map(async (link) => {
+      try {
+        const response = await fetch(artifactUrl(link.path), {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(`Report fetch failed: ${response.status}`);
+        }
+
+        return {
+          kind: link.kind,
+          label: link.label || link.kind,
+          ok: true,
+          path: link.path,
+          text: await response.text(),
+        };
+      } catch (error) {
+        return {
+          kind: link.kind,
+          label: link.label || link.kind,
+          ok: false,
+          path: link.path,
+          error: error instanceof Error ? error.message : String(error),
+          text: "",
+        };
+      }
+    }),
+  );
+
+  const ok = state.reports.every((report) => report.ok);
+  status.textContent = ok
+    ? `${state.reports.length} Loaded`
+    : `${state.reports.filter((report) => report.ok).length}/${
+        state.reports.length
+      } Loaded`;
+  status.className = ok ? "pill good" : "pill warn";
+  renderReportControls();
+  renderActiveReport();
+}
+
 function renderParameterSummaryCards(pairs) {
   const container = document.getElementById("parameterSummary");
   container.replaceChildren();
@@ -915,6 +1015,7 @@ function render(response) {
   renderChecklist(checklist);
   renderArtifactCoverage(manifest.artifactLinks || [], manifest.phases || []);
   renderParameterSummary(manifest.artifactLinks || []);
+  renderReports(manifest.artifactLinks || []);
   renderArtifacts(manifest.artifactLinks || []);
 }
 
@@ -927,11 +1028,16 @@ function renderError(message) {
   setStatus("phaseCoverageStatus", "Check", false);
   setStatus("phaseStatus", "Check", false);
   setStatus("artifactCoverageStatus", "Check", false);
+  setStatus("reportStatus", "Check", false);
   setStatus("sourceStatus", "Check", false);
   setText("manifestPath", "Unavailable");
   setText("manifestBytes", "Unavailable");
   setText("manifestModified", "Unavailable");
   setText("artifactRoot", "Unavailable");
+  state.reports = [];
+  state.activeReportIndex = 0;
+  renderReportControls();
+  renderActiveReport();
 }
 
 async function loadManifest() {

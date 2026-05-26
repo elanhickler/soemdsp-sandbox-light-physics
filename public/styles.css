@@ -236,6 +236,39 @@ audio {
   background: #182129;
 }
 
+.report-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.report-button {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.report-button.active {
+  border-color: var(--accent);
+  background: rgba(127, 199, 217, 0.16);
+}
+
+.report-viewer {
+  min-height: 210px;
+  max-height: 360px;
+  margin: 14px 0 0;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #101214;
+  color: var(--text);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .waveform-scrubber {
   display: block;
   width: 100%;
