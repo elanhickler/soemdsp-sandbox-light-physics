@@ -949,6 +949,28 @@ function drawSignalPlot() {
     Math.PI * 2,
   );
   context.fill();
+
+  const nearestProbe = state.signalPlotProbe?.nearest;
+  if (nearestProbe) {
+    const probeFrame = Math.max(
+      0,
+      Math.min(drawableFrames - 1, nearestProbe.frame),
+    );
+    const probeX = centerX + samples[probeFrame] * scale;
+    const probeY = centerY - samples[probeFrame + lagFrames] * scale;
+    const radius = Math.max(7, 7 * pixelRatio);
+    context.strokeStyle = "#f6c96d";
+    context.lineWidth = Math.max(2, 2 * pixelRatio);
+    context.beginPath();
+    context.arc(probeX, probeY, radius, 0, Math.PI * 2);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(probeX - radius * 1.35, probeY);
+    context.lineTo(probeX + radius * 1.35, probeY);
+    context.moveTo(probeX, probeY - radius * 1.35);
+    context.lineTo(probeX, probeY + radius * 1.35);
+    context.stroke();
+  }
 }
 
 function signalPlotProbeAtClientPoint(clientX, clientY) {
@@ -1027,11 +1049,13 @@ function probeSignalPlot(event) {
   }
 
   state.signalPlotProbe = signalPlotProbeAtClientPoint(event.clientX, event.clientY);
+  drawSignalPlot();
   renderSignalPlotProbe();
 }
 
 function clearSignalPlotProbe() {
   state.signalPlotProbe = null;
+  drawSignalPlot();
   renderSignalPlotProbe();
 }
 
