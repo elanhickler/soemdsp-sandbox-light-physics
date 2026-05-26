@@ -383,16 +383,33 @@ function renderParameterSummaryCards(pairs) {
   const container = document.getElementById("parameterSummary");
   container.replaceChildren();
 
+  const firstFrequency = parseSummaryNumber(pairs.get("first half frequency"));
+  const firstAmplitude = parseSummaryNumber(pairs.get("first half amplitude"));
+  const secondFrequency = parseSummaryNumber(pairs.get("second half frequency"));
+  const secondAmplitude = parseSummaryNumber(pairs.get("second half amplitude"));
   const values = [
     ["First Frequency", pairs.get("first half frequency")],
     ["First Amplitude", pairs.get("first half amplitude")],
     ["Second Frequency", pairs.get("second half frequency")],
     ["Second Amplitude", pairs.get("second half amplitude")],
+    [
+      "Frequency Change",
+      formatSummaryChange(firstFrequency, secondFrequency),
+      "comparison",
+    ],
+    [
+      "Amplitude Change",
+      formatSummaryChange(firstAmplitude, secondAmplitude),
+      "comparison",
+    ],
   ];
 
-  for (const [label, value] of values) {
+  for (const [label, value, kind] of values) {
     const item = document.createElement("div");
     item.className = "summary-card";
+    if (kind === "comparison") {
+      item.classList.add("comparison");
+    }
 
     const title = document.createElement("span");
     title.className = "label";
@@ -407,6 +424,34 @@ function renderParameterSummaryCards(pairs) {
     item.append(title, body);
     container.append(item);
   }
+}
+
+function parseSummaryNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function formatSummaryChange(first, second) {
+  if (first === null || second === null) {
+    return "";
+  }
+
+  const delta = second - first;
+  const ratio = first === 0 ? null : second / first;
+  if (ratio === null) {
+    return `${formatSignedNumber(delta)} / ratio unavailable`;
+  }
+
+  return `${formatSignedNumber(delta)} / x${formatCompactNumber(ratio)}`;
+}
+
+function formatSignedNumber(value) {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${formatCompactNumber(value)}`;
+}
+
+function formatCompactNumber(value) {
+  return Number(value.toFixed(3)).toString();
 }
 
 async function renderParameterSummary(links) {

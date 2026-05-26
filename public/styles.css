@@ -190,7 +190,7 @@ audio {
 
 .parameter-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
@@ -213,6 +213,11 @@ audio {
 
 .summary-card strong.warn {
   color: var(--warn);
+}
+
+.summary-card.comparison {
+  border-color: rgba(120, 209, 255, 0.38);
+  background: #182129;
 }
 
 .waveform-scrubber {
