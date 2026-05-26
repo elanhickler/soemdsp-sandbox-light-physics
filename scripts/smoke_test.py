@@ -36,6 +36,12 @@ REQUIRED_ARTIFACT_KINDS = {
     "text-summary",
     "wav-report",
 }
+REPORT_ARTIFACT_KINDS = {
+    "manifest",
+    "text-summary",
+    "wav-report",
+    "phase-report",
+}
 
 
 @dataclass
@@ -186,6 +192,32 @@ def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> 
         require(content_length > 0, f"artifact link {index} content length missing")
 
 
+def require_report_documents(base_url: str, payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+    links = manifest.get("artifactLinks")
+    require(isinstance(links, list), "artifact links missing")
+
+    report_links = [
+        link
+        for link in links
+        if isinstance(link, dict) and link.get("kind") in REPORT_ARTIFACT_KINDS
+    ]
+    require(report_links, "report artifact links missing")
+
+    for index, link in enumerate(report_links):
+        path = link.get("path")
+        kind = link.get("kind")
+        require(isinstance(path, str) and path, f"report link {index} path missing")
+        response = request(f"{base_url}/artifact?path={urllib.parse.quote(path)}")
+        require(response.status == 200, f"report link {index} did not return 200")
+        require_no_store(response, f"report link {index}")
+        text = response.body.decode("utf-8")
+        require(text.strip(), f"report link {index} was empty")
+        if kind == "manifest":
+            json.loads(text)
+
+
 def wait_for_server(base_url: str) -> None:
     deadline = time.monotonic() + 5
     last_status = ""
@@ -256,6 +288,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         require_artifact_contract(payload)
         require_phase_contract(payload)
         require_artifact_reachability(base_url, payload)
+        require_report_documents(base_url, payload)
 
         handoff = payload["manifest"].get("sandboxHandoff", {})
         audio_path = handoff.get("primaryAudioArtifact")
