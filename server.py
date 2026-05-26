@@ -69,6 +69,7 @@ class SandboxServer(BaseHTTPRequestHandler):
                 {
                     "ok": False,
                     "error": "manifest not found",
+                    "artifactRoot": str(self.artifact_root.resolve()),
                     "path": str(manifest_path),
                 },
                 status=404,
@@ -82,6 +83,7 @@ class SandboxServer(BaseHTTPRequestHandler):
                 {
                     "ok": False,
                     "error": "manifest JSON parse failed",
+                    "artifactRoot": str(self.artifact_root.resolve()),
                     "message": str(exc),
                     "path": str(manifest_path),
                 },
