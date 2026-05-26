@@ -137,6 +137,20 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         require(missing_artifact.status == 404, "missing artifact did not return 404")
         require_no_store(missing_artifact, "missing artifact")
 
+        forbidden_artifact = request(
+            f"{base_url}/artifact?path=../server.py",
+            method="HEAD",
+        )
+        require(forbidden_artifact.status == 403, "artifact traversal did not return 403")
+        require_no_store(forbidden_artifact, "artifact traversal")
+
+        forbidden_public = request(
+            f"{base_url}/public/%2e%2e/server.py",
+            method="HEAD",
+        )
+        require(forbidden_public.status == 403, "public traversal did not return 403")
+        require_no_store(forbidden_public, "public traversal")
+
         manifest_head = request(f"{base_url}/api/manifest", method="HEAD")
         require(manifest_head.status == 405, "manifest HEAD did not return 405")
         require_no_store(manifest_head, "manifest HEAD")
