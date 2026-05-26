@@ -3266,6 +3266,43 @@ function renderArtifacts(links) {
     });
 }
 
+function renderUnavailableArtifacts() {
+  const list = document.getElementById("artifactList");
+  list.replaceChildren();
+
+  const heading = document.createElement("div");
+  heading.className = "artifact-heading";
+  for (const text of ["Label", "Kind", "Path", "Modified", "Status"]) {
+    const item = document.createElement("span");
+    item.textContent = text;
+    heading.append(item);
+  }
+  list.append(heading);
+
+  const row = document.createElement("div");
+  row.className = "artifact-row warn-row";
+
+  const label = document.createElement("span");
+  label.textContent = "Artifact packet";
+
+  const kind = document.createElement("strong");
+  kind.textContent = "unavailable";
+
+  const path = document.createElement("code");
+  path.textContent = "manifest required";
+
+  const modified = document.createElement("span");
+  modified.className = "artifact-modified";
+  modified.textContent = "Unavailable";
+
+  const status = document.createElement("span");
+  status.className = "artifact-status warn";
+  status.textContent = "Check";
+
+  row.append(label, kind, path, modified, status);
+  list.append(row);
+}
+
 async function checkArtifactAvailability(link, status, modified) {
   if (!link.path) {
     status.textContent = "Check";
@@ -3850,7 +3887,7 @@ function renderError(message, details = {}) {
   clearElement("phaseList");
   renderUnavailableChecklist();
   renderUnavailableArtifactCoverage();
-  clearElement("artifactList");
+  renderUnavailableArtifacts();
 }
 
 async function loadManifest() {
