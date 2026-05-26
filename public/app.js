@@ -28,6 +28,9 @@ const requiredFlags = [
 const expectedContract = "soemdsp-demo-local-sandbox-handoff";
 const expectedContractVersion = 1;
 const expectedInspectionMode = "mouse-and-ears";
+const phaseAudioFrequencyToleranceHz = 0.5;
+const phaseAudioAmplitudeTolerance = 0.001;
+const phaseAudioRmsTolerance = 0.001;
 const signalPlotSettingsKey = "soemdsp-sandbox.signalPlotSettings";
 
 function artifactUrl(path) {
@@ -630,6 +633,7 @@ function renderPhaseAudioStats() {
     return;
   }
 
+  let allOk = true;
   for (const region of regions) {
     const stats = analyzeSampleRange(
       waveform.samples,
@@ -647,8 +651,29 @@ function renderPhaseAudioStats() {
     const producerMeasurement = producerPhaseAudioMeasurement(region);
     const producerFrequency = Number(producerMeasurement?.measuredFrequency);
     const producerPeak = Number(producerMeasurement?.peak);
+    const producerRms = Number(producerMeasurement?.rms);
+    const producerFrequencyDelta =
+      measuredFrequency === null || !Number.isFinite(producerFrequency)
+        ? null
+        : measuredFrequency - producerFrequency;
+    const producerPeakDelta = !Number.isFinite(producerPeak)
+      ? null
+      : stats.peak - producerPeak;
+    const producerRmsDelta = !Number.isFinite(producerRms)
+      ? null
+      : stats.rms - producerRms;
+    const producerOk =
+      producerMeasurement &&
+      producerFrequencyDelta !== null &&
+      Math.abs(producerFrequencyDelta) <= phaseAudioFrequencyToleranceHz &&
+      producerPeakDelta !== null &&
+      Math.abs(producerPeakDelta) <= phaseAudioAmplitudeTolerance &&
+      producerRmsDelta !== null &&
+      Math.abs(producerRmsDelta) <= phaseAudioRmsTolerance;
+    allOk = allOk && producerOk;
+
     const item = document.createElement("div");
-    item.className = "phase-stat";
+    item.className = producerOk ? "phase-stat" : "phase-stat warn-row";
     item.dataset.phaseName = region.name;
 
     const name = document.createElement("h3");
@@ -660,28 +685,32 @@ function renderPhaseAudioStats() {
       measuredFrequency === null || frequencyValue === null
         ? "missing"
         : formatSignedNumber(measuredFrequency - frequencyValue);
-    const producerFrequencyDelta =
-      measuredFrequency === null || !Number.isFinite(producerFrequency)
+    const producerFrequencyDeltaText =
+      producerFrequencyDelta === null
         ? "missing"
-        : formatSignedNumber(measuredFrequency - producerFrequency);
+        : formatSignedNumber(producerFrequencyDelta);
     const peakDelta =
       amplitudeValue === null ? "missing" : formatSignedNumber(stats.peak - amplitudeValue);
-    const producerPeakDelta =
-      !Number.isFinite(producerPeak)
+    const producerPeakDeltaText =
+      producerPeakDelta === null
         ? "missing"
-        : formatSignedNumber(stats.peak - producerPeak);
+        : formatSignedNumber(producerPeakDelta);
+    const producerRmsDeltaText =
+      producerRmsDelta === null ? "missing" : formatSignedNumber(producerRmsDelta);
     renderKeyValue(body, [
       ["target freq", frequencyValue === null ? "missing" : `${formatCompactNumber(frequencyValue)} Hz`],
       ["measured freq", measuredFrequency === null ? "missing" : `${formatCompactNumber(measuredFrequency)} Hz`],
       ["freq delta", frequencyDelta],
       ["producer freq", Number.isFinite(producerFrequency) ? `${formatCompactNumber(producerFrequency)} Hz` : "missing"],
-      ["producer freq delta", producerFrequencyDelta],
+      ["producer freq delta", producerFrequencyDeltaText],
       ["target amp", amplitudeValue === null ? "missing" : formatCompactNumber(amplitudeValue)],
       ["peak", formatCompactNumber(stats.peak)],
       ["peak delta", peakDelta],
       ["producer peak", Number.isFinite(producerPeak) ? formatCompactNumber(producerPeak) : "missing"],
-      ["producer peak delta", producerPeakDelta],
+      ["producer peak delta", producerPeakDeltaText],
       ["rms", formatCompactNumber(stats.rms)],
+      ["producer rms", Number.isFinite(producerRms) ? formatCompactNumber(producerRms) : "missing"],
+      ["producer rms delta", producerRmsDeltaText],
       ["min", formatCompactNumber(stats.min)],
       ["max", formatCompactNumber(stats.max)],
       ["dc offset", formatCompactNumber(stats.dcOffset)],
@@ -691,8 +720,8 @@ function renderPhaseAudioStats() {
     list.append(item);
   }
 
-  status.textContent = `${regions.length} phases`;
-  status.className = "pill good";
+  status.textContent = allOk ? "Verified" : "Check";
+  status.className = `pill ${allOk ? "good" : "warn"}`;
   updatePhaseAudioStatsActive(activeWaveformRegion());
 }
 
@@ -1892,6 +1921,7 @@ function validateConsumerChecklist(manifest) {
   const handoff = manifest.sandboxHandoff || {};
   const links = manifest.artifactLinks || [];
   const phases = manifest.phases || [];
+  const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
   const checks = [
     ["allOk", manifest.allOk === true],
     ["contract", handoff.contract === expectedContract],
@@ -1906,6 +1936,7 @@ function validateConsumerChecklist(manifest) {
     ["entry-point link", hasArtifactKind(links, "entry-point")],
     ["audio link", hasArtifactKind(links, "audio")],
     ["phase report", phases.length > 0],
+    ["phase audio measurements", phaseAudioIssues.length === 0],
   ];
 
   return {
@@ -1935,6 +1966,7 @@ function renderChecklist(result) {
 function renderProducerProof(manifest) {
   const status = document.getElementById("producerStatus");
   const setters = manifest.parameterSetters || {};
+  const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
   const rows = [
     ["demo", manifest.demo || "missing"],
     ["kind", manifest.kind || "missing"],
@@ -1943,6 +1975,7 @@ function renderProducerProof(manifest) {
     ["audio engine", boolText(Boolean(manifest.audioEngine)), false],
     ["frequency setter", boolText(Boolean(setters.frequency)), true],
     ["amplitude setter", boolText(Boolean(setters.amplitude)), true],
+    ["phase measurements", boolText(phaseAudioIssues.length === 0), true],
   ];
   const ok = rows.every(([, value, expected]) => {
     if (expected === undefined) {
@@ -2332,7 +2365,89 @@ function manifestShapeError(payload) {
     return "phases missing";
   }
 
+  const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
+  if (phaseAudioIssues.length) {
+    return phaseAudioIssues[0];
+  }
+
   return "";
+}
+
+function phaseAudioMeasurementIssues(manifest) {
+  const phases = Array.isArray(manifest?.phases) ? manifest.phases : [];
+  const measurements = manifest?.phaseAudioMeasurements;
+  const resync = manifest?.parameterResync || {};
+  const frequency = resync.frequency || {};
+  const amplitude = resync.amplitude || {};
+
+  if (!Array.isArray(measurements)) {
+    return ["phase audio measurements missing"];
+  }
+
+  if (measurements.length !== phases.length) {
+    return ["phase audio measurement count mismatch"];
+  }
+
+  const measurementsByName = new Map();
+  for (const measurement of measurements) {
+    if (!measurement || typeof measurement !== "object") {
+      return ["phase audio measurement invalid"];
+    }
+    if (typeof measurement.name !== "string" || !measurement.name) {
+      return ["phase audio measurement name missing"];
+    }
+    measurementsByName.set(measurement.name, measurement);
+  }
+
+  for (const phase of phases) {
+    const name = phase?.name;
+    if (typeof name !== "string" || !name) {
+      return ["phase name missing"];
+    }
+
+    const measurement = measurementsByName.get(name);
+    if (!measurement) {
+      return [`${name} phase audio measurement missing`];
+    }
+
+    const measuredFrequency = Number(measurement.measuredFrequency);
+    const peak = Number(measurement.peak);
+    const rms = Number(measurement.rms);
+    const min = Number(measurement.min);
+    const max = Number(measurement.max);
+    const dcOffset = Number(measurement.dcOffset);
+    if (
+      !Number.isFinite(measuredFrequency) ||
+      !Number.isFinite(peak) ||
+      !Number.isFinite(rms) ||
+      !Number.isFinite(min) ||
+      !Number.isFinite(max) ||
+      !Number.isFinite(dcOffset)
+    ) {
+      return [`${name} phase audio measurement values missing`];
+    }
+
+    if (measuredFrequency <= 0 || peak <= 0 || rms <= 0) {
+      return [`${name} phase audio measurement values invalid`];
+    }
+
+    const targetFrequency = Number(frequency[name]);
+    const targetAmplitude = Number(amplitude[name]);
+    if (
+      !Number.isFinite(targetFrequency) ||
+      Math.abs(measuredFrequency - targetFrequency) > phaseAudioFrequencyToleranceHz
+    ) {
+      return [`${name} phase audio frequency mismatch`];
+    }
+    if (
+      !Number.isFinite(targetAmplitude) ||
+      Math.abs(peak - targetAmplitude) > phaseAudioAmplitudeTolerance
+    ) {
+      return [`${name} phase audio peak mismatch`];
+    }
+  }
+
+  return [];
 }
 
 function renderError(message, details = {}) {
