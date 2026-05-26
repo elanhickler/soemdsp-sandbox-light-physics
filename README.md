@@ -26,6 +26,18 @@ Open:
 http://127.0.0.1:8765
 ```
 
+## Smoke Test
+
+After generating the current `soemdsp` artifact packet, run:
+
+```powershell
+python C:\Users\argit\Desktop\soemdsp-sandbox\scripts\smoke_test.py
+```
+
+The smoke test starts an isolated local server, checks the manifest endpoint,
+checks primary audio artifact reachability, checks expected error responses, and
+verifies local responses use no-store cache headers.
+
 ## Boundaries
 
 This shell is read-only.
