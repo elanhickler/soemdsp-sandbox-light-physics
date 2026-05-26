@@ -16,6 +16,10 @@ DEFAULT_SOEMDSP_ROOT = ROOT.parent / "soemdsp"
 DEFAULT_MANIFEST = (
     DEFAULT_SOEMDSP_ROOT / "runtime_dsp_object_bound_wav_resync_demo.manifest.json"
 )
+STATIC_MIME_TYPES = {
+    ".css": "text/css",
+    ".js": "application/javascript",
+}
 
 
 class SandboxServer(BaseHTTPRequestHandler):
@@ -167,16 +171,79 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.send_error(404, "Not found")
             return
 
-        mime_type, _ = mimetypes.guess_type(path)
+        mime_type = STATIC_MIME_TYPES.get(path.suffix.lower())
+        if mime_type is None:
+            mime_type, _ = mimetypes.guess_type(path)
         stat = path.stat()
-        self.send_response(200)
+        try:
+            byte_range = self.parse_byte_range(
+                self.headers.get("Range"),
+                stat.st_size,
+            )
+        except ValueError:
+            self.send_range_error(stat.st_size)
+            return
+
+        start = 0
+        end = stat.st_size - 1
+        if byte_range is not None:
+            start, end = byte_range
+        content_length = end - start + 1
+
+        self.send_response(206 if byte_range is not None else 200)
         self.send_header("Content-Type", mime_type or "application/octet-stream")
-        self.send_header("Content-Length", str(stat.st_size))
+        self.send_header("Content-Length", str(content_length))
         self.send_header("Last-Modified", formatdate(stat.st_mtime, usegmt=True))
+        self.send_header("Accept-Ranges", "bytes")
+        if byte_range is not None:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{stat.st_size}")
         self.send_no_store_headers()
         self.end_headers()
         if send_body:
-            self.wfile.write(path.read_bytes())
+            with path.open("rb") as handle:
+                handle.seek(start)
+                self.wfile.write(handle.read(content_length))
+
+    def parse_byte_range(
+        self,
+        header: str | None,
+        file_size: int,
+    ) -> tuple[int, int] | None:
+        if not header:
+            return None
+
+        if not header.startswith("bytes="):
+            raise ValueError("unsupported range unit")
+
+        spec = header.removeprefix("bytes=").strip()
+        if "," in spec or "-" not in spec:
+            raise ValueError("unsupported byte range")
+
+        start_text, end_text = spec.split("-", 1)
+        try:
+            if start_text == "":
+                suffix_length = int(end_text)
+                if suffix_length <= 0:
+                    raise ValueError("invalid suffix range")
+                start = max(0, file_size - suffix_length)
+                end = file_size - 1
+            else:
+                start = int(start_text)
+                end = int(end_text) if end_text else file_size - 1
+        except ValueError as error:
+            raise ValueError("invalid byte range") from error
+
+        if start < 0 or end < start or start >= file_size:
+            raise ValueError("unsatisfiable byte range")
+
+        return start, min(end, file_size - 1)
+
+    def send_range_error(self, file_size: int) -> None:
+        self.send_response(416)
+        self.send_header("Content-Range", f"bytes */{file_size}")
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_no_store_headers()
+        self.end_headers()
 
     def send_no_store_headers(self) -> None:
         self.send_header("Cache-Control", "no-store, max-age=0")

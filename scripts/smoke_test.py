@@ -19,6 +19,7 @@ from wave import open as open_wave
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PUBLIC = ROOT / "public"
 DEFAULT_MANIFEST = (
     ROOT.parent / "soemdsp" / "runtime_dsp_object_bound_wav_resync_demo.manifest.json"
 )
@@ -142,8 +143,12 @@ class Response:
     body: bytes
 
 
-def request(url: str, method: str = "GET") -> Response:
-    request = urllib.request.Request(url, method=method)
+def request(
+    url: str,
+    method: str = "GET",
+    headers: dict[str, str] | None = None,
+) -> Response:
+    request = urllib.request.Request(url, headers=headers or {}, method=method)
     try:
         with urllib.request.urlopen(request, timeout=5) as response:
             return Response(
@@ -505,7 +510,40 @@ def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None
     response = request(f"{base_url}/artifact?path={urllib.parse.quote(audio_path)}")
     require(response.status == 200, "primary audio WAV did not return 200")
     require_no_store(response, "primary audio WAV")
+    require(
+        response.headers.get("accept-ranges") == "bytes",
+        "primary audio WAV did not advertise byte ranges",
+    )
     require(len(response.body) == expected_file_bytes, "WAV file byte count mismatch")
+
+    range_url = f"{base_url}/artifact?path={urllib.parse.quote(audio_path)}"
+    range_response = request(range_url, headers={"Range": "bytes=0-15"})
+    require(range_response.status == 206, "primary audio range did not return 206")
+    require_no_store(range_response, "primary audio range")
+    require(
+        range_response.headers.get("accept-ranges") == "bytes",
+        "primary audio range did not advertise byte ranges",
+    )
+    require(
+        range_response.headers.get("content-range")
+        == f"bytes 0-15/{expected_file_bytes}",
+        "primary audio range content-range mismatch",
+    )
+    require(len(range_response.body) == 16, "primary audio range byte count mismatch")
+
+    unsatisfied_range = request(
+        range_url,
+        headers={"Range": f"bytes={expected_file_bytes + 1}-"},
+    )
+    require(
+        unsatisfied_range.status == 416,
+        "unsatisfied primary audio range did not return 416",
+    )
+    require_no_store(unsatisfied_range, "unsatisfied primary audio range")
+    require(
+        unsatisfied_range.headers.get("content-range") == f"bytes */{expected_file_bytes}",
+        "unsatisfied primary audio range content-range mismatch",
+    )
 
     try:
         with tempfile.TemporaryFile() as handle:
@@ -565,6 +603,22 @@ def require_static_assets(base_url: str) -> None:
         require(static_response.status == 200, f"{path} did not return 200")
         require_no_store(static_response, path)
         require_content_type(static_response, content_type, path)
+
+
+def require_waveform_seek_source_contract() -> None:
+    app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
+    require(
+        "function seekPrimaryAudioToFrame(frame)" in app_source,
+        "waveform seek helper missing",
+    )
+    require(
+        "audio.currentTime = targetTime;" in app_source,
+        "waveform seek helper does not seek primary audio",
+    )
+    require(
+        "setFollowAudio(false, false);" not in app_source,
+        "waveform controls still force free-view mode",
+    )
 
 
 def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
@@ -720,6 +774,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
 
         run_step("root shell contract", lambda: require_root_shell(base_url))
         run_step("static assets", lambda: require_static_assets(base_url))
+        run_step("waveform seek source contract", require_waveform_seek_source_contract)
 
         payload: dict[str, object] = {}
 

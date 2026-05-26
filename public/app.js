@@ -300,8 +300,7 @@ function renderWaveformPhaseControls() {
     button.dataset.phaseIndex = String(index);
     button.textContent = region.name;
     button.addEventListener("click", () => {
-      setFollowAudio(false, false);
-      setPlayheadFrame(region.startFrame);
+      seekPrimaryAudioToFrame(region.startFrame);
     });
     container.append(button);
   }
@@ -442,6 +441,24 @@ function syncWaveformToAudio() {
   setPlayheadFrame(Math.round(audio.currentTime * state.waveform.sampleRate));
 }
 
+function seekPrimaryAudioToFrame(frame) {
+  const waveform = state.waveform;
+  if (!waveform) {
+    return;
+  }
+
+  const targetFrame = Math.min(waveform.frames, Math.max(0, frame));
+  if (state.followAudio) {
+    const audio = document.getElementById("audioPlayer");
+    const targetTime = targetFrame / waveform.sampleRate;
+    if (Number.isFinite(targetTime)) {
+      audio.currentTime = targetTime;
+    }
+  }
+
+  setPlayheadFrame(targetFrame);
+}
+
 function seekWaveform(event) {
   const waveform = state.waveform;
   if (!waveform) {
@@ -451,8 +468,7 @@ function seekWaveform(event) {
   const canvas = document.getElementById("waveformCanvas");
   const rect = canvas.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-  setFollowAudio(false, false);
-  setPlayheadFrame(Math.round(ratio * waveform.frames));
+  seekPrimaryAudioToFrame(Math.round(ratio * waveform.frames));
 }
 
 function scrubWaveform(event) {
@@ -462,8 +478,7 @@ function scrubWaveform(event) {
   }
 
   const ratio = Number(event.currentTarget.value);
-  setFollowAudio(false, false);
-  setPlayheadFrame(Math.round(ratio * waveform.frames));
+  seekPrimaryAudioToFrame(Math.round(ratio * waveform.frames));
 }
 
 function toggleFollowAudio() {
