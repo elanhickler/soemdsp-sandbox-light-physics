@@ -2036,6 +2036,7 @@ function renderWaveformPosition() {
     phaseRange.textContent = "range";
     phaseJumpTarget.textContent = "jump idle";
     scrubber.value = "0";
+    updateWaveformScrubberLabel(scrubber, null, null);
     renderCurrentParameters(null);
     updateParameterTimelinePlayhead(null);
     updatePhaseAudioStatsActive(null);
@@ -2066,8 +2067,30 @@ function renderWaveformPosition() {
   scrubber.value = String(
     waveform.frames > 0 ? state.playheadFrame / waveform.frames : 0,
   );
+  updateWaveformScrubberLabel(scrubber, waveform, activeRegion);
   updateActivePhaseButtons(activeRegion);
   renderWaveformProbe();
+}
+
+function updateWaveformScrubberLabel(scrubber, waveform, activeRegion) {
+  const followText = state.followAudio ? "follow" : "free";
+  const followTitle = state.followAudio ? "Follow Audio" : "Free View";
+  if (!waveform) {
+    scrubber.setAttribute("aria-valuetext", `0.000s / unknown / phase unknown / ${followText}`);
+    scrubber.dataset.followMode = followText;
+    scrubber.title = `Waveform position 0.000s / unknown / phase unknown / ${followTitle}`;
+    return;
+  }
+
+  const timeText = formatSeconds(state.playheadFrame / waveform.sampleRate);
+  const durationText = formatAudioDuration(waveform.frames / waveform.sampleRate);
+  const phaseText = activeRegion?.name || "phase unknown";
+  scrubber.setAttribute(
+    "aria-valuetext",
+    `${timeText} / ${durationText} / frame ${state.playheadFrame} / ${phaseText} / ${followText}`,
+  );
+  scrubber.dataset.followMode = followText;
+  scrubber.title = `Waveform position ${timeText} / frame ${state.playheadFrame} / ${phaseText} / ${followTitle}`;
 }
 
 function renderWaveformProbe() {
@@ -2309,6 +2332,8 @@ function setFollowAudio(enabled, syncNow) {
   renderFollowAudioControl();
   if (enabled && syncNow) {
     syncWaveformToAudio();
+  } else {
+    renderWaveformPosition();
   }
 }
 
@@ -3209,6 +3234,19 @@ function waveformControlsLabeled() {
   );
 }
 
+function waveformScrubberLabeled() {
+  const scrubber = document.getElementById("waveformScrubber");
+  return (
+    scrubber?.getAttribute("aria-label") === "Waveform position" &&
+    Boolean(scrubber.getAttribute("aria-valuetext")) &&
+    Boolean(scrubber.title) &&
+    ["follow", "free"].includes(scrubber.dataset.followMode || "") &&
+    scrubber.getAttribute("min") === "0" &&
+    scrubber.getAttribute("max") === "1" &&
+    scrubber.getAttribute("step") === "0.001"
+  );
+}
+
 function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform)) {
   const rows = [
     [
@@ -3220,6 +3258,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["waveform control labels", waveformControlsLabeled()],
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
+    ["waveform scrubber labels", waveformReady && waveformScrubberLabeled()],
     ["waveform hover probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["level envelope probe", waveformReady && Boolean(document.getElementById("levelEnvelopeProbe"))],
     ["parameter timeline probe", waveformReady && Boolean(document.getElementById("parameterTimelineProbe"))],
