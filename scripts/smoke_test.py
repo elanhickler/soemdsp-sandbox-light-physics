@@ -1241,6 +1241,28 @@ def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None
     )
     require(len(range_response.body) == 16, "primary audio range byte count mismatch")
 
+    open_range = request(range_url, headers={"Range": "bytes=16-"})
+    require(open_range.status == 206, "open-ended primary audio range did not return 206")
+    require_no_store(open_range, "open-ended primary audio range")
+    require(
+        open_range.headers.get("content-range") == f"bytes 16-{expected_file_bytes - 1}/{expected_file_bytes}",
+        "open-ended primary audio range content-range mismatch",
+    )
+    require(
+        open_range.body == response.body[16:],
+        "open-ended primary audio range bytes mismatch",
+    )
+
+    suffix_range = request(range_url, headers={"Range": "bytes=-16"})
+    require(suffix_range.status == 206, "suffix primary audio range did not return 206")
+    require_no_store(suffix_range, "suffix primary audio range")
+    require(
+        suffix_range.headers.get("content-range")
+        == f"bytes {expected_file_bytes - 16}-{expected_file_bytes - 1}/{expected_file_bytes}",
+        "suffix primary audio range content-range mismatch",
+    )
+    require(suffix_range.body == response.body[-16:], "suffix primary audio range bytes mismatch")
+
     unsatisfied_range = request(
         range_url,
         headers={"Range": f"bytes={expected_file_bytes + 1}-"},
