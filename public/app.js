@@ -797,6 +797,7 @@ function renderArtifactCoverage(links, phases) {
   const phaseReportCount = countArtifactKind(links, "phase-report");
   const rows = [
     ["total links", String(links.length)],
+    ["reachability method", "HEAD", "HEAD"],
     ["entry point", String(countArtifactKind(links, "entry-point")), 1],
     ["audio", String(countArtifactKind(links, "audio")), 1],
     ["manifest", String(countArtifactKind(links, "manifest")), 1],
