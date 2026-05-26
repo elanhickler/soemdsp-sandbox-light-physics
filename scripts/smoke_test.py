@@ -108,6 +108,7 @@ REQUIRED_SHELL_IDS = {
 class ShellContractParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
+        self.duplicate_ids: set[str] = set()
         self.ids: set[str] = set()
         self.scripts: set[str] = set()
         self.stylesheets: set[str] = set()
@@ -116,6 +117,8 @@ class ShellContractParser(HTMLParser):
         attributes = dict(attrs)
         element_id = attributes.get("id")
         if element_id:
+            if element_id in self.ids:
+                self.duplicate_ids.add(element_id)
             self.ids.add(element_id)
 
         if tag == "script":
@@ -216,6 +219,8 @@ def require_shell_contract(html: str) -> None:
     parser = ShellContractParser()
     parser.feed(html)
 
+    duplicate_ids = sorted(parser.duplicate_ids)
+    require(not duplicate_ids, f"shell duplicate ids: {duplicate_ids}")
     missing_ids = sorted(REQUIRED_SHELL_IDS - parser.ids)
     require(not missing_ids, f"shell missing required ids: {missing_ids}")
     require("/public/app.js" in parser.scripts, "shell missing app.js script")
