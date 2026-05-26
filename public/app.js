@@ -119,6 +119,21 @@ function setInspectionCursorSource(sourceName, mode) {
   source.className = `pill inspection-source ${mode}`;
 }
 
+function formatInspectionDelta(deltaFrame, sampleRate) {
+  if (deltaFrame === null) {
+    return "none";
+  }
+
+  const sign = deltaFrame >= 0 ? "+" : "";
+  return `${sign}${deltaFrame} frames / ${sign}${formatSeconds(deltaFrame / sampleRate)}`;
+}
+
+function setInspectionCursorDelta(deltaFrame, sampleRate) {
+  const delta = document.getElementById("inspectionCursorDelta");
+  delta.textContent = `delta ${formatInspectionDelta(deltaFrame, sampleRate)}`;
+  delta.className = `pill inspection-delta ${deltaFrame === null ? "none" : "hover"}`;
+}
+
 function boolText(value) {
   return value ? "true" : "false";
 }
@@ -1803,6 +1818,7 @@ function renderInspectionCursor() {
   if (!waveform) {
     setStatus("inspectionCursorStatus", "Check", false);
     setInspectionCursorSource("none", "none");
+    setInspectionCursorDelta(null, 1);
     renderKeyValue(cursor, [
       ["transport frame", "0"],
       ["transport time", "0.000s"],
@@ -1836,6 +1852,7 @@ function renderInspectionCursor() {
 
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
   setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
+  setInspectionCursorDelta(hoverDeltaFrame, waveform.sampleRate);
   renderKeyValue(cursor, [
     ["transport frame", String(transportFrame)],
     ["transport time", formatSeconds(transportFrame / waveform.sampleRate)],
@@ -1849,11 +1866,7 @@ function renderInspectionCursor() {
     ],
     [
       "hover delta",
-      hoverDeltaFrame === null
-        ? "none"
-        : `${hoverDeltaFrame >= 0 ? "+" : ""}${hoverDeltaFrame} frames / ${
-            hoverDeltaFrame >= 0 ? "+" : ""
-          }${formatSeconds(hoverDeltaFrame / waveform.sampleRate)}`,
+      formatInspectionDelta(hoverDeltaFrame, waveform.sampleRate),
     ],
     ["hover phase", hoverRegion?.name || "none"],
     ["hover sample", hoverSample === null ? "none" : formatCompactNumber(hoverSample)],
@@ -2703,6 +2716,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["signal-to-waveform probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["inspection cursor", waveformReady && Boolean(document.getElementById("inspectionCursor"))],
     ["inspection source pill", waveformReady && Boolean(document.getElementById("inspectionCursorSource"))],
+    ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
     [
       "inspection hover delta",
       waveformReady && document.getElementById("inspectionCursor")?.textContent.includes("hover delta"),
@@ -3404,6 +3418,7 @@ function renderError(message, details = {}) {
   setStatus("producerStatus", "Check", false);
   setStatus("handsOnReadinessStatus", "Check", false);
   setInspectionCursorSource("none", "none");
+  setInspectionCursorDelta(null, 1);
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
