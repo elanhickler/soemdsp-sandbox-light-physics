@@ -200,10 +200,13 @@ function setInspectionCursorTarget(region, frame, sampleRate) {
   target.className = `pill inspection-target ${hasTarget ? "active" : "none"}`;
 }
 
-function setInspectionCursorTransport(region) {
+function setInspectionCursorTransport(region, frame, sampleRate) {
   const transport = document.getElementById("inspectionCursorTransport");
-  transport.textContent = `transport ${region?.name || "none"}`;
-  transport.className = `pill inspection-transport ${region ? "active" : "none"}`;
+  const hasTransport = region && frame !== null && Number.isFinite(sampleRate) && sampleRate > 0;
+  transport.textContent = hasTransport
+    ? `transport ${region.name} / ${formatSeconds(frame / sampleRate)} / frame ${frame}`
+    : "transport none";
+  transport.className = `pill inspection-transport ${hasTransport ? "active" : "none"}`;
 }
 
 function setInspectionCursorDivergence(transportRegion, targetRegion) {
@@ -1952,7 +1955,7 @@ function renderInspectionCursor() {
     setInspectionCursorSeek(null);
     setInspectionCursorSeekTarget(null, null, 1);
     setInspectionCursorSeekSync("none");
-    setInspectionCursorTransport(null);
+    setInspectionCursorTransport(null, null, 1);
     setInspectionCursorTarget(null, null, 1);
     setInspectionCursorDivergence(null, null);
     renderKeyValue(cursor, [
@@ -2021,7 +2024,7 @@ function renderInspectionCursor() {
   setInspectionCursorSeek(state.lastSeekSource);
   setInspectionCursorSeekTarget(lastSeekRegion, lastSeekFrame, waveform.sampleRate);
   setInspectionCursorSeekSync(lastSeekTransportMatch);
-  setInspectionCursorTransport(transportRegion);
+  setInspectionCursorTransport(transportRegion, transportFrame, waveform.sampleRate);
   setInspectionCursorTarget(hoverRegion, hoverFrame, waveform.sampleRate);
   setInspectionCursorDivergence(transportRegion, hoverRegion);
   renderKeyValue(cursor, [
@@ -3641,7 +3644,7 @@ function renderError(message, details = {}) {
   setInspectionCursorSeek(null);
   setInspectionCursorSeekTarget(null, null, 1);
   setInspectionCursorSeekSync("none");
-  setInspectionCursorTransport(null);
+  setInspectionCursorTransport(null, null, 1);
   setInspectionCursorTarget(null, null, 1);
   setInspectionCursorDivergence(null, null);
   setStatus("sandboxContractStatus", "Check", false);
