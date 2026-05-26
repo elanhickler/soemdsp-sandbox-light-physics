@@ -373,6 +373,9 @@ def require_artifact_contract(payload: dict[str, object]) -> None:
     kinds = {str(link.get("kind")) for link in links}
     missing_kinds = REQUIRED_ARTIFACT_KINDS - kinds
     require(not missing_kinds, f"required artifact kinds missing: {sorted(missing_kinds)}")
+    for kind in REQUIRED_ARTIFACT_KINDS - {"phase-report"}:
+        count = sum(1 for link in links if link.get("kind") == kind)
+        require(count == 1, f"{kind} artifact link count mismatch")
 
     links_by_kind = {str(link.get("kind")): link for link in links}
     entry_point = handoff.get("entryPoint")
@@ -484,6 +487,28 @@ def require_artifact_contract_negative_cases() -> None:
         "wav path mismatch",
         lambda manifest: manifest["wav"].update({"path": "other.wav"}),
         "wav path did not match primary audio",
+    )
+    require_artifact_contract_failure(
+        "duplicate entry point",
+        lambda manifest: manifest["artifactLinks"].append(
+            {
+                "label": "Duplicate HTML report",
+                "kind": "entry-point",
+                "path": "duplicate.html",
+            },
+        ),
+        "entry-point artifact link count mismatch",
+    )
+    require_artifact_contract_failure(
+        "duplicate audio",
+        lambda manifest: manifest["artifactLinks"].append(
+            {
+                "label": "Duplicate WAV",
+                "kind": "audio",
+                "path": "duplicate.wav",
+            },
+        ),
+        "audio artifact link count mismatch",
     )
 
 
@@ -1126,6 +1151,12 @@ def require_waveform_seek_source_contract() -> None:
         '["phase audio measurements", phaseAudioIssues.length === 0]',
         '["entry point path", entryPointMatches ? "match" : "mismatch", "match"]',
         '["audio path", primaryAudioMatches ? "match" : "mismatch", "match"]',
+        'countArtifactKind(links, "entry-point") === 1',
+        'countArtifactKind(links, "audio") === 1',
+        'countArtifactKind(links, "manifest") === 1',
+        'countArtifactKind(links, "text-summary") === 1',
+        'countArtifactKind(links, "wav-report") === 1',
+        'return `${kind} artifact link count mismatch`',
         'return "entry-point link mismatch"',
         'return "audio link mismatch"',
         "function drawSignalPlot()",

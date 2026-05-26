@@ -2053,13 +2053,13 @@ function renderArtifactCoverage(manifest) {
   const ok =
     links.length > 0 &&
     missingPathCount === 0 &&
-    countArtifactKind(links, "entry-point") >= 1 &&
-    countArtifactKind(links, "audio") >= 1 &&
+    countArtifactKind(links, "entry-point") === 1 &&
+    countArtifactKind(links, "audio") === 1 &&
     entryPointMatches &&
     primaryAudioMatches &&
-    countArtifactKind(links, "manifest") >= 1 &&
-    countArtifactKind(links, "text-summary") >= 1 &&
-    countArtifactKind(links, "wav-report") >= 1 &&
+    countArtifactKind(links, "manifest") === 1 &&
+    countArtifactKind(links, "text-summary") === 1 &&
+    countArtifactKind(links, "wav-report") === 1 &&
     phaseReportCount === phases.length;
 
   setStatus("artifactCoverageStatus", ok ? "Complete" : "Check", ok);
@@ -2374,6 +2374,12 @@ function manifestShapeError(payload) {
 
   if (!Array.isArray(manifest.artifactLinks)) {
     return "artifact links missing";
+  }
+
+  for (const kind of ["entry-point", "audio", "manifest", "text-summary", "wav-report"]) {
+    if (countArtifactKind(manifest.artifactLinks, kind) !== 1) {
+      return `${kind} artifact link count mismatch`;
+    }
   }
 
   if (findArtifactPath(manifest.artifactLinks, "entry-point") !== handoff.entryPoint) {
