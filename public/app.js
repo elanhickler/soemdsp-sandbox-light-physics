@@ -1309,7 +1309,9 @@ function renderSignalPlotProbe() {
   )} / y ${formatCompactNumber(state.signalPlotProbe.y)}`;
   const nearest = state.signalPlotProbe.nearest;
   source.textContent = nearest
-    ? `near frame ${nearest.frame} / ${formatSeconds(nearest.seconds)} / ${nearest.phase}`
+    ? `${probeSourceText()} / near frame ${nearest.frame} / ${formatSeconds(
+        nearest.seconds,
+      )} / ${nearest.phase}`
     : "near frame";
 }
 

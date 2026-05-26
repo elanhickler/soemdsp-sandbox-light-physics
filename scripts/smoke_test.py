@@ -1503,6 +1503,7 @@ def require_waveform_seek_source_contract() -> None:
         "function renderSignalPlotProbe()",
         "waveformRegionAtFrame(frame)?.name",
         "nearest.frame",
+        "${probeSourceText()} / near frame ${nearest.frame}",
         "state.waveformProbeFrame = state.signalPlotProbe.nearest?.frame ?? null",
         "clampFrame(state.waveformProbeFrame, waveform) / waveform.frames",
         "const nearestProbe = state.signalPlotProbe?.nearest",
