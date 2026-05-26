@@ -866,9 +866,13 @@ function renderArtifacts(links) {
     status.className = "artifact-status";
     status.textContent = "Checking";
 
-    anchor.append(label, kind, path, status);
+    const modified = document.createElement("span");
+    modified.className = "artifact-modified";
+    modified.textContent = "Modified";
+
+    anchor.append(label, kind, path, modified, status);
     list.append(anchor);
-    checks.push(checkArtifactAvailability(link, status));
+    checks.push(checkArtifactAvailability(link, status, modified));
   }
 
   Promise.all(checks)
@@ -880,10 +884,11 @@ function renderArtifacts(links) {
     });
 }
 
-async function checkArtifactAvailability(link, status) {
+async function checkArtifactAvailability(link, status, modified) {
   if (!link.path) {
     status.textContent = "Check";
     status.className = "artifact-status warn";
+    modified.textContent = "Unavailable";
     return { ok: false };
   }
 
@@ -892,17 +897,25 @@ async function checkArtifactAvailability(link, status) {
     if (!response.ok) {
       status.textContent = `Check ${response.status}`;
       status.className = "artifact-status warn";
+      modified.textContent = "Unavailable";
       return { ok: false };
     }
 
     const bytes = Number(response.headers.get("content-length"));
     const size = formatBytes(bytes);
+    const modifiedValue = formatTimestamp(response.headers.get("last-modified"));
     status.textContent = size ? `OK ${size}` : "OK";
     status.className = "artifact-status good";
-    return { ok: true, bytes };
+    modified.textContent = modifiedValue;
+    modified.className =
+      modifiedValue === "missing" || modifiedValue === "invalid"
+        ? "artifact-modified warn"
+        : "artifact-modified";
+    return { ok: true, bytes, modified: modifiedValue };
   } catch (error) {
     status.textContent = "Check";
     status.className = "artifact-status warn";
+    modified.textContent = "Unavailable";
     console.error(error);
     return { ok: false };
   }

@@ -4,6 +4,7 @@ import argparse
 import json
 import mimetypes
 from datetime import datetime, timezone
+from email.utils import formatdate
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -121,9 +122,11 @@ class SandboxServer(BaseHTTPRequestHandler):
 
         mime_type, _ = mimetypes.guess_type(path)
         body = path.read_bytes()
+        modified_time = path.stat().st_mtime
         self.send_response(200)
         self.send_header("Content-Type", mime_type or "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Last-Modified", formatdate(modified_time, usegmt=True))
         self.end_headers()
         self.wfile.write(body)
 

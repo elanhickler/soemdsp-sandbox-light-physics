@@ -387,6 +387,7 @@ dd.warn {
     minmax(130px, 1fr)
     minmax(110px, 150px)
     minmax(0, 2fr)
+    minmax(150px, 190px)
     minmax(90px, 120px);
   gap: 12px;
   align-items: center;
@@ -420,6 +421,18 @@ dd.warn {
 }
 
 .artifact-status.warn {
+  color: var(--warn);
+}
+
+.artifact-modified {
+  justify-self: end;
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.artifact-modified.warn {
   color: var(--warn);
 }
 
