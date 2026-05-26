@@ -151,6 +151,12 @@ function setInspectionCursorTarget(region) {
   target.className = `pill inspection-target ${region ? "active" : "none"}`;
 }
 
+function setInspectionCursorTransport(region) {
+  const transport = document.getElementById("inspectionCursorTransport");
+  transport.textContent = `transport ${region?.name || "none"}`;
+  transport.className = `pill inspection-transport ${region ? "active" : "none"}`;
+}
+
 function boolText(value) {
   return value ? "true" : "false";
 }
@@ -1837,6 +1843,7 @@ function renderInspectionCursor() {
     setInspectionCursorSource("none", "none");
     setInspectionCursorDelta(null, 1);
     setInspectionCursorPreview(false);
+    setInspectionCursorTransport(null);
     setInspectionCursorTarget(null);
     renderKeyValue(cursor, [
       ["transport frame", "0"],
@@ -1873,6 +1880,7 @@ function renderInspectionCursor() {
   setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
   setInspectionCursorDelta(hoverDeltaFrame, waveform.sampleRate);
   setInspectionCursorPreview(hoverFrame !== null);
+  setInspectionCursorTransport(transportRegion);
   setInspectionCursorTarget(hoverRegion);
   renderKeyValue(cursor, [
     ["transport frame", String(transportFrame)],
@@ -2741,6 +2749,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
     ["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))],
     ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
+    ["inspection transport pill", waveformReady && Boolean(document.getElementById("inspectionCursorTransport"))],
     ["inspection target pill", waveformReady && Boolean(document.getElementById("inspectionCursorTarget"))],
     [
       "inspection hover delta",
@@ -3446,6 +3455,7 @@ function renderError(message, details = {}) {
   setInspectionCursorDelta(null, 1);
   setInspectionCursorAudio(0);
   setInspectionCursorPreview(false);
+  setInspectionCursorTransport(null);
   setInspectionCursorTarget(null);
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
