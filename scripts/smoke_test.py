@@ -477,6 +477,114 @@ def require_phase_contract(payload: dict[str, object]) -> None:
         require(rms > 0, f"{name} producer measured rms missing")
 
 
+def phase_audio_contract_fixture() -> dict[str, object]:
+    return {
+        "manifest": {
+            "wav": {
+                "frames": 200,
+            },
+            "phases": [
+                {
+                    "name": "first",
+                    "preflightOk": True,
+                    "applyOk": True,
+                    "processOk": True,
+                    "samplesProcessed": 100,
+                    "startFrame": 0,
+                    "endFrame": 100,
+                },
+                {
+                    "name": "second",
+                    "preflightOk": True,
+                    "applyOk": True,
+                    "processOk": True,
+                    "samplesProcessed": 100,
+                    "startFrame": 100,
+                    "endFrame": 200,
+                },
+            ],
+            "parameterResync": {
+                "frequency": {
+                    "first": 220,
+                    "second": 440,
+                },
+                "amplitude": {
+                    "first": 0.2,
+                    "second": 0.35,
+                },
+            },
+            "phaseAudioMeasurements": [
+                {
+                    "name": "first",
+                    "measuredFrequency": 220,
+                    "peak": 0.2,
+                    "rms": 0.141421,
+                },
+                {
+                    "name": "second",
+                    "measuredFrequency": 440,
+                    "peak": 0.35,
+                    "rms": 0.247487,
+                },
+            ],
+        }
+    }
+
+
+def require_phase_audio_contract_failure(
+  label: str,
+  mutate: Callable[[dict[str, object]], None],
+  expected: str,
+) -> None:
+    payload = json.loads(json.dumps(phase_audio_contract_fixture()))
+    manifest = payload["manifest"]
+    require(isinstance(manifest, dict), f"{label} fixture manifest missing")
+    mutate(manifest)
+    try:
+        require_phase_contract(payload)
+    except AssertionError as error:
+        require(expected in str(error), f"{label} produced {error}, expected {expected}")
+        return
+
+    raise AssertionError(f"{label} did not fail")
+
+
+def require_phase_audio_contract_negative_cases() -> None:
+    require_phase_contract(phase_audio_contract_fixture())
+    require_phase_audio_contract_failure(
+        "missing measurements",
+        lambda manifest: manifest.pop("phaseAudioMeasurements"),
+        "phase audio measurements missing",
+    )
+    require_phase_audio_contract_failure(
+        "measurement count mismatch",
+        lambda manifest: manifest["phaseAudioMeasurements"].pop(),
+        "phase audio measurement count did not match phase count",
+    )
+    require_phase_audio_contract_failure(
+        "measurement name mismatch",
+        lambda manifest: manifest["phaseAudioMeasurements"][0].update({"name": "other"}),
+        "first measurement missing",
+    )
+    require_phase_audio_contract_failure(
+        "producer frequency mismatch",
+        lambda manifest: manifest["phaseAudioMeasurements"][0].update(
+            {"measuredFrequency": 221},
+        ),
+        "first producer measured frequency mismatch",
+    )
+    require_phase_audio_contract_failure(
+        "producer peak mismatch",
+        lambda manifest: manifest["phaseAudioMeasurements"][0].update({"peak": 0.25}),
+        "first producer measured peak mismatch",
+    )
+    require_phase_audio_contract_failure(
+        "producer rms missing",
+        lambda manifest: manifest["phaseAudioMeasurements"][0].update({"rms": 0}),
+        "first producer measured rms missing",
+    )
+
+
 def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
@@ -1182,6 +1290,10 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
 
         run_step("manifest transport", fetch_payload)
         run_step("manifest contracts", lambda: require_manifest_contracts(payload))
+        run_step(
+            "phase audio contract negative cases",
+            require_phase_audio_contract_negative_cases,
+        )
         run_step(
             "artifact reports and audio",
             lambda: require_artifact_report_and_audio_contracts(base_url, payload),

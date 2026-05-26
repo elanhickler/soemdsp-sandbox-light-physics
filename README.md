@@ -43,6 +43,8 @@ link for reachability, checks report documents, checks parameter resync summary
 values, checks primary audio artifact reachability, WAV metadata, and byte-range
 audio responses, checks producer-side phase audio measurements against decoded
 consumer measurements, checks decoded phase frequency and peak amplitude against the manifest resync targets, checks
+negative phase-audio measurement contract cases for missing, mismatched, and
+drifting producer values, checks
 expected error and forbidden path responses including encoded traversal, checks
 that non-read methods are rejected by the read-only server, and verifies that
 readable malformed manifest shapes still preserve source details for the browser
