@@ -7,6 +7,7 @@ const state = {
   waveformPointerActive: false,
   phaseJumpPreviewIndex: null,
   lastSeekSource: null,
+  lastSeekFrame: null,
   followAudio: true,
   reports: [],
   activeReportIndex: 0,
@@ -1725,6 +1726,7 @@ async function renderWaveform(path) {
     state.waveformProbeSource = null;
     state.phaseJumpPreviewIndex = null;
     state.lastSeekSource = null;
+    state.lastSeekFrame = null;
     state.signalPlotProbe = null;
     state.waveform.stats = analyzeWaveform(state.waveform.samples);
     state.waveform.envelope = buildLevelEnvelope(state.waveform);
@@ -1764,6 +1766,7 @@ async function renderWaveform(path) {
     state.waveformProbeSource = null;
     state.phaseJumpPreviewIndex = null;
     state.lastSeekSource = null;
+    state.lastSeekFrame = null;
     state.signalPlotProbe = null;
     state.playheadFrame = 0;
     meta.replaceChildren();
@@ -1871,6 +1874,9 @@ function renderInspectionCursor() {
       ["transport frame", "0"],
       ["transport time", "0.000s"],
       ["transport phase", "phase"],
+      ["last seek source", "none"],
+      ["last seek frame", "none"],
+      ["last seek time", "none"],
       ["hover source", "none"],
       ["hover frame", "none"],
       ["hover signal", "none"],
@@ -1897,6 +1903,10 @@ function renderInspectionCursor() {
   const hoverAmplitude = activeParameterValue("amplitude", hoverRegion);
   const hoverSource = hoverFrame === null ? "transport" : state.waveformProbeSource || "probe";
   const hoverDeltaFrame = hoverFrame === null ? null : hoverFrame - transportFrame;
+  const lastSeekFrame =
+    state.lastSeekFrame === null ? null : clampFrame(state.lastSeekFrame, waveform);
+  const lastSeekRegion =
+    lastSeekFrame === null ? null : waveformRegionAtFrame(lastSeekFrame);
 
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
   setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
@@ -1911,6 +1921,13 @@ function renderInspectionCursor() {
     ["transport time", formatSeconds(transportFrame / waveform.sampleRate)],
     ["transport phase", transportRegion?.name || "phase"],
     ["transport sample", formatCompactNumber(transportSample)],
+    ["last seek source", state.lastSeekSource || "none"],
+    ["last seek frame", lastSeekFrame === null ? "none" : String(lastSeekFrame)],
+    [
+      "last seek time",
+      lastSeekFrame === null ? "none" : formatSeconds(lastSeekFrame / waveform.sampleRate),
+    ],
+    ["last seek phase", lastSeekRegion?.name || "none"],
     ["hover source", hoverFrame === null ? "none" : hoverSource],
     ["hover frame", hoverFrame === null ? "none" : String(hoverFrame)],
     [
@@ -1999,6 +2016,7 @@ function seekPrimaryAudioToFrame(frame, source = "waveform") {
 
   const targetFrame = clampFrame(frame, waveform);
   state.lastSeekSource = source;
+  state.lastSeekFrame = targetFrame;
   if (state.followAudio) {
     const audio = document.getElementById("audioPlayer");
     const targetTime = targetFrame / waveform.sampleRate;
@@ -3468,6 +3486,7 @@ function renderError(message, details = {}) {
   state.waveformProbeSource = null;
   state.phaseJumpPreviewIndex = null;
   state.lastSeekSource = null;
+  state.lastSeekFrame = null;
   state.signalPlotProbe = null;
   state.reports = [];
   state.activeReportIndex = 0;
