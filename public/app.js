@@ -455,6 +455,7 @@ function renderSignalPlot() {
   const meta = document.getElementById("signalPlotMeta");
   const waveform = state.waveform;
   renderSignalPlotControls();
+  renderSignalPlotPoint();
   if (!waveform) {
     status.textContent = "Check";
     status.className = "pill warn";
@@ -476,6 +477,25 @@ function renderSignalPlot() {
   ]);
   status.textContent = "Drawn";
   status.className = "pill good";
+}
+
+function renderSignalPlotPoint() {
+  const point = document.getElementById("signalPlotPoint");
+  const waveform = state.waveform;
+  if (!waveform) {
+    point.textContent = "x 0 / y 0";
+    return;
+  }
+
+  const lagFrames = signalPlotLagFrames(waveform);
+  const drawableFrames = Math.max(0, waveform.samples.length - lagFrames);
+  const pointFrame = Math.max(
+    0,
+    Math.min(drawableFrames - 1, state.playheadFrame),
+  );
+  const x = waveform.samples[pointFrame] || 0;
+  const y = waveform.samples[pointFrame + lagFrames] || 0;
+  point.textContent = `x ${formatCompactNumber(x)} / y ${formatCompactNumber(y)}`;
 }
 
 function renderSignalPlotControls() {
@@ -578,6 +598,7 @@ function setPlayheadFrame(frame) {
   renderWaveformPosition();
   drawWaveform();
   drawSignalPlot();
+  renderSignalPlotPoint();
 }
 
 async function renderWaveform(path) {
@@ -1548,6 +1569,7 @@ function renderError(message, details = {}) {
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("waveformStatus", "Check", false);
   setStatus("signalPlotStatus", "Check", false);
+  setText("signalPlotPoint", "x 0 / y 0");
   setStatus("phaseCoverageStatus", "Check", false);
   setStatus("phaseStatus", "Check", false);
   setStatus("artifactCoverageStatus", "Check", false);
