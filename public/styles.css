@@ -381,6 +381,7 @@ dd.warn {
   color: var(--warn);
 }
 
+.artifact-heading,
 .artifact-row {
   display: grid;
   grid-template-columns:
@@ -391,6 +392,21 @@ dd.warn {
     minmax(90px, 120px);
   gap: 12px;
   align-items: center;
+}
+
+.artifact-heading {
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.artifact-heading span:nth-child(4),
+.artifact-heading span:nth-child(5) {
+  justify-self: end;
+}
+
+.artifact-row {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 6px;

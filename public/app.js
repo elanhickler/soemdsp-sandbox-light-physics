@@ -845,6 +845,15 @@ function renderArtifacts(links) {
     return;
   }
 
+  const heading = document.createElement("div");
+  heading.className = "artifact-heading";
+  for (const text of ["Label", "Kind", "Path", "Modified", "Status"]) {
+    const item = document.createElement("span");
+    item.textContent = text;
+    heading.append(item);
+  }
+  list.append(heading);
+
   const checks = [];
   for (const link of links) {
     const anchor = document.createElement("a");
