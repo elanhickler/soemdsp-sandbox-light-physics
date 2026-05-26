@@ -1665,6 +1665,13 @@ function renderWaveformPhaseControls() {
     button.type = "button";
     button.className = "phase-button";
     button.dataset.phaseIndex = String(index);
+    button.dataset.phaseStartFrame = String(region.startFrame);
+    button.dataset.phaseStartTime = formatSeconds(region.startFrame / waveform.sampleRate);
+    button.setAttribute(
+      "aria-label",
+      `Jump waveform to ${region.name} phase at frame ${region.startFrame}`,
+    );
+    button.title = `Jump to ${region.name} at ${button.dataset.phaseStartTime}`;
     button.textContent = region.name;
     button.classList.toggle("preview", index === state.phaseJumpPreviewIndex);
     button.addEventListener("pointermove", () => probePhaseButton(index));
