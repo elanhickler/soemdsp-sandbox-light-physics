@@ -17,6 +17,25 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = (
     ROOT.parent / "soemdsp" / "runtime_dsp_object_bound_wav_resync_demo.manifest.json"
 )
+EXPECTED_CONTRACT = "soemdsp-demo-local-sandbox-handoff"
+EXPECTED_CONTRACT_VERSION = 1
+EXPECTED_INSPECTION_MODE = "mouse-and-ears"
+REQUIRED_FLAGS = {
+    "callerOwnsProcessingOrder": True,
+    "callerOwnsDspObjects": True,
+    "circuitOwnsDspObjects": False,
+    "dspObjectsKnowCircuit": False,
+    "serializesPatch": False,
+    "ownsAudioEngine": False,
+    "ownsScheduler": False,
+}
+REQUIRED_ARTIFACT_KINDS = {
+    "entry-point",
+    "audio",
+    "manifest",
+    "text-summary",
+    "wav-report",
+}
 
 
 @dataclass
@@ -69,6 +88,48 @@ def require_content_type(response: Response, expected: str | tuple[str, ...], la
     require(
         any(content_type.startswith(value) for value in expected_values),
         f"{label} content-type was {content_type!r}, expected {expected_values!r}",
+    )
+
+
+def require_handoff_contract(payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+    require(manifest.get("allOk") is True, "manifest allOk was not true")
+
+    handoff = manifest.get("sandboxHandoff")
+    require(isinstance(handoff, dict), "sandbox handoff missing")
+    require(handoff.get("contract") == EXPECTED_CONTRACT, "handoff contract mismatch")
+    require(
+        handoff.get("contractVersion") == EXPECTED_CONTRACT_VERSION,
+        "handoff contract version mismatch",
+    )
+    require(
+        handoff.get("inspectionMode") == EXPECTED_INSPECTION_MODE,
+        "handoff inspection mode mismatch",
+    )
+
+    for key, expected in REQUIRED_FLAGS.items():
+        require(handoff.get(key) is expected, f"handoff flag {key} mismatch")
+
+
+def require_artifact_contract(payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+    links = manifest.get("artifactLinks")
+    require(isinstance(links, list), "artifact links missing")
+    require(all(isinstance(link, dict) for link in links), "artifact link not object")
+    require(all(link.get("path") for link in links), "artifact link path missing")
+
+    kinds = {str(link.get("kind")) for link in links}
+    missing_kinds = REQUIRED_ARTIFACT_KINDS - kinds
+    require(not missing_kinds, f"required artifact kinds missing: {sorted(missing_kinds)}")
+
+    phases = manifest.get("phases")
+    require(isinstance(phases, list), "phases missing")
+    phase_report_count = sum(1 for link in links if link.get("kind") == "phase-report")
+    require(
+        phase_report_count == len(phases),
+        "phase report count did not match phase count",
     )
 
 
@@ -138,6 +199,8 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         require(payload.get("ok") is True, "manifest payload was not ok")
         require(payload.get("manifestPath"), "manifest path missing")
         require(payload.get("artifactRoot"), "artifact root missing")
+        require_handoff_contract(payload)
+        require_artifact_contract(payload)
 
         handoff = payload["manifest"].get("sandboxHandoff", {})
         audio_path = handoff.get("primaryAudioArtifact")
