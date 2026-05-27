@@ -247,6 +247,15 @@ function labelInspectionCursorPill(element, label, value, stateName) {
   element.dataset.inspectionState = stateName;
 }
 
+function labelInspectionCursorSurface(cursor, value, stateName) {
+  cursor.dataset.inspectionCursorLabel = "inspection cursor";
+  cursor.dataset.inspectionCursorValue = value;
+  cursor.dataset.inspectionCursorState = stateName;
+  cursor.setAttribute("role", "group");
+  cursor.setAttribute("aria-label", `inspection cursor: ${value}`);
+  cursor.title = `inspection cursor: ${value} / ${stateName}`;
+}
+
 function setInspectionCursorSource(sourceName, mode) {
   const source = document.getElementById("inspectionCursorSource");
   const value = `source ${sourceName}`;
@@ -2567,6 +2576,7 @@ function renderInspectionCursor() {
       ["hover frame", "none"],
       ["hover signal", "none"],
     ]);
+    labelInspectionCursorSurface(cursor, "unavailable", "check");
     return;
   }
 
@@ -2691,6 +2701,11 @@ function renderInspectionCursor() {
         : "none",
     ],
   ]);
+  labelInspectionCursorSurface(
+    cursor,
+    hoverFrame === null ? "transport inspection" : "hover inspection",
+    "ok",
+  );
 }
 
 function renderAudioPosition() {
@@ -4139,6 +4154,21 @@ function inspectionCursorPillsLabeled() {
   });
 }
 
+function inspectionCursorLabeled() {
+  const cursor = document.getElementById("inspectionCursor");
+  const label = cursor?.getAttribute("aria-label") || "";
+  return (
+    cursor?.dataset.inspectionCursorLabel === "inspection cursor" &&
+    Boolean(cursor.dataset.inspectionCursorValue) &&
+    cursor.dataset.inspectionCursorState === "ok" &&
+    cursor.getAttribute("role") === "group" &&
+    label === `inspection cursor: ${cursor.dataset.inspectionCursorValue}` &&
+    cursor.title === `${label} / ok` &&
+    cursor.textContent.includes("transport frame") &&
+    cursor.textContent.includes("hover signal")
+  );
+}
+
 function parameterTimelineSegmentsLabeled() {
   const segments = [...document.querySelectorAll("#parameterTimeline .parameter-segment")];
   return (
@@ -4317,7 +4347,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["signal plot canvas labels", waveformReady && signalPlotCanvasLabeled()],
     ["waveform-to-signal probe", waveformReady && Boolean(signalPlotProbeAtFrame(0))],
     ["signal-to-waveform probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
-    ["inspection cursor", waveformReady && Boolean(document.getElementById("inspectionCursor"))],
+    ["inspection cursor", waveformReady && inspectionCursorLabeled()],
     ["inspection source pill", waveformReady && Boolean(document.getElementById("inspectionCursorSource"))],
     ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
     ["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))],
