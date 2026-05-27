@@ -293,7 +293,7 @@ audio {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  cursor: ew-resize;
+  cursor: all-scroll;
   touch-action: none;
 }
 

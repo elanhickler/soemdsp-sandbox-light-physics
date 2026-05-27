@@ -3058,6 +3058,7 @@ def require_node_graph_mvp_contract() -> None:
         ".node-palette",
         "body.debug-collapsed",
         ".node-slider-readout",
+        "cursor: all-scroll;",
         ".node-slider-readout.value-dragging",
         ".node-slider-readout-value",
         "white-space: pre;",
