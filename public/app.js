@@ -6006,7 +6006,7 @@ const nodeGraphDefaultPatch = Object.freeze({
   info: {
     author: "",
     description: "",
-    name: "",
+    name: "Patch Name",
     tags: "tags",
   },
   grid: { ...nodeGraphGrid },
