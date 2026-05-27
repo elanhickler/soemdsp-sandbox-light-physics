@@ -146,7 +146,7 @@ audio {
 
 .node-graph-workspace {
   position: relative;
-  min-height: 430px;
+  min-height: 520px;
   margin-top: 16px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -237,9 +237,24 @@ audio {
   font-size: 0.78rem;
 }
 
+.node-slider-drag-surface {
+  width: 100%;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
 .dsp-node input[type="range"] {
   width: 100%;
   accent-color: var(--accent);
+  pointer-events: none;
+}
+
+.node-slider-drag-surface.value-dragging {
+  cursor: ew-resize;
+}
+
+.node-slider-drag-surface.value-dragging input[type="range"] {
+  accent-color: var(--accent-2);
 }
 
 .node-slider-numbers {

@@ -5924,6 +5924,7 @@ const nodeGraphMvp = {
   rendered: null,
   sampleRate: 44100,
   seconds: 2,
+  sliderDragging: null,
 };
 
 function nodeGraphLabel(node, port) {
@@ -5944,7 +5945,7 @@ function clampNodeSliderValue(value, min, max) {
 }
 
 function syncNodeSliderNumberFields(slider) {
-  const row = slider.parentElement.querySelector(".node-slider-numbers");
+  const row = slider.closest("label")?.querySelector(".node-slider-numbers");
   if (!row) {
     return;
   }
@@ -5998,8 +5999,92 @@ function updateNodeSliderFromNumber(input) {
   renderNodeGraphAudio();
 }
 
+function setNodeSliderValue(slider, value) {
+  slider.value = String(
+    clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
+  );
+  syncNodeSliderNumberFields(slider);
+  renderNodeGraphAudio();
+}
+
+function beginNodeSliderDrag(event) {
+  if (nodeGraphMvp.sliderDragging || event.button > 0) {
+    return;
+  }
+
+  const surface = event.currentTarget;
+  const slider = document.getElementById(surface.dataset.sliderTarget);
+  if (!slider) {
+    return;
+  }
+
+  const rect = surface.getBoundingClientRect();
+  nodeGraphMvp.sliderDragging = {
+    pointerId: event.pointerId ?? null,
+    slider,
+    surface,
+    startValue: Number(slider.value),
+    startX: event.clientX,
+    startY: event.clientY,
+    width: Math.max(1, rect.width),
+  };
+  surface.classList.add("value-dragging");
+  if (event.pointerId !== undefined) {
+    surface.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+}
+
+function dragNodeSlider(event) {
+  const drag = nodeGraphMvp.sliderDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+
+  const range = Number(drag.slider.max) - Number(drag.slider.min);
+  const horizontalDelta = event.clientX - drag.startX;
+  const verticalDelta = drag.startY - event.clientY;
+  const valueDelta = ((horizontalDelta + verticalDelta) / drag.width) * range;
+  setNodeSliderValue(drag.slider, drag.startValue + valueDelta);
+  event.preventDefault();
+}
+
+function endNodeSliderDrag(event) {
+  const drag = nodeGraphMvp.sliderDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+
+  drag.surface.classList.remove("value-dragging");
+  if (event.pointerId !== undefined && drag.surface.hasPointerCapture?.(event.pointerId)) {
+    drag.surface.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.sliderDragging = null;
+}
+
+function createNodeSliderDragSurface(slider) {
+  if (slider.parentElement?.classList.contains("node-slider-drag-surface")) {
+    return slider.parentElement;
+  }
+
+  const surface = document.createElement("div");
+  surface.className = "node-slider-drag-surface";
+  surface.dataset.sliderTarget = slider.id;
+  surface.setAttribute("role", "presentation");
+  slider.insertAdjacentElement("beforebegin", surface);
+  surface.append(slider);
+  return surface;
+}
+
 function createNodeSliderNumberControls(slider) {
-  if (slider.parentElement.querySelector(".node-slider-numbers")) {
+  const label = slider.closest("label");
+  if (!label || label.querySelector(".node-slider-numbers")) {
     return;
   }
 
@@ -6032,7 +6117,7 @@ function createNodeSliderNumberControls(slider) {
     label.append(labelSpan, input);
     row.append(label);
   }
-  slider.insertAdjacentElement("afterend", row);
+  label.append(row);
   syncNodeSliderNumberFields(slider);
 }
 
@@ -6636,11 +6721,21 @@ function initNodeGraphMvp() {
   ]) {
     const slider = document.getElementById(id);
     createNodeSliderNumberControls(slider);
+    const surface = createNodeSliderDragSurface(slider);
+    surface.addEventListener("pointerdown", beginNodeSliderDrag);
+    surface.addEventListener("lostpointercapture", endNodeSliderDrag);
+    surface.addEventListener("mousedown", beginNodeSliderDrag);
     slider.addEventListener("input", () => {
       syncNodeSliderNumberFields(slider);
       renderNodeGraphAudio();
     });
   }
+
+  document.addEventListener("pointermove", dragNodeSlider);
+  document.addEventListener("pointerup", endNodeSliderDrag);
+  document.addEventListener("pointercancel", endNodeSliderDrag);
+  document.addEventListener("mousemove", dragNodeSlider);
+  document.addEventListener("mouseup", endNodeSliderDrag);
 
   renderNodeGraphConnectionList();
   renderNodeGraphAudio();
