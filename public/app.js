@@ -2416,11 +2416,11 @@ function renderWaveformPosition() {
   const scrubber = document.getElementById("waveformScrubber");
   const waveform = state.waveform;
   if (!waveform) {
-    position.textContent = "0.000s / unknown";
-    sample.textContent = "frame 0 / unknown / sample 0";
+    labelWaveformHeaderPill(position, "waveform position", "0.000s / unknown", false);
+    labelWaveformHeaderPill(sample, "waveform sample", "frame 0 / unknown / sample 0", false);
     resetIdleProbePill("waveformProbe", "Waveform probe idle");
-    phase.textContent = "phase";
-    phaseRange.textContent = "range";
+    labelWaveformHeaderPill(phase, "waveform phase", "phase", false);
+    labelWaveformHeaderPill(phaseRange, "waveform phase range", "range", false);
     phaseJumpTarget.textContent = "jump idle";
     scrubber.value = "0";
     updateWaveformScrubberLabel(scrubber, null, null);
@@ -2440,14 +2440,23 @@ function renderWaveformPosition() {
     Math.min(waveform.samples.length - 1, state.playheadFrame),
   );
   const sampleValue = waveform.samples[sampleFrame] || 0;
-  position.textContent = `${formatSeconds(
+  const positionText = `${formatSeconds(
     state.playheadFrame / waveform.sampleRate,
   )} / ${formatAudioDuration(waveform.frames / waveform.sampleRate)}`;
-  sample.textContent = `frame ${state.playheadFrame} / ${waveform.frames} / sample ${formatCompactNumber(
+  const sampleText = `frame ${state.playheadFrame} / ${waveform.frames} / sample ${formatCompactNumber(
     sampleValue,
   )}`;
-  phase.textContent = activeRegion ? activeRegion.name : "phase";
-  phaseRange.textContent = formatRegionRange(activeRegion, waveform.sampleRate);
+  const phaseText = activeRegion ? activeRegion.name : "phase";
+  const phaseRangeText = formatRegionRange(activeRegion, waveform.sampleRate);
+  labelWaveformHeaderPill(position, "waveform position", positionText, true);
+  labelWaveformHeaderPill(sample, "waveform sample", sampleText, true);
+  labelWaveformHeaderPill(phase, "waveform phase", phaseText, Boolean(activeRegion));
+  labelWaveformHeaderPill(
+    phaseRange,
+    "waveform phase range",
+    phaseRangeText,
+    Boolean(activeRegion),
+  );
   renderCurrentParameters(activeRegion);
   updateParameterTimelinePlayhead(activeRegion);
   updatePhaseAudioStatsActive(activeRegion);
@@ -3873,6 +3882,21 @@ function currentParameterPillsLabeled() {
   });
 }
 
+function waveformTransportPillsLabeled() {
+  const ids = ["waveformPosition", "waveformSample", "waveformPhase", "waveformPhaseRange"];
+  return ids.every((id) => {
+    const pill = document.getElementById(id);
+    const label = pill?.getAttribute("aria-label") || "";
+    return (
+      pill?.dataset.waveformHeaderLabel !== undefined &&
+      pill.dataset.waveformHeaderValue !== undefined &&
+      pill.dataset.waveformHeaderState === "ok" &&
+      label === `${pill.dataset.waveformHeaderLabel}: ${pill.dataset.waveformHeaderValue}` &&
+      pill.title === `${label} / ok`
+    );
+  });
+}
+
 function artifactRowsLabeled() {
   const rows = [...document.querySelectorAll("#artifactList .artifact-row")];
   return (
@@ -4210,6 +4234,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["boundary flag row labels", boundaryFlagRowsLabeled()],
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
+    ["waveform transport labels", waveformReady && waveformTransportPillsLabeled()],
     ["waveform canvas labels", waveformReady && waveformCanvasLabeled()],
     ["waveform scrubber labels", waveformReady && waveformScrubberLabeled()],
     ["waveform hover probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
