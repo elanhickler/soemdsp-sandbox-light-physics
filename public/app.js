@@ -5939,85 +5939,41 @@ function nodeGraphReadNumber(id) {
 }
 
 function formatNodeSliderNumber(value) {
-  return Number(value).toString();
+  return Number(value).toFixed(6);
 }
 
 function clampNodeSliderValue(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function syncNodeSliderNumberFields(slider) {
-  const row = slider.closest("label")?.querySelector(".node-slider-numbers");
-  if (!row) {
+function syncNodeSliderReadout(slider) {
+  const readout = slider.closest("label")?.querySelector(".node-slider-readout");
+  if (!readout) {
     return;
   }
 
-  const fields = {
-    min: slider.min,
-    mid: slider.dataset.mid,
-    max: slider.max,
-    def: slider.dataset.default,
-    cur: slider.value,
-  };
-  for (const [field, value] of Object.entries(fields)) {
-    const input = row.querySelector(`[data-slider-number-field="${field}"]`);
-    if (input) {
-      input.value = formatNodeSliderNumber(value);
-    }
-  }
+  readout.textContent = formatNodeSliderNumber(slider.value);
+  readout.dataset.value = slider.value;
+  readout.title = `Double-click to type value / min ${formatNodeSliderNumber(
+    slider.min,
+  )} / mid ${formatNodeSliderNumber(slider.dataset.mid)} / max ${formatNodeSliderNumber(
+    slider.max,
+  )} / default ${formatNodeSliderNumber(slider.dataset.default)}`;
 }
 
-function updateNodeSliderFromNumber(input) {
-  const slider = document.getElementById(input.dataset.sliderTarget);
+function updateNodeSliderCurrentValue(slider, rawValue) {
   if (!slider) {
     return;
   }
 
-  const value = Number(input.value);
+  const value = Number(rawValue);
   if (!Number.isFinite(value)) {
-    syncNodeSliderNumberFields(slider);
+    syncNodeSliderReadout(slider);
     return;
   }
 
-  const clampSliderMetadata = () => {
-    const min = Number(slider.min);
-    const max = Number(slider.max);
-    slider.dataset.mid = String(
-      clampNodeSliderValue(Number(slider.dataset.mid), min, max),
-    );
-    slider.dataset.default = String(
-      clampNodeSliderValue(Number(slider.dataset.default), min, max),
-    );
-    slider.value = String(clampNodeSliderValue(Number(slider.value), min, max));
-  };
-
-  if (input.dataset.sliderNumberField === "min") {
-    const max = Number(slider.max);
-    slider.min = String(Math.min(value, max));
-    clampSliderMetadata();
-  }
-  if (input.dataset.sliderNumberField === "mid") {
-    slider.dataset.mid = String(
-      clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
-    );
-  }
-  if (input.dataset.sliderNumberField === "max") {
-    const min = Number(slider.min);
-    slider.max = String(Math.max(value, min));
-    clampSliderMetadata();
-  }
-  if (input.dataset.sliderNumberField === "def") {
-    slider.dataset.default = String(
-      clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
-    );
-  }
-  if (input.dataset.sliderNumberField === "cur") {
-    slider.value = String(
-      clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
-    );
-  }
-
-  syncNodeSliderNumberFields(slider);
+  slider.value = String(clampNodeSliderValue(value, Number(slider.min), Number(slider.max)));
+  syncNodeSliderReadout(slider);
   renderNodeGraphAudio();
 }
 
@@ -6025,7 +5981,7 @@ function setNodeSliderValue(slider, value) {
   slider.value = String(
     clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
   );
-  syncNodeSliderNumberFields(slider);
+  syncNodeSliderReadout(slider);
   renderNodeGraphAudio();
 }
 
@@ -6104,48 +6060,79 @@ function createNodeSliderDragSurface(slider) {
   return surface;
 }
 
-function createNodeSliderNumberControls(slider) {
+function commitNodeSliderReadoutEdit(input) {
+  updateNodeSliderCurrentValue(document.getElementById(input.dataset.sliderTarget), input.value);
+  const readout = document.createElement("button");
+  readout.type = "button";
+  readout.className = "node-slider-readout";
+  readout.dataset.sliderTarget = input.dataset.sliderTarget;
+  readout.setAttribute("aria-label", input.getAttribute("aria-label"));
+  input.replaceWith(readout);
+  attachNodeSliderReadoutEvents(readout);
+  syncNodeSliderReadout(document.getElementById(readout.dataset.sliderTarget));
+}
+
+function cancelNodeSliderReadoutEdit(input) {
+  const slider = document.getElementById(input.dataset.sliderTarget);
+  const readout = document.createElement("button");
+  readout.type = "button";
+  readout.className = "node-slider-readout";
+  readout.dataset.sliderTarget = input.dataset.sliderTarget;
+  readout.setAttribute("aria-label", input.getAttribute("aria-label"));
+  input.replaceWith(readout);
+  attachNodeSliderReadoutEvents(readout);
+  syncNodeSliderReadout(slider);
+}
+
+function beginNodeSliderReadoutEdit(readout) {
+  const slider = document.getElementById(readout.dataset.sliderTarget);
+  if (!slider) {
+    return;
+  }
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.className = "node-slider-readout-input";
+  input.step = slider.step || "any";
+  input.inputMode = "decimal";
+  input.value = formatNodeSliderNumber(slider.value);
+  input.dataset.sliderTarget = slider.id;
+  input.setAttribute("aria-label", readout.getAttribute("aria-label"));
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      commitNodeSliderReadoutEdit(input);
+    }
+    if (event.key === "Escape") {
+      cancelNodeSliderReadoutEdit(input);
+    }
+  });
+  input.addEventListener("blur", () => commitNodeSliderReadoutEdit(input));
+  readout.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function attachNodeSliderReadoutEvents(readout) {
+  readout.addEventListener("dblclick", () => beginNodeSliderReadoutEdit(readout));
+}
+
+function createNodeSliderReadout(slider) {
   const label = slider.closest("label");
-  if (!label || label.querySelector(".node-slider-numbers")) {
+  if (!label || label.querySelector(".node-slider-readout, .node-slider-readout-input")) {
     return;
   }
 
   slider.dataset.mid ||= String((Number(slider.min) + Number(slider.max)) / 2);
   slider.dataset.default ||= slider.value;
 
-  const row = document.createElement("div");
-  row.className = "node-slider-numbers";
-  for (const [field, labelText] of [
-    ["min", "MIN"],
-    ["mid", "MID"],
-    ["max", "MAX"],
-    ["def", "DEF"],
-    ["cur", "CUR"],
-  ]) {
-    const label = document.createElement("label");
-    label.className = "node-slider-number";
-    const labelSpan = document.createElement("span");
-    labelSpan.textContent = labelText;
-    const input = document.createElement("input");
-    input.type = "number";
-    input.step = slider.step || "any";
-    input.inputMode = "decimal";
-    input.draggable = false;
-    input.dataset.sliderTarget = slider.id;
-    input.dataset.sliderNumberField = field;
-    input.setAttribute("aria-label", `${slider.id} ${labelText.toLowerCase()} value`);
-    input.addEventListener("change", () => updateNodeSliderFromNumber(input));
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        updateNodeSliderFromNumber(input);
-        input.blur();
-      }
-    });
-    label.append(labelSpan, input);
-    row.append(label);
-  }
-  label.append(row);
-  syncNodeSliderNumberFields(slider);
+  const readout = document.createElement("button");
+  readout.type = "button";
+  readout.className = "node-slider-readout";
+  readout.dataset.sliderTarget = slider.id;
+  readout.setAttribute("aria-label", `${slider.id} current value`);
+  attachNodeSliderReadoutEvents(readout);
+  label.append(readout);
+  syncNodeSliderReadout(slider);
 }
 
 function nodeGraphInputKey(node, port) {
@@ -6914,13 +6901,13 @@ function initNodeGraphMvp() {
     "nodeBiasAmount",
   ]) {
     const slider = document.getElementById(id);
-    createNodeSliderNumberControls(slider);
+    createNodeSliderReadout(slider);
     const surface = createNodeSliderDragSurface(slider);
     surface.addEventListener("pointerdown", beginNodeSliderDrag);
     surface.addEventListener("lostpointercapture", endNodeSliderDrag);
     surface.addEventListener("mousedown", beginNodeSliderDrag);
     slider.addEventListener("input", () => {
-      syncNodeSliderNumberFields(slider);
+      syncNodeSliderReadout(slider);
       renderNodeGraphAudio();
     });
   }
