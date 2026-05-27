@@ -35,6 +35,7 @@ EXPECTED_META_KINDS = {
     "decimal_bipolar",
     "descrete",
     "frequency",
+    "integer_bipolar",
     "momentary",
     "onoff",
     "pitch",
@@ -2914,6 +2915,8 @@ def require_node_graph_mvp_contract() -> None:
         'decimal_bipolar: {',
         'frequency: { def: 1000, label: "Frequency"',
         'descrete: { def: 0, label: "Descrete"',
+        'integer_bipolar: {',
+        'label: "Integer Bipolar"',
         'waveform: {',
         'bypass: {',
         'plusminus: {',
@@ -3161,6 +3164,7 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     decimal_bipolar = templates.get("decimal_bipolar")
     frequency = templates.get("frequency")
     descrete = templates.get("descrete")
+    integer_bipolar = templates.get("integer_bipolar")
     waveform = templates.get("waveform")
     bypass = templates.get("bypass")
     plusminus = templates.get("plusminus")
@@ -3171,6 +3175,7 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(isinstance(decimal_bipolar, dict), "decimal_bipolar metadata kind missing")
     require(isinstance(frequency, dict), "frequency metadata kind missing")
     require(isinstance(descrete, dict), "descrete metadata kind missing")
+    require(isinstance(integer_bipolar, dict), "integer_bipolar metadata kind missing")
     require(isinstance(waveform, dict), "waveform metadata kind missing")
     require(isinstance(bypass, dict), "bypass metadata kind missing")
     require(isinstance(plusminus, dict), "plusminus metadata kind missing")
@@ -3182,10 +3187,15 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(decibels.get("unit") == "dB", "decibels metadata unit mismatch")
     require(decimal_bipolar.get("unit") == "lin", "decimal_bipolar metadata unit mismatch")
     require(decimal_bipolar.get("showPlusMinus") is True, "decimal_bipolar showPlusMinus mismatch")
-    require(decibels.get("showPlusMinus") is True, "decibels showPlusMinus mismatch")
+    require("showPlusMinus" not in decibels, "decibels should not default showPlusMinus")
     require(frequency.get("unit") == "Hz", "frequency metadata unit mismatch")
-    require(templates.get("pitch", {}).get("showPlusMinus") is True, "pitch showPlusMinus mismatch")
+    require("showPlusMinus" not in templates.get("pitch", {}), "pitch should not default showPlusMinus")
     require(descrete.get("unit") == "idx", "descrete metadata unit mismatch")
+    require(integer_bipolar.get("label") == "Integer Bipolar", "integer_bipolar metadata label mismatch")
+    require(integer_bipolar.get("unit") == "idx", "integer_bipolar metadata unit mismatch")
+    require(integer_bipolar.get("min") == -9, "integer_bipolar metadata min mismatch")
+    require(integer_bipolar.get("max") == 9, "integer_bipolar metadata max mismatch")
+    require(integer_bipolar.get("showPlusMinus") is True, "integer_bipolar showPlusMinus mismatch")
     require(waveform.get("choices") == ["Sine", "Saw", "Square", "Noise"], "waveform choices mismatch")
     require(bypass.get("choices") == ["active", "BYPASSED"], "bypass choices mismatch")
     require(plusminus.get("choices") == ["-", "+"], "plusminus choices mismatch")
