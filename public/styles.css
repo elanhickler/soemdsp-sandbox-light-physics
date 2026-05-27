@@ -286,12 +286,34 @@ audio {
   color: var(--text);
   font-family: Consolas, "Courier New", monospace;
   font-size: 0.78rem;
-  text-align: right;
 }
 
 .node-slider-readout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   cursor: ew-resize;
   touch-action: none;
+}
+
+.node-slider-readout-value {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+}
+
+.node-slider-readout-unit {
+  min-width: 1.75em;
+  color: var(--accent);
+  font-size: 0.68rem;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.node-slider-readout-unit[hidden] {
+  display: none;
 }
 
 .node-slider-readout.value-dragging {
@@ -336,7 +358,7 @@ audio {
 }
 
 .metadata-popover-heading button,
-.metadata-popover-actions button {
+.metadata-popover-grid button {
   min-height: 30px;
   padding: 0 10px;
   font-size: 0.72rem;
@@ -358,7 +380,8 @@ audio {
 }
 
 .metadata-popover-grid input,
-.metadata-popover-grid select {
+.metadata-popover-grid select,
+.metadata-popover-grid button {
   width: 100%;
   min-width: 0;
   height: 30px;
@@ -369,6 +392,13 @@ audio {
   color: var(--text);
   font-family: Consolas, "Courier New", monospace;
   font-size: 0.78rem;
+}
+
+.metadata-popover-grid button {
+  align-self: end;
+  font-family: inherit;
+  font-size: 0.66rem;
+  text-transform: uppercase;
 }
 
 .node-parameter-metadata-popover button:focus {
@@ -382,12 +412,7 @@ audio {
   border-color: var(--line);
 }
 
-.metadata-popover-actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.metadata-popover-actions button.armed {
+.metadata-popover-grid button.armed {
   border-color: rgba(242, 93, 93, 0.76);
   background: rgba(122, 28, 28, 0.72);
   color: #ffd7d7;

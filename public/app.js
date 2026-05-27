@@ -6162,12 +6162,22 @@ function syncNodeSliderReadout(slider) {
     return;
   }
 
+  if (!readout.querySelector(".node-slider-readout-value")) {
+    readout.textContent = "";
+    populateNodeSliderReadoutShell(readout);
+  }
+  const valueText = readout.querySelector(".node-slider-readout-value");
+  const unitText = readout.querySelector(".node-slider-readout-unit");
   const min = Number(slider.min);
   const max = Number(slider.max);
   const range = max - min;
   const position = range === 0 ? 0 : ((Number(slider.value) - min) / range) * 100;
-  readout.textContent = formatNodeSliderNumber(slider.value);
+  const unit = (slider.dataset.unit || "").trim();
+  valueText.textContent = formatNodeSliderNumber(slider.value);
+  unitText.textContent = unit;
+  unitText.hidden = !unit;
   readout.dataset.value = slider.value;
+  readout.dataset.unit = unit;
   readout.title = `${formatNodeSliderMetadataTooltip(slider)} / double-click to type`;
   readout.style.setProperty(
     "--value-position",
@@ -6425,6 +6435,14 @@ function endNodeSliderDrag(event) {
   nodeGraphMvp.sliderDragging = null;
 }
 
+function populateNodeSliderReadoutShell(readout) {
+  const valueText = document.createElement("span");
+  valueText.className = "node-slider-readout-value";
+  const unitText = document.createElement("span");
+  unitText.className = "node-slider-readout-unit";
+  readout.append(valueText, unitText);
+}
+
 function commitNodeSliderReadoutEdit(input) {
   updateNodeSliderCurrentValue(document.getElementById(input.dataset.sliderTarget), input.value);
   const readout = document.createElement("button");
@@ -6432,6 +6450,7 @@ function commitNodeSliderReadoutEdit(input) {
   readout.className = "node-slider-readout";
   readout.dataset.sliderTarget = input.dataset.sliderTarget;
   readout.setAttribute("aria-label", input.getAttribute("aria-label"));
+  populateNodeSliderReadoutShell(readout);
   input.replaceWith(readout);
   attachNodeSliderReadoutEvents(readout);
   syncNodeSliderReadout(document.getElementById(readout.dataset.sliderTarget));
@@ -6444,6 +6463,7 @@ function cancelNodeSliderReadoutEdit(input) {
   readout.className = "node-slider-readout";
   readout.dataset.sliderTarget = input.dataset.sliderTarget;
   readout.setAttribute("aria-label", input.getAttribute("aria-label"));
+  populateNodeSliderReadoutShell(readout);
   input.replaceWith(readout);
   attachNodeSliderReadoutEvents(readout);
   syncNodeSliderReadout(slider);
@@ -6503,6 +6523,7 @@ function createNodeSliderReadout(slider) {
   readout.dataset.sliderTarget = slider.id;
   readout.setAttribute("aria-label", `${slider.id} current value`);
   readout.setAttribute("title", formatNodeSliderMetadataTooltip(slider));
+  populateNodeSliderReadoutShell(readout);
   attachNodeSliderReadoutEvents(readout);
   label.append(readout);
   syncNodeSliderReadout(slider);
