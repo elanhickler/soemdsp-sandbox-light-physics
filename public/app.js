@@ -1566,12 +1566,23 @@ function clearSignalPlotProbe() {
 function renderSignalPlot() {
   const status = document.getElementById("signalPlotStatus");
   const meta = document.getElementById("signalPlotMeta");
+  const canvas = document.getElementById("signalPlotCanvas");
   const waveform = state.waveform;
   renderSignalPlotControls();
   renderSignalPlotSummary();
   renderSignalPlotPoint();
   renderSignalPlotProbe();
   if (!waveform) {
+    canvas.dataset.signalSource = "unavailable";
+    canvas.dataset.signalFocus = "unavailable";
+    canvas.dataset.signalMode = state.signalPlotMode;
+    canvas.dataset.signalScale = String(state.signalPlotScale);
+    canvas.dataset.signalWindow = "unavailable";
+    canvas.dataset.signalWindowMs = String(state.signalPlotWindowMs);
+    canvas.dataset.signalLagMs = String(state.signalLagMs);
+    canvas.dataset.signalLagFrames = "unavailable";
+    canvas.dataset.signalPoints = "unavailable";
+    canvas.title = "Primary WAV signal plot unavailable";
     status.textContent = "Check";
     status.className = "pill warn";
     renderUnavailableSignalPlotMeta();
@@ -1581,19 +1592,36 @@ function renderSignalPlot() {
   const lagFrames = signalPlotLagFrames(waveform);
   const drawableFrames = Math.max(0, waveform.samples.length - lagFrames);
   const focusStats = signalPlotFocusStats(waveform, drawableFrames);
+  const focusName = signalPlotFocusName(waveform);
+  const windowName = signalPlotWindowName(waveform, drawableFrames);
+  const pointCount = signalPlotPointCount(waveform, drawableFrames);
+  canvas.dataset.signalSource = "decoded primary WAV";
+  canvas.dataset.signalFocus = focusName;
+  canvas.dataset.signalMode = state.signalPlotMode;
+  canvas.dataset.signalScale = String(state.signalPlotScale);
+  canvas.dataset.signalWindow = windowName;
+  canvas.dataset.signalWindowMs = String(state.signalPlotWindowMs);
+  canvas.dataset.signalLagMs = String(state.signalLagMs);
+  canvas.dataset.signalLagFrames = String(lagFrames);
+  canvas.dataset.signalPoints = String(pointCount);
+  canvas.dataset.signalFocusPeak = formatCompactNumber(focusStats.peak);
+  canvas.dataset.signalFocusRms = formatCompactNumber(focusStats.rms);
+  canvas.title =
+    `Primary WAV signal plot / ${focusName} / ${state.signalPlotMode} / ` +
+    `x${state.signalPlotScale} / ${windowName} / lag ${state.signalLagMs} ms / ${pointCount} points`;
   drawSignalPlot();
   renderKeyValue(meta, [
-    ["focus", signalPlotFocusName(waveform)],
+    ["focus", focusName],
     ["mode", state.signalPlotMode],
     ["scale", `x${state.signalPlotScale}`],
-    ["window", signalPlotWindowName(waveform, drawableFrames)],
+    ["window", windowName],
     ["window size", `${state.signalPlotWindowMs} ms`],
     ["x", "sample[n]"],
     ["y", "sample[n + lag]"],
     ["lag", `${state.signalLagMs} ms`],
     ["lag frames", String(lagFrames)],
     ["lag time", formatSeconds(lagFrames / waveform.sampleRate)],
-    ["points", String(signalPlotPointCount(waveform, drawableFrames))],
+    ["points", String(pointCount)],
     ["focus peak", formatCompactNumber(focusStats.peak)],
     ["focus rms", formatCompactNumber(focusStats.rms)],
     ["focus min", formatCompactNumber(focusStats.min)],
@@ -3579,6 +3607,25 @@ function signalPlotControlsLabeled() {
   );
 }
 
+function signalPlotCanvasLabeled() {
+  const canvas = document.getElementById("signalPlotCanvas");
+  return (
+    canvas?.getAttribute("aria-label") === "Primary WAV signal plot" &&
+    canvas.dataset.signalSource === "decoded primary WAV" &&
+    canvas.dataset.signalFocus !== undefined &&
+    canvas.dataset.signalMode !== undefined &&
+    canvas.dataset.signalScale !== undefined &&
+    canvas.dataset.signalWindow !== undefined &&
+    canvas.dataset.signalWindowMs !== undefined &&
+    canvas.dataset.signalLagMs !== undefined &&
+    canvas.dataset.signalLagFrames !== undefined &&
+    canvas.dataset.signalPoints !== undefined &&
+    canvas.dataset.signalFocusPeak !== undefined &&
+    canvas.dataset.signalFocusRms !== undefined &&
+    Boolean(canvas.title)
+  );
+}
+
 function parameterTimelineSegmentsLabeled() {
   const segments = [...document.querySelectorAll("#parameterTimeline .parameter-segment")];
   return (
@@ -3739,6 +3786,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["signal plot source probe", waveformReady && Boolean(document.getElementById("signalPlotProbeSource"))],
     ["signal plot probe labels", waveformReady && signalPlotProbeLabeled()],
     ["signal plot control labels", waveformReady && signalPlotControlsLabeled()],
+    ["signal plot canvas labels", waveformReady && signalPlotCanvasLabeled()],
     ["waveform-to-signal probe", waveformReady && Boolean(signalPlotProbeAtFrame(0))],
     ["signal-to-waveform probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["inspection cursor", waveformReady && Boolean(document.getElementById("inspectionCursor"))],
