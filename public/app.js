@@ -4378,6 +4378,26 @@ function signalToWaveformProbeAvailable() {
   return waveformProbeLabeled();
 }
 
+function circuitChainRowsLabeled() {
+  const rows = [...document.querySelectorAll("#circuitChain .chain-row")];
+  if (!rows.length) {
+    return false;
+  }
+  return rows.every((row, index) => {
+    const label = row.getAttribute("aria-label") || "";
+    return (
+      row.dataset.chainIndex === String(index) &&
+      row.dataset.circuitConnection !== undefined &&
+      row.dataset.callerStep !== undefined &&
+      row.dataset.chainState === "ok" &&
+      row.getAttribute("role") === "group" &&
+      label.includes(row.dataset.circuitConnection) &&
+      label.includes(row.dataset.callerStep) &&
+      row.title === label
+    );
+  });
+}
+
 function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform)) {
   const rows = [
     [
@@ -4398,6 +4418,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["artifact coverage row labels", artifactCoverageRowsLabeled()],
     ["source row labels", sourceRowsLabeled()],
     ["producer proof row labels", producerProofRowsLabeled()],
+    ["circuit chain rows", circuitChainRowsLabeled()],
     ["boundary flag row labels", boundaryFlagRowsLabeled()],
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
@@ -4519,6 +4540,92 @@ function renderUnavailableProducerProof() {
     ["phase measurements", "unavailable", boolText(true)],
     ["caller processing order", "unavailable", boolText(true)],
   ]);
+}
+
+function formatCircuitStep(step) {
+  return `${step.sourceNode}.${step.sourcePort} -> ${step.destinationNode}.${step.destinationPort}`;
+}
+
+function renderCircuitChain(manifest) {
+  const list = document.getElementById("circuitChain");
+  const issue = callerProcessingOrderIssue(manifest);
+  const order = manifest.callerProcessingOrder || {};
+  const steps = Array.isArray(order.steps) ? order.steps : [];
+  const ok = issue === "" && steps.length > 0;
+
+  list.replaceChildren();
+  for (const [index, step] of steps.entries()) {
+    const circuitConnection = formatCircuitStep(step);
+    const callerStep = String(step.callerStep || "missing");
+    const rowOk = ok && Number(step.index) === index;
+    const row = document.createElement("div");
+    row.className = rowOk ? "chain-row" : "chain-row warn-row";
+    row.dataset.chainIndex = String(index);
+    row.dataset.circuitConnection = circuitConnection;
+    row.dataset.callerStep = callerStep;
+    row.dataset.chainState = rowOk ? "ok" : "check";
+    row.setAttribute("role", "group");
+    row.setAttribute(
+      "aria-label",
+      `Circuit connection ${index + 1}: ${circuitConnection}; caller step: ${callerStep}; ${row.dataset.chainState}`,
+    );
+    row.title = row.getAttribute("aria-label");
+
+    const badge = document.createElement("strong");
+    badge.className = "chain-index";
+    badge.textContent = String(index + 1);
+
+    const circuit = document.createElement("div");
+    circuit.className = "chain-cell";
+    const circuitLabel = document.createElement("span");
+    circuitLabel.textContent = "Circuit connection";
+    const circuitText = document.createElement("strong");
+    circuitText.textContent = circuitConnection;
+    circuit.append(circuitLabel, circuitText);
+
+    const caller = document.createElement("div");
+    caller.className = "chain-cell";
+    const callerLabel = document.createElement("span");
+    callerLabel.textContent = "Caller processing step";
+    const callerText = document.createElement("strong");
+    callerText.textContent = callerStep;
+    caller.append(callerLabel, callerText);
+
+    row.append(badge, circuit, caller);
+    list.append(row);
+  }
+
+  if (!steps.length) {
+    const row = document.createElement("div");
+    row.className = "chain-row warn-row";
+    row.dataset.chainIndex = "none";
+    row.dataset.circuitConnection = "unavailable";
+    row.dataset.callerStep = "unavailable";
+    row.dataset.chainState = "check";
+    row.setAttribute("role", "group");
+    row.setAttribute("aria-label", "Circuit chain unavailable");
+    row.title = "Circuit chain unavailable";
+    row.textContent = issue || "circuit chain unavailable";
+    list.append(row);
+  }
+
+  setStatus("circuitChainStatus", ok ? "Aligned" : "Check", ok);
+}
+
+function renderUnavailableCircuitChain() {
+  const list = document.getElementById("circuitChain");
+  list.replaceChildren();
+  const row = document.createElement("div");
+  row.className = "chain-row warn-row";
+  row.dataset.chainIndex = "none";
+  row.dataset.circuitConnection = "unavailable";
+  row.dataset.callerStep = "unavailable";
+  row.dataset.chainState = "unavailable";
+  row.setAttribute("role", "group");
+  row.setAttribute("aria-label", "Circuit chain unavailable");
+  row.title = "Circuit chain unavailable";
+  row.textContent = "manifest required";
+  list.append(row);
 }
 
 function renderSandboxContract(manifest) {
@@ -5092,6 +5199,7 @@ function render(response) {
     ]),
   );
   renderProducerProof(manifest);
+  renderCircuitChain(manifest);
   renderSandboxContract(manifest);
   renderParameterTimeline(manifest);
   renderPhaseCoverage(manifest.phases || [], manifest.wav);
@@ -5431,6 +5539,7 @@ function renderError(message, details = {}) {
   setText("frameCount", "0");
   setStatus("checklistStatus", "Check", false);
   setStatus("producerStatus", "Check", false);
+  setStatus("circuitChainStatus", "Check", false);
   setStatus("handsOnReadinessStatus", "Check", false);
   setInspectionCursorSource("none", "none");
   setInspectionCursorDelta(null, 1);
@@ -5517,6 +5626,7 @@ function renderError(message, details = {}) {
   renderAudioPosition();
 
   renderUnavailableProducerProof();
+  renderUnavailableCircuitChain();
   renderUnavailableHandsOnReadiness();
   renderUnavailableSandboxContract();
   renderUnavailableParameterSummary();
