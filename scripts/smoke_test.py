@@ -213,6 +213,7 @@ REQUIRED_SHELL_IDS = {
     "nodeWaveformCanvas",
     "nodeWireSvg",
     "metadataDefaultValue",
+    "metadataDisplayChoicesValue",
     "metadataKindValue",
     "metadataChoicesValue",
     "metadataMaxValue",
@@ -2882,6 +2883,8 @@ def require_node_graph_mvp_contract() -> None:
         "metadataUnitValue",
         "metadataChoicesValue",
         "Choices",
+        "metadataDisplayChoicesValue",
+        "Display choices",
         "metadataShowSignValue",
         "Always show +/-",
         "metadataPopoverDragHandle",
@@ -2938,6 +2941,8 @@ def require_node_graph_mvp_contract() -> None:
         "function syncNodeSliderReadout(slider)",
         "function parseNodeMetadataChoices(value)",
         "function formatNodeMetadataChoices(choices)",
+        "function nodeSliderShouldDisplayChoices(slider)",
+        "function nodeSliderChoiceLabel(slider)",
         "function nodeSliderShouldShowSign(slider)",
         "function nodeSliderMetadata(slider)",
         "function formatNodeSliderMetadataTooltip(slider)",
@@ -2999,6 +3004,7 @@ def require_node_graph_mvp_contract() -> None:
         "slider.dataset.kind",
         "slider.dataset.unit",
         "slider.dataset.choices",
+        "slider.dataset.displayChoices",
         "slider.dataset.showSign",
         "function beginNodeSliderReadoutEdit(readout)",
         "function commitNodeSliderReadoutEdit(input)",
@@ -3197,11 +3203,16 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(integer_bipolar.get("max") == 9, "integer_bipolar metadata max mismatch")
     require(integer_bipolar.get("showPlusMinus") is True, "integer_bipolar showPlusMinus mismatch")
     require(waveform.get("choices") == ["Sine", "Saw", "Square", "Noise"], "waveform choices mismatch")
+    require(waveform.get("displayChoices") is True, "waveform displayChoices mismatch")
     require(bypass.get("choices") == ["active", "BYPASSED"], "bypass choices mismatch")
+    require(bypass.get("displayChoices") is True, "bypass displayChoices mismatch")
     require(plusminus.get("choices") == ["-", "+"], "plusminus choices mismatch")
+    require(plusminus.get("displayChoices") is True, "plusminus displayChoices mismatch")
     require(plusminus.get("showPlusMinus") is True, "plusminus showPlusMinus mismatch")
     require(onoff.get("choices") == ["off", "on"], "onoff choices mismatch")
+    require(onoff.get("displayChoices") is True, "onoff displayChoices mismatch")
     require(momentary.get("choices") == ["idle", "on"], "momentary choices mismatch")
+    require(momentary.get("displayChoices") is True, "momentary displayChoices mismatch")
 
 
 def require_manifest_contracts(payload: dict[str, object]) -> None:

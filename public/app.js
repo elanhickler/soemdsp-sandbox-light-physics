@@ -6046,6 +6046,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
   waveform: {
     choices: ["Sine", "Saw", "Square", "Noise"],
     def: 0,
+    displayChoices: true,
     label: "Waveform",
     max: 9,
     mid: 4,
@@ -6056,6 +6057,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
   bypass: {
     choices: ["active", "BYPASSED"],
     def: 0,
+    displayChoices: true,
     label: "Bypass",
     max: 1,
     mid: 0.5,
@@ -6066,6 +6068,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
   plusminus: {
     choices: ["-", "+"],
     def: -1,
+    displayChoices: true,
     label: "Plus Minus",
     max: 1,
     mid: 0,
@@ -6077,6 +6080,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
   onoff: {
     choices: ["off", "on"],
     def: 1,
+    displayChoices: true,
     label: "On Off",
     max: 1,
     mid: 0.5,
@@ -6087,6 +6091,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
   momentary: {
     choices: ["idle", "on"],
     def: 0,
+    displayChoices: true,
     label: "Momentary",
     max: 1,
     mid: 0.5,
@@ -6178,6 +6183,10 @@ function nodeSliderShouldShowSign(slider) {
   return slider.dataset.showSign === "true";
 }
 
+function nodeSliderShouldDisplayChoices(slider) {
+  return slider.dataset.displayChoices === "true";
+}
+
 function formatNodeSliderCompactNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Number(number.toFixed(6)).toString() : "";
@@ -6203,6 +6212,20 @@ function formatNodeMetadataChoices(choices) {
   return choices.join(", ");
 }
 
+function nodeSliderChoiceLabel(slider) {
+  const metadata = nodeSliderMetadata(slider);
+  if (!metadata.displayChoices || !metadata.choices.length) {
+    return null;
+  }
+
+  const index = Math.round(Number(slider.value));
+  if (!Number.isFinite(index)) {
+    return null;
+  }
+
+  return metadata.choices[Math.max(0, Math.min(metadata.choices.length - 1, index))] ?? null;
+}
+
 function nodeSliderMetadata(slider) {
   const min = Number(slider.min);
   const mid = Number(slider.dataset.mid);
@@ -6217,6 +6240,7 @@ function nodeSliderMetadata(slider) {
     choices: parseNodeMetadataChoices(slider.dataset.choices || ""),
     cur,
     def,
+    displayChoices: nodeSliderShouldDisplayChoices(slider),
     showSign: nodeSliderShouldShowSign(slider),
     unit: slider.dataset.unit ?? "",
     kind: slider.dataset.kind || "decimal",
@@ -6240,6 +6264,7 @@ function formatNodeSliderMetadataTooltip(slider) {
     `kind ${metadata.kind}`,
     `unit ${metadata.unit}`,
     `choices ${metadata.choices.length ? formatNodeMetadataChoices(metadata.choices) : "none"}`,
+    `display choices ${metadata.displayChoices}`,
     `show sign ${metadata.showSign}`,
   ].join(" / ");
 }
@@ -6308,6 +6333,7 @@ function setNodeSliderMetadata(slider, metadata) {
   slider.dataset.kind = metadata.kind || "decimal";
   slider.dataset.unit = metadata.unit ?? "";
   slider.dataset.choices = formatNodeMetadataChoices(metadata.choices || []);
+  slider.dataset.displayChoices = metadata.displayChoices ? "true" : "false";
   slider.dataset.showSign = metadata.showSign ? "true" : "false";
   slider.value = String(clampNodeSliderValue(Number(slider.value), metadata.min, metadata.max));
   syncNodeSliderReadout(slider);
@@ -6338,7 +6364,8 @@ function syncNodeSliderReadout(slider) {
   const unitText = readout.querySelector(".node-slider-readout-unit");
   const position = nodeSliderTravelFromValue(slider, Number(slider.value)) * 100;
   const unit = (slider.dataset.unit || "").trim();
-  valueText.textContent = formatNodeSliderNumber(slider.value, {
+  const choiceLabel = nodeSliderChoiceLabel(slider);
+  valueText.textContent = choiceLabel ?? formatNodeSliderNumber(slider.value, {
     reserveSignSpace: true,
     showSign: nodeSliderShouldShowSign(slider),
   });
@@ -6513,6 +6540,7 @@ function fillNodeMetadataPopover(slider) {
   document.getElementById("metadataUnitValue").value = metadata.unit;
   document.getElementById("metadataChoicesValue").value =
     formatNodeMetadataChoices(metadata.choices);
+  document.getElementById("metadataDisplayChoicesValue").checked = metadata.displayChoices;
   document.getElementById("metadataShowSignValue").checked = metadata.showSign;
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
@@ -6573,6 +6601,7 @@ function readNodeMetadataEditorValues(slider) {
     mid: parseNodeMetadataNumber(document.getElementById("metadataMidValue").value, current.mid),
     min,
     choices: parseNodeMetadataChoices(document.getElementById("metadataChoicesValue").value),
+    displayChoices: document.getElementById("metadataDisplayChoicesValue").checked,
     step: stepInput.toLowerCase() === "any"
       ? 0
       : Math.max(0, parseNodeMetadataNumber(stepInput, current.step)),
@@ -6607,6 +6636,7 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataUnitValue").value = template.unit;
   document.getElementById("metadataChoicesValue").value =
     formatNodeMetadataChoices(template.choices || []);
+  document.getElementById("metadataDisplayChoicesValue").checked = Boolean(template.displayChoices);
   document.getElementById("metadataShowSignValue").checked = Boolean(template.showPlusMinus);
   applyNodeMetadataEditor();
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
@@ -6803,6 +6833,7 @@ function createNodeSliderReadout(slider) {
   slider.dataset.kind ||= "decimal";
   slider.dataset.unit ??= "";
   slider.dataset.choices ??= "";
+  slider.dataset.displayChoices ??= "false";
   slider.dataset.showSign ??= "false";
 
   const readout = document.createElement("button");

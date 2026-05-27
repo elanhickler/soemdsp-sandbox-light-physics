@@ -117,6 +117,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "waveform": {
         "choices": ["Sine", "Saw", "Square", "Noise"],
         "def": 0,
+        "displayChoices": True,
         "label": "Waveform",
         "max": 9,
         "mid": 4,
@@ -127,6 +128,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "bypass": {
         "choices": ["active", "BYPASSED"],
         "def": 0,
+        "displayChoices": True,
         "label": "Bypass",
         "max": 1,
         "mid": 0.5,
@@ -137,6 +139,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "plusminus": {
         "choices": ["-", "+"],
         "def": -1,
+        "displayChoices": True,
         "label": "Plus Minus",
         "max": 1,
         "mid": 0,
@@ -148,6 +151,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "onoff": {
         "choices": ["off", "on"],
         "def": 1,
+        "displayChoices": True,
         "label": "On Off",
         "max": 1,
         "mid": 0.5,
@@ -158,6 +162,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "momentary": {
         "choices": ["idle", "on"],
         "def": 0,
+        "displayChoices": True,
         "label": "Momentary",
         "max": 1,
         "mid": 0.5,
