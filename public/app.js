@@ -4188,6 +4188,23 @@ function inspectionCursorPillsLabeled() {
   return inspectionCursorPillIds.every((id) => inspectionCursorPillLabeled(id));
 }
 
+function inspectionCursorKeyValueLabeled(key) {
+  const values = [...document.querySelectorAll("#inspectionCursor dd")];
+  const value = values.find((row) => row.dataset.kvKey === key);
+  return (
+    value &&
+    value.dataset.kvValue !== undefined &&
+    value.dataset.kvExpected !== undefined &&
+    value.dataset.kvState === "ok" &&
+    value.getAttribute("aria-label") === `${key}: ${value.dataset.kvValue}` &&
+    value.title === value.getAttribute("aria-label")
+  );
+}
+
+function inspectionCursorHoverDeltaLabeled() {
+  return inspectionCursorKeyValueLabeled("hover delta");
+}
+
 function inspectionCursorLabeled() {
   const cursor = document.getElementById("inspectionCursor");
   const label = cursor?.getAttribute("aria-label") || "";
@@ -4198,8 +4215,8 @@ function inspectionCursorLabeled() {
     cursor.getAttribute("role") === "group" &&
     label === `inspection cursor: ${cursor.dataset.inspectionCursorValue}` &&
     cursor.title === `${label} / ok` &&
-    cursor.textContent.includes("transport frame") &&
-    cursor.textContent.includes("hover signal")
+    inspectionCursorKeyValueLabeled("transport frame") &&
+    inspectionCursorKeyValueLabeled("hover signal")
   );
 }
 
@@ -4426,10 +4443,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection target pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorTarget")],
     ["inspection divergence pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorDivergence")],
     ["inspection pill labels", waveformReady && inspectionCursorPillsLabeled()],
-    [
-      "inspection hover delta",
-      waveformReady && document.getElementById("inspectionCursor")?.textContent.includes("hover delta"),
-    ],
+    ["inspection hover delta", waveformReady && inspectionCursorHoverDeltaLabeled()],
     ["read-only boundary", validateConsumerChecklist(manifest).accepted],
     ["consumer checklist row labels", validateConsumerChecklist(manifest).accepted && consumerChecklistRowsLabeled()],
     ["sandbox contract row labels", validateConsumerChecklist(manifest).accepted && sandboxContractRowsLabeled()],
