@@ -6153,6 +6153,17 @@ function formatNodeMetadataStep(value) {
   return value > 0 ? formatNodeSliderCompactNumber(value) : "any";
 }
 
+function parseNodeMetadataChoices(value) {
+  return String(value)
+    .split(",")
+    .map((choice) => choice.trim())
+    .filter(Boolean);
+}
+
+function formatNodeMetadataChoices(choices) {
+  return choices.join(", ");
+}
+
 function nodeSliderMetadata(slider) {
   const min = Number(slider.min);
   const mid = Number(slider.dataset.mid);
@@ -6164,6 +6175,7 @@ function nodeSliderMetadata(slider) {
       ? Number(slider.dataset.step)
       : 0;
   return {
+    choices: parseNodeMetadataChoices(slider.dataset.choices || ""),
     cur,
     def,
     showSign: nodeSliderShouldShowSign(slider),
@@ -6188,6 +6200,7 @@ function formatNodeSliderMetadataTooltip(slider) {
     `step ${stepText}`,
     `kind ${metadata.kind}`,
     `unit ${metadata.unit}`,
+    `choices ${metadata.choices.length ? formatNodeMetadataChoices(metadata.choices) : "none"}`,
     `show sign ${metadata.showSign}`,
   ].join(" / ");
 }
@@ -6255,6 +6268,7 @@ function setNodeSliderMetadata(slider, metadata) {
   slider.dataset.step = metadata.step > 0 ? String(metadata.step) : "any";
   slider.dataset.kind = metadata.kind || "decimal";
   slider.dataset.unit = metadata.unit ?? "";
+  slider.dataset.choices = formatNodeMetadataChoices(metadata.choices || []);
   slider.dataset.showSign = metadata.showSign ? "true" : "false";
   slider.value = String(clampNodeSliderValue(Number(slider.value), metadata.min, metadata.max));
   syncNodeSliderReadout(slider);
@@ -6453,6 +6467,8 @@ function fillNodeMetadataPopover(slider) {
   document.getElementById("metadataStepValue").value = formatNodeMetadataStep(metadata.step);
   document.getElementById("metadataKindValue").value = normalizeNodeMetadataKind(metadata.kind);
   document.getElementById("metadataUnitValue").value = metadata.unit;
+  document.getElementById("metadataChoicesValue").value =
+    formatNodeMetadataChoices(metadata.choices);
   document.getElementById("metadataShowSignValue").checked = metadata.showSign;
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
@@ -6511,6 +6527,7 @@ function readNodeMetadataEditorValues(slider) {
     max,
     mid: parseNodeMetadataNumber(document.getElementById("metadataMidValue").value, current.mid),
     min,
+    choices: parseNodeMetadataChoices(document.getElementById("metadataChoicesValue").value),
     step: stepInput.toLowerCase() === "any"
       ? 0
       : Math.max(0, parseNodeMetadataNumber(stepInput, current.step)),
@@ -6543,6 +6560,8 @@ function setNodeMetadataDefaultsFromKind() {
     formatNodeSliderCompactNumber(template.def);
   document.getElementById("metadataStepValue").value = formatNodeMetadataStep(template.step);
   document.getElementById("metadataUnitValue").value = template.unit;
+  document.getElementById("metadataChoicesValue").value =
+    formatNodeMetadataChoices(template.choices || []);
   applyNodeMetadataEditor();
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
@@ -6736,6 +6755,7 @@ function createNodeSliderReadout(slider) {
   slider.step = "any";
   slider.dataset.kind ||= "decimal";
   slider.dataset.unit ??= "";
+  slider.dataset.choices ??= "";
   slider.dataset.showSign ??= "false";
 
   const readout = document.createElement("button");
