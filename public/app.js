@@ -3698,6 +3698,10 @@ function producerProofRowsLabeled() {
   return keyValueRowsLabeled("producerProof", 8);
 }
 
+function boundaryFlagRowsLabeled() {
+  return keyValueRowsLabeled("boundaryFlags", requiredFlags.length);
+}
+
 function signalPlotControlsLabeled() {
   const groups = [...document.querySelectorAll("#signalPlotControls .control-group")];
   const buttons = [...document.querySelectorAll("#signalPlotControls button")];
@@ -3885,6 +3889,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["report control labels", reportControlsLabeled()],
     ["artifact row labels", artifactRowsLabeled()],
     ["producer proof row labels", producerProofRowsLabeled()],
+    ["boundary flag row labels", boundaryFlagRowsLabeled()],
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
     ["waveform canvas labels", waveformReady && waveformCanvasLabeled()],
