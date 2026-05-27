@@ -6081,6 +6081,7 @@ const nodeGraphMvp = {
   dragging: null,
   metadataDragging: null,
   metadataEditorTarget: null,
+  metadataPopoverPosition: null,
   nodeDragging: null,
   nodeTypeCounts: {
     bias: 1,
@@ -6337,7 +6338,7 @@ function nodeSliderDebugPath(slider) {
   return `${nodeName} : ${nodeSliderLabelText(slider)} : Metadata`;
 }
 
-function positionNodeMetadataPopover(popover, x, y) {
+function positionNodeMetadataPopover(popover, x, y, remember = false) {
   const margin = 12;
   popover.hidden = false;
   const rect = popover.getBoundingClientRect();
@@ -6345,6 +6346,9 @@ function positionNodeMetadataPopover(popover, x, y) {
   const top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, y));
   popover.style.left = `${left}px`;
   popover.style.top = `${top}px`;
+  if (remember) {
+    nodeGraphMvp.metadataPopoverPosition = { left, top };
+  }
 }
 
 function beginNodeMetadataPopoverDrag(event) {
@@ -6384,6 +6388,7 @@ function dragNodeMetadataPopover(event) {
     document.getElementById("nodeParameterMetadataPopover"),
     event.clientX - drag.offsetX,
     event.clientY - drag.offsetY,
+    true,
   );
   event.preventDefault();
 }
@@ -6483,10 +6488,11 @@ function openNodeMetadataPopover(event, readout) {
 
   nodeGraphMvp.metadataEditorTarget = slider.id;
   fillNodeMetadataPopover(slider);
+  const savedPosition = nodeGraphMvp.metadataPopoverPosition;
   positionNodeMetadataPopover(
     document.getElementById("nodeParameterMetadataPopover"),
-    event.clientX,
-    event.clientY,
+    savedPosition?.left ?? event.clientX,
+    savedPosition?.top ?? event.clientY,
   );
 }
 
