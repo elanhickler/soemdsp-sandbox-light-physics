@@ -3490,6 +3490,29 @@ function parameterTimelineSegmentsLabeled() {
   );
 }
 
+function phaseListItemsLabeled() {
+  const items = [...document.querySelectorAll("#phaseList .phase")];
+  return (
+    items.length > 0 &&
+    items.every((item) => {
+      const label = item.getAttribute("aria-label") || "";
+      return (
+        item.dataset.phaseIndex !== undefined &&
+        item.dataset.phaseName !== undefined &&
+        item.dataset.startFrame !== undefined &&
+        item.dataset.endFrame !== undefined &&
+        item.dataset.startTime !== undefined &&
+        item.dataset.endTime !== undefined &&
+        item.dataset.duration !== undefined &&
+        item.dataset.wavShare !== undefined &&
+        label.startsWith("Phase ") &&
+        item.getAttribute("role") === "group" &&
+        item.title.startsWith(label)
+      );
+    })
+  );
+}
+
 function probePillLabeled(id) {
   const probe = document.getElementById(id);
   return (
@@ -3563,6 +3586,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["phase jump target", waveformReady && Boolean(document.getElementById("waveformPhaseJumpTarget"))],
     ["phase list probe", waveformReady && Boolean(document.getElementById("phaseProbe"))],
     ["phase list probe labels", waveformReady && phaseListProbeLabeled()],
+    ["phase list item labels", waveformReady && phaseListItemsLabeled()],
     ["phase preview target", waveformReady && Boolean(document.querySelector(".phase"))],
     ["phase parameter readout", parameterResyncContractIssue(manifest) === ""],
     ["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0],
@@ -4079,15 +4103,29 @@ function renderPhases(phases, wav) {
     const span = spans[index];
     const duration =
       sampleRate > 0 ? formatSeconds(span.frames / sampleRate) : "unavailable";
+    const startTime =
+      sampleRate > 0 ? formatSeconds(span.startFrame / sampleRate) : "unavailable";
+    const endTime =
+      sampleRate > 0 ? formatSeconds(span.endFrame / sampleRate) : "unavailable";
     const share =
       totalFrames > 0
         ? formatPercent((span.frames / totalFrames) * 100)
         : "unavailable";
+    const itemLabel =
+      `Phase ${phase.name || "phase"} from frame ${span.startFrame} to ${span.endFrame}`;
     const item = document.createElement("div");
     item.className = "phase";
+    item.dataset.phaseIndex = String(index);
     item.dataset.phaseName = phase.name || "";
     item.dataset.startFrame = String(span.startFrame);
     item.dataset.endFrame = String(span.endFrame);
+    item.dataset.startTime = startTime;
+    item.dataset.endTime = endTime;
+    item.dataset.duration = duration;
+    item.dataset.wavShare = share;
+    item.setAttribute("aria-label", itemLabel);
+    item.setAttribute("role", "group");
+    item.title = `${itemLabel} / ${startTime} to ${endTime} / ${duration}`;
     item.addEventListener("pointermove", probePhaseList);
     item.addEventListener("pointerleave", clearPhaseListProbe);
 
@@ -4120,6 +4158,17 @@ function renderUnavailablePhases() {
 
   const item = document.createElement("div");
   item.className = "phase warn-row";
+  item.dataset.phaseIndex = "none";
+  item.dataset.phaseName = "unavailable";
+  item.dataset.startFrame = "none";
+  item.dataset.endFrame = "none";
+  item.dataset.startTime = "unavailable";
+  item.dataset.endTime = "unavailable";
+  item.dataset.duration = "unavailable";
+  item.dataset.wavShare = "unavailable";
+  item.setAttribute("aria-label", "Phase list unavailable: manifest required");
+  item.setAttribute("role", "group");
+  item.title = "Phase list unavailable: manifest required";
 
   const name = document.createElement("h3");
   name.textContent = "Phases unavailable";
