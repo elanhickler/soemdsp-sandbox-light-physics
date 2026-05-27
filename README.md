@@ -4,7 +4,7 @@ Local browser sandbox for `soemdsp` proof artifacts and demo-scoped interactive 
 
 The sandbox now has two lanes:
 
-- a browser-only Node Wiring MVP where Osc or Noise can be wired through Gain, Bias, and Output, validated, rendered to an audible Web Audio buffer, and inspected through local waveform and signal-plot canvases
+- a browser-only Node Wiring MVP where output ports can be freely wired into input ports, with reachable acyclic graphs ending at Output rendered to an audible Web Audio buffer and inspected through local waveform and signal-plot canvases
 - a read-only artifact inspector for generated `soemdsp` handoff manifests, WAVs, phase reports, producer proofs, boundary flags, parameter resync data, waveform playback, level envelopes, and X/Y signal plots
 
 The server remains read-only. The node graph is intentionally demo-scoped browser state; it does not save patches, mutate `Circuit`, add a scheduler, or become a plugin layer.

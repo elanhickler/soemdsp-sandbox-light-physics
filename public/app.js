@@ -5915,12 +5915,6 @@ const nodeGraphDefaultConnections = Object.freeze([
   { sourceNode: "bias", sourcePort: "Out", destinationNode: "output", destinationPort: "In" },
 ]);
 
-const nodeGraphAllowedInputs = Object.freeze({
-  "gain.In": new Set(["osc.Out", "noise.Out"]),
-  "bias.In": new Set(["gain.Out", "osc.Out"]),
-  "output.In": new Set(["bias.Out"]),
-});
-
 const nodeGraphMvp = {
   audioContext: null,
   bufferSource: null,
@@ -5945,45 +5939,98 @@ function nodeGraphInputKey(node, port) {
   return `${node}.${port}`;
 }
 
-function nodeGraphConnectionKey(node, port) {
-  return `${node}.${port}`;
-}
-
-function nodeGraphFindInputConnection(node, port) {
-  return nodeGraphMvp.connections.find(
+function nodeGraphFindInputConnections(node, port) {
+  return nodeGraphMvp.connections.filter(
     (connection) =>
       connection.destinationNode === node && connection.destinationPort === port,
   );
 }
 
 function nodeGraphValidate() {
-  const gainSourceConnection = nodeGraphFindInputConnection("gain", "In");
-  const biasConnection = nodeGraphFindInputConnection("bias", "In");
-  const outputConnection = nodeGraphFindInputConnection("output", "In");
-  const gainSourceNode = gainSourceConnection?.sourceNode || "";
-  const directBiasSourceNode = biasConnection?.sourceNode === "osc" ? "osc" : "";
-  const gainSourceValid = gainSourceNode === "osc" || gainSourceNode === "noise";
-  const gainToBiasValid = biasConnection?.sourceNode === "gain" && gainSourceValid;
-  const directBiasValid = directBiasSourceNode === "osc";
-  const biasValid = outputConnection?.sourceNode === "bias";
-  const sourceNode = directBiasSourceNode || gainSourceNode;
-  const usesGain = gainToBiasValid;
-  const valid = (gainToBiasValid || directBiasValid) && biasValid;
-  const missing = [];
+  const issues = [];
+  const plan = [];
+  const route = [];
+  let sourceNode = "";
+  const visiting = new Set();
+  const visited = new Set();
 
-  if (!gainToBiasValid && !directBiasValid) {
-    missing.push("Osc/Noise -> Gain");
-    missing.push("Gain/Osc -> Bias");
+  function inputConnections(node, port) {
+    return nodeGraphFindInputConnections(node, port);
   }
-  if (!biasValid) {
-    missing.push("Bias -> Output");
+
+  for (const [node, port] of [
+    ["gain", "In"],
+    ["bias", "In"],
+    ["output", "In"],
+  ]) {
+    const connections = inputConnections(node, port);
+    if (connections.length > 1) {
+      issues.push(`unsupported multi-source into ${nodeGraphLabel(node, port)}`);
+    }
+  }
+
+  function resolveInput(node, port) {
+    const connections = inputConnections(node, port);
+    if (connections.length === 0) {
+      issues.push(
+        node === "output"
+          ? "missing Output input"
+          : `missing ${nodeGraphNodeLabels[node]} input`,
+      );
+      return false;
+    }
+    if (connections.length > 1) {
+      return false;
+    }
+    return resolveNode(connections[0].sourceNode);
+  }
+
+  function resolveNode(node) {
+    if (node === "osc" || node === "noise") {
+      sourceNode = node;
+      route.push(node);
+      return true;
+    }
+    if (node !== "gain" && node !== "bias" && node !== "output") {
+      issues.push(`unsupported source ${node}`);
+      return false;
+    }
+    if (visiting.has(node)) {
+      issues.push(`cycle detected at ${nodeGraphNodeLabels[node]}`);
+      return false;
+    }
+    if (visited.has(node)) {
+      return true;
+    }
+
+    visiting.add(node);
+    const resolved = resolveInput(node, "In");
+    visiting.delete(node);
+    visited.add(node);
+    if (!resolved) {
+      return false;
+    }
+    if (node !== "output") {
+      plan.push(node);
+      route.push(node);
+    }
+    return true;
+  }
+
+  resolveNode("output");
+  route.push("output");
+
+  const uniqueIssues = [...new Set(issues)];
+  if (!sourceNode && !uniqueIssues.length) {
+    uniqueIssues.push("missing renderable source");
   }
 
   return {
-    missing,
+    issues: uniqueIssues,
+    plan,
+    route,
     sourceNode,
-    usesGain,
-    valid,
+    valid: uniqueIssues.length === 0,
   };
 }
 
@@ -6097,7 +6144,7 @@ function renderNodeGraphConnectionList() {
     : "source missing";
   validationPill.textContent = validation.valid
     ? "valid"
-    : `missing ${validation.missing.join(", ")}`;
+    : validation.issues.join(", ");
   validationPill.className = `pill ${validation.valid ? "good" : "warn"}`;
 
   document.getElementById("nodeRenderButton").disabled = !validation.valid;
@@ -6113,20 +6160,21 @@ function disconnectNodeGraphConnection(index) {
 }
 
 function connectNodeGraphPorts(sourceNode, sourcePort, destinationNode, destinationPort) {
-  const outputKey = nodeGraphConnectionKey(sourceNode, sourcePort);
-  const inputKey = nodeGraphInputKey(destinationNode, destinationPort);
-  const allowed = nodeGraphAllowedInputs[inputKey];
-  if (!allowed || !allowed.has(outputKey)) {
+  if (!nodeGraphInputKey(destinationNode, destinationPort)) {
     return false;
   }
 
-  nodeGraphMvp.connections = nodeGraphMvp.connections.filter(
+  const duplicate = nodeGraphMvp.connections.some(
     (connection) =>
-      !(
-        connection.destinationNode === destinationNode &&
-        connection.destinationPort === destinationPort
-      ),
+      connection.sourceNode === sourceNode &&
+      connection.sourcePort === sourcePort &&
+      connection.destinationNode === destinationNode &&
+      connection.destinationPort === destinationPort,
   );
+  if (duplicate) {
+    return false;
+  }
+
   nodeGraphMvp.connections.push({
     sourceNode,
     sourcePort,
@@ -6286,6 +6334,8 @@ function renderNodeGraphAudio() {
     playButton.disabled = true;
     renderStatus.textContent = "render blocked";
     renderStatus.className = "pill warn";
+    document.getElementById("nodeAudioStats").textContent = "peak 0 / rms 0";
+    document.getElementById("nodeOutputSummary").textContent = validation.issues.join(", ");
     drawNodeRenderedAudio();
     return;
   }
@@ -6307,9 +6357,16 @@ function renderNodeGraphAudio() {
     seed = (Math.imul(1664525, seed) + 1013904223) >>> 0;
     const noise = (seed / 0xffffffff) * 2 - 1;
     const osc = Math.sin(phase) * oscLevel;
-    const sourceSample = sourceNode === "noise" ? noise * noiseLevel : osc;
-    const biasedInput = validation.usesGain ? sourceSample * gainAmount : sourceSample;
-    const output = Math.max(-0.95, Math.min(0.95, biasedInput + biasAmount));
+    let output = sourceNode === "noise" ? noise * noiseLevel : osc;
+    for (const node of validation.plan) {
+      if (node === "gain") {
+        output *= gainAmount;
+      }
+      if (node === "bias") {
+        output += biasAmount;
+      }
+    }
+    output = Math.max(-0.95, Math.min(0.95, output));
     samples[frame] = output;
     peak = Math.max(peak, Math.abs(output));
     squareSum += output * output;
@@ -6330,9 +6387,7 @@ function renderNodeGraphAudio() {
   renderStatus.textContent = "render ready";
   renderStatus.className = "pill good";
   document.getElementById("nodeAudioStats").textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
-  const route = validation.usesGain
-    ? `${nodeGraphNodeLabels[sourceNode]} -> Gain -> Bias -> Output`
-    : `${nodeGraphNodeLabels[sourceNode]} -> Bias -> Output`;
+  const route = validation.route.map((node) => nodeGraphNodeLabels[node]).join(" -> ");
   document.getElementById("nodeOutputSummary").textContent = route;
   drawNodeRenderedAudio();
 }
