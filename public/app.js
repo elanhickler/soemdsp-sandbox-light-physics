@@ -8478,12 +8478,15 @@ function evaluateNodeGraphLiveOutputPort(runtime, port, frameValues, sampleRate)
 }
 
 function renderNodeGraphLiveScriptBlock(event) {
-  const runtime = nodeGraphMvp.live.runtime;
-  if (!runtime) {
-    return;
-  }
   const output = event.outputBuffer;
   const frames = output.length;
+  const runtime = nodeGraphMvp.live.runtime;
+  if (!runtime) {
+    for (let channel = 0; channel < output.numberOfChannels; channel += 1) {
+      output.getChannelData(channel).fill(0);
+    }
+    return;
+  }
   const sampleRate = event.playbackTime !== undefined
     ? output.sampleRate
     : nodeGraphMvp.live.context?.sampleRate || nodeGraphMvp.sampleRate;
@@ -8538,7 +8541,10 @@ function sendNodeGraphLivePlan() {
     });
     setNodeGraphLiveStatus("running", "good");
   } catch (error) {
+    nodeGraphMvp.live.runtime = null;
     nodeGraphMvp.live.node?.port?.postMessage({ type: "stop" });
+    setNodeGraphLiveMeter();
+    setNodeGraphLiveRouteStatus("route muted", "warn");
     setNodeGraphLiveStatus("error", "warn");
     document.getElementById("nodeLiveStatus").title = error.message;
   }
