@@ -6157,7 +6157,6 @@ const nodeGraphMvp = {
   live: {
     context: null,
     inputActive: false,
-    mediaDestination: null,
     meterGain: null,
     node: null,
     outputGain: null,
@@ -8523,11 +8522,9 @@ async function stopNodeGraphLiveAudio() {
   clearNodeGraphLivePlanSync();
   const liveNode = nodeGraphMvp.live.node;
   const liveContext = nodeGraphMvp.live.context;
-  const monitor = document.getElementById("nodeLiveMonitor");
   const scriptNode = nodeGraphMvp.live.scriptNode;
   nodeGraphMvp.live.node = null;
   nodeGraphMvp.live.context = null;
-  nodeGraphMvp.live.mediaDestination = null;
   nodeGraphMvp.live.meterGain = null;
   nodeGraphMvp.live.outputGain = null;
   nodeGraphMvp.live.runtime = null;
@@ -8542,12 +8539,6 @@ async function stopNodeGraphLiveAudio() {
   }
   if (liveContext && liveContext.state !== "closed") {
     await liveContext.close();
-  }
-  if (monitor) {
-    monitor.pause();
-    monitor.removeAttribute("src");
-    monitor.srcObject = null;
-    monitor.load();
   }
   setNodeGraphLiveStatus("stopped");
   setNodeGraphLiveMeter();
@@ -8579,12 +8570,7 @@ async function startNodeGraphLiveAudio() {
     outputGain.gain.value = 1;
     const scriptNode = context.createScriptProcessor(512, 0, 2);
     scriptNode.onaudioprocess = renderNodeGraphLiveScriptBlock;
-    const monitor = document.getElementById("nodeLiveMonitor");
-    const mediaDestination = typeof context.createMediaStreamDestination === "function"
-      ? context.createMediaStreamDestination()
-      : null;
     nodeGraphMvp.live.context = context;
-    nodeGraphMvp.live.mediaDestination = mediaDestination;
     nodeGraphMvp.live.meterGain = null;
     nodeGraphMvp.live.node = scriptNode;
     nodeGraphMvp.live.outputGain = outputGain;
@@ -8592,19 +8578,7 @@ async function startNodeGraphLiveAudio() {
     nodeGraphMvp.live.scriptNode = scriptNode;
     scriptNode.connect(outputGain);
     outputGain.connect(context.destination);
-    if (mediaDestination && monitor) {
-      outputGain.connect(mediaDestination);
-      monitor.srcObject = mediaDestination.stream;
-      monitor.muted = false;
-      monitor.volume = 1;
-      setNodeGraphLiveRouteStatus("route output + monitor", "good");
-      monitor.play().catch(() => {
-        setNodeGraphLiveRouteStatus("route output / press monitor play", "warn");
-        monitor.controls = true;
-      });
-    } else {
-      setNodeGraphLiveRouteStatus("route output only", "warn");
-    }
+    setNodeGraphLiveRouteStatus("route output", "good");
     await context.resume();
     setNodeGraphLiveStatus("running", "good");
     document.getElementById("nodeLiveStatus").removeAttribute("title");
