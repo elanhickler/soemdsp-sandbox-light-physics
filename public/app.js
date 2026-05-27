@@ -5909,6 +5909,89 @@ const nodeGraphNodeLabels = Object.freeze({
   output: "Output",
 });
 
+const nodeGraphModuleDefinitions = Object.freeze({
+  osc: {
+    outputs: ["Out"],
+    parameters: [
+      {
+        defaultValue: "220",
+        key: "frequency",
+        label: "Frequency",
+        max: "880",
+        mid: "220",
+        min: "80",
+        step: "1",
+      },
+      {
+        defaultValue: "0.35",
+        key: "level",
+        label: "Level",
+        max: "0.8",
+        mid: "0.35",
+        min: "0",
+        step: "0.01",
+      },
+    ],
+  },
+  noise: {
+    outputs: ["Out"],
+    parameters: [
+      {
+        defaultValue: "0.12",
+        key: "level",
+        label: "Level",
+        max: "0.5",
+        mid: "0.12",
+        min: "0",
+        step: "0.01",
+      },
+    ],
+  },
+  gain: {
+    inputs: ["In"],
+    outputs: ["Out"],
+    parameters: [
+      {
+        defaultValue: "1.5",
+        key: "amount",
+        label: "Amount",
+        max: "3",
+        mid: "1",
+        min: "0",
+        step: "0.01",
+      },
+    ],
+  },
+  bias: {
+    inputs: ["In"],
+    outputs: ["Out"],
+    parameters: [
+      {
+        defaultValue: "0.05",
+        key: "offset",
+        label: "Offset",
+        max: "0.4",
+        mid: "0",
+        min: "-0.4",
+        step: "0.01",
+      },
+    ],
+  },
+  output: {
+    inputs: ["In"],
+    output: true,
+    parameters: [],
+  },
+});
+
+const nodeGraphDefaultNodeConfigs = Object.freeze([
+  { id: "osc", type: "osc", x: "4%", y: "24px" },
+  { id: "noise", type: "noise", x: "4%", y: "330px" },
+  { id: "gain", type: "gain", x: "36%", y: "205px" },
+  { id: "bias", type: "bias", x: "62%", y: "205px" },
+  { id: "output", type: "output", x: "84%", y: "230px" },
+]);
+
 const nodeGraphDefaultConnections = Object.freeze([
   { sourceNode: "osc", sourcePort: "Out", destinationNode: "gain", destinationPort: "In" },
   { sourceNode: "gain", sourcePort: "Out", destinationNode: "bias", destinationPort: "In" },
@@ -5923,6 +6006,12 @@ const nodeGraphMvp = {
   dragging: null,
   metadataEditorTarget: null,
   nodeDragging: null,
+  nodeTypeCounts: {
+    bias: 1,
+    gain: 1,
+    noise: 1,
+    osc: 1,
+  },
   rendered: null,
   sceneContextPoint: null,
   selected: null,
@@ -5932,11 +6021,35 @@ const nodeGraphMvp = {
 };
 
 function nodeGraphLabel(node, port) {
-  return `${nodeGraphNodeLabels[node] || node}.${port}`;
+  return `${nodeGraphNodeDisplayName(node)}.${port}`;
 }
 
 function nodeGraphReadNumber(id) {
   const value = Number(document.getElementById(id).value);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function nodeGraphNodeSelector(node) {
+  return `.dsp-node[data-node="${CSS.escape(node)}"]`;
+}
+
+function nodeGraphNodeElement(node) {
+  return document.querySelector(nodeGraphNodeSelector(node));
+}
+
+function nodeGraphNodeType(node) {
+  return nodeGraphNodeElement(node)?.dataset.nodeType || node;
+}
+
+function nodeGraphNodeDisplayName(node) {
+  const element = nodeGraphNodeElement(node);
+  const title = element?.querySelector(".dsp-node-title span")?.textContent?.trim();
+  return title || nodeGraphNodeLabels[nodeGraphNodeType(node)] || node;
+}
+
+function nodeGraphReadNodeNumber(node, key) {
+  const input = nodeGraphNodeElement(node)?.querySelector(`[data-param="${key}"]`);
+  const value = Number(input?.value);
   return Number.isFinite(value) ? value : 0;
 }
 
@@ -6340,6 +6453,100 @@ function createNodeSliderReadout(slider) {
   syncNodeSliderReadout(slider);
 }
 
+function attachNodeGraphNodeEvents(node) {
+  node.addEventListener("pointerdown", beginNodeGraphNodeDrag);
+  node.addEventListener("pointermove", dragNodeGraphNode);
+  node.addEventListener("pointerup", endNodeGraphNodeDrag);
+  node.addEventListener("pointercancel", endNodeGraphNodeDrag);
+  node.addEventListener("lostpointercapture", endNodeGraphNodeDrag);
+  for (const port of node.querySelectorAll(".node-port.output")) {
+    port.addEventListener("pointerdown", beginNodeGraphWireDrag);
+  }
+  for (const slider of node.querySelectorAll('input[type="range"]')) {
+    createNodeSliderReadout(slider);
+    slider.addEventListener("input", () => {
+      syncNodeSliderReadout(slider);
+      renderNodeGraphAudio();
+    });
+  }
+}
+
+function createNodeGraphPort(node, type, port, io) {
+  const button = document.createElement("button");
+  button.className = `node-port ${io}`;
+  button.type = "button";
+  button.dataset.node = node;
+  button.dataset.port = port;
+  button.dataset.io = io;
+  button.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${io} port`);
+  button.textContent = port;
+  return button;
+}
+
+function createNodeGraphParameter(node, type, parameter) {
+  const label = document.createElement("label");
+  label.append(document.createTextNode(parameter.label));
+  const input = document.createElement("input");
+  input.id = `node-${node}-${parameter.key}`;
+  input.dataset.param = parameter.key;
+  input.type = "range";
+  input.min = parameter.min;
+  input.max = parameter.max;
+  input.step = "any";
+  input.value = parameter.defaultValue;
+  input.dataset.step = parameter.step;
+  input.dataset.mid = parameter.mid;
+  input.dataset.default = parameter.defaultValue;
+  input.dataset.kind = "decimal";
+  input.dataset.display = "decimal";
+  input.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${parameter.label}`);
+  label.append(input);
+  return label;
+}
+
+function createNodeGraphModuleElement(type, node) {
+  const definition = nodeGraphModuleDefinitions[type];
+  const article = document.createElement("article");
+  article.className = `dsp-node${definition.output ? " output-node" : ""}`;
+  article.dataset.node = node;
+  article.dataset.nodeType = type;
+
+  const title = document.createElement("div");
+  title.className = "dsp-node-title";
+  for (const port of definition.inputs || []) {
+    title.append(createNodeGraphPort(node, type, port, "input"));
+  }
+  const titleText = document.createElement("span");
+  titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
+  title.append(titleText);
+  for (const port of definition.outputs || []) {
+    title.append(createNodeGraphPort(node, type, port, "output"));
+  }
+  article.append(title);
+
+  for (const parameter of definition.parameters) {
+    article.append(createNodeGraphParameter(node, type, parameter));
+  }
+  if (definition.output) {
+    const summary = document.createElement("p");
+    summary.id = "nodeOutputSummary";
+    summary.textContent = "waiting for render";
+    article.append(summary);
+  }
+
+  attachNodeGraphNodeEvents(article);
+  return article;
+}
+
+function registerExistingNodeGraphNodes() {
+  nodeGraphMvp.activeNodes = new Set();
+  for (const node of document.querySelectorAll(".dsp-node")) {
+    node.dataset.nodeType ||= node.dataset.node;
+    nodeGraphMvp.activeNodes.add(node.dataset.node);
+    attachNodeGraphNodeEvents(node);
+  }
+}
+
 function nodeGraphInputKey(node, port) {
   return `${node}.${port}`;
 }
@@ -6365,14 +6572,13 @@ function nodeGraphValidate() {
     return nodeGraphFindInputConnections(node, port);
   }
 
-  for (const [node, port] of [
-    ["gain", "In"],
-    ["bias", "In"],
-    ["output", "In"],
-  ]) {
-    const connections = inputConnections(node, port);
-    if (connections.length > 1) {
-      issues.push(`unsupported multi-source into ${nodeGraphLabel(node, port)}`);
+  for (const node of nodeGraphMvp.activeNodes) {
+    const type = nodeGraphNodeType(node);
+    if (type === "gain" || type === "bias" || type === "output") {
+      const connections = inputConnections(node, "In");
+      if (connections.length > 1) {
+        issues.push(`unsupported multi-source into ${nodeGraphLabel(node, "In")}`);
+      }
     }
   }
 
@@ -6380,9 +6586,9 @@ function nodeGraphValidate() {
     const connections = inputConnections(node, port);
     if (connections.length === 0) {
       issues.push(
-        node === "output"
+        nodeGraphNodeType(node) === "output"
           ? "missing Output input"
-          : `missing ${nodeGraphNodeLabels[node]} input`,
+          : `missing ${nodeGraphNodeDisplayName(node)} input`,
       );
       return false;
     }
@@ -6393,17 +6599,18 @@ function nodeGraphValidate() {
   }
 
   function resolveNode(node) {
-    if (node === "osc" || node === "noise") {
+    const type = nodeGraphNodeType(node);
+    if (type === "osc" || type === "noise") {
       sourceNode = node;
       route.push(node);
       return true;
     }
-    if (node !== "gain" && node !== "bias" && node !== "output") {
+    if (type !== "gain" && type !== "bias" && type !== "output") {
       issues.push(`unsupported source ${node}`);
       return false;
     }
     if (visiting.has(node)) {
-      issues.push(`cycle detected at ${nodeGraphNodeLabels[node]}`);
+      issues.push(`cycle detected at ${nodeGraphNodeDisplayName(node)}`);
       return false;
     }
     if (visited.has(node)) {
@@ -6417,7 +6624,7 @@ function nodeGraphValidate() {
     if (!resolved) {
       return false;
     }
-    if (node !== "output") {
+    if (type !== "output") {
       plan.push(node);
       route.push(node);
     }
@@ -6442,7 +6649,7 @@ function nodeGraphValidate() {
 }
 
 function nodeGraphPortSelector(node, port, io) {
-  return `.node-port.${io}[data-node="${node}"][data-port="${port}"]`;
+  return `.node-port.${io}[data-node="${CSS.escape(node)}"][data-port="${CSS.escape(port)}"]`;
 }
 
 function nodeGraphPortCenter(node, port, io) {
@@ -6555,12 +6762,8 @@ function drawNodeGraphWires() {
     path.setAttribute("d", pathData);
     svg.append(path);
 
-    workspace
-      .querySelector(`.dsp-node[data-node="${connection.sourceNode}"]`)
-      ?.classList.add("connected");
-    workspace
-      .querySelector(`.dsp-node[data-node="${connection.destinationNode}"]`)
-      ?.classList.add("connected");
+    nodeGraphNodeElement(connection.sourceNode)?.classList.add("connected");
+    nodeGraphNodeElement(connection.destinationNode)?.classList.add("connected");
   }
 
   if (nodeGraphMvp.dragging) {
@@ -6625,7 +6828,7 @@ function renderNodeGraphConnectionList() {
   status.textContent = validation.valid ? "Graph Valid" : "Graph Incomplete";
   status.className = `pill ${validation.valid ? "good" : "warn"}`;
   source.textContent = validation.sourceNode
-    ? `source ${nodeGraphNodeLabels[validation.sourceNode].toLowerCase()}`
+    ? `source ${nodeGraphNodeDisplayName(validation.sourceNode).toLowerCase()}`
     : "source missing";
   validationPill.textContent = validation.valid
     ? "valid"
@@ -6832,7 +7035,24 @@ function endNodeGraphNodeDrag(event) {
 }
 
 function restoreDefaultNodeGraph() {
-  nodeGraphMvp.activeNodes = new Set(["osc", "noise", "gain", "bias", "output"]);
+  const container = document.getElementById("nodeGraphNodes");
+  for (const node of [...container.querySelectorAll(".dsp-node")]) {
+    node.remove();
+  }
+  nodeGraphMvp.activeNodes = new Set();
+  nodeGraphMvp.nodeTypeCounts = {
+    bias: 1,
+    gain: 1,
+    noise: 1,
+    osc: 1,
+  };
+  for (const config of nodeGraphDefaultNodeConfigs) {
+    const node = createNodeGraphModuleElement(config.type, config.id);
+    node.style.setProperty("--node-x", config.x);
+    node.style.setProperty("--node-y", config.y);
+    container.append(node);
+    nodeGraphMvp.activeNodes.add(config.id);
+  }
   nodeGraphMvp.connections = nodeGraphDefaultConnections.map((connection) => ({
     ...connection,
   }));
@@ -6864,26 +7084,35 @@ function renderNodeVisibility() {
 
 function renderNodePalette() {
   for (const button of document.querySelectorAll("[data-palette-node]")) {
-    const node = button.dataset.paletteNode;
-    const active = nodeGraphMvp.activeNodes.has(node);
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
+    button.classList.remove("active");
+    button.setAttribute("aria-pressed", "false");
   }
 }
 
+function defaultNodeGraphModulePoint(type) {
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  const workspaceRect = workspace.getBoundingClientRect();
+  const count = nodeGraphMvp.nodeTypeCounts[type] || 1;
+  return {
+    x: Math.min(workspaceRect.width - 180, 80 + count * 32),
+    y: Math.min(workspaceRect.height - 150, 80 + count * 28),
+  };
+}
+
 function showNodeGraphModule(node, point = null) {
-  if (node === "output" || !Object.hasOwn(nodeGraphNodeLabels, node)) {
+  const type = node;
+  if (type === "output" || !Object.hasOwn(nodeGraphModuleDefinitions, type)) {
     return;
   }
 
-  nodeGraphMvp.activeNodes.add(node);
+  nodeGraphMvp.nodeTypeCounts[type] = (nodeGraphMvp.nodeTypeCounts[type] || 0) + 1;
+  const id = `${type}-${nodeGraphMvp.nodeTypeCounts[type]}`;
+  const element = createNodeGraphModuleElement(type, id);
+  document.getElementById("nodeGraphNodes").append(element);
+  nodeGraphMvp.activeNodes.add(id);
   renderNodePalette();
-  renderNodeVisibility();
-  const element = document.querySelector(`.dsp-node[data-node="${node}"]`);
-  if (point && element) {
-    positionNodeGraphNode(element, point);
-  }
-  setNodeGraphSelection({ type: "node", id: node });
+  positionNodeGraphNode(element, point || defaultNodeGraphModulePoint(type));
+  setNodeGraphSelection({ type: "node", id });
   renderNodeGraphConnectionList();
   renderNodeGraphAudio();
 }
@@ -6914,6 +7143,7 @@ function deleteSelectedNodeGraphItem() {
       (connection) =>
         connection.sourceNode !== selection.id && connection.destinationNode !== selection.id,
     );
+    nodeGraphNodeElement(selection.id)?.remove();
     setNodeGraphSelection(null);
     renderNodePalette();
     renderNodeVisibility();
@@ -6967,11 +7197,10 @@ function renderNodeGraphAudio() {
   const frames = Math.floor(nodeGraphMvp.sampleRate * nodeGraphMvp.seconds);
   const samples = new Float32Array(frames);
   const sourceNode = validation.sourceNode;
-  const frequency = nodeGraphReadNumber("nodeOscFrequency");
-  const oscLevel = nodeGraphReadNumber("nodeOscLevel");
-  const noiseLevel = nodeGraphReadNumber("nodeNoiseLevel");
-  const gainAmount = nodeGraphReadNumber("nodeGainAmount");
-  const biasAmount = nodeGraphReadNumber("nodeBiasAmount");
+  const sourceType = nodeGraphNodeType(sourceNode);
+  const frequency = sourceType === "osc" ? nodeGraphReadNodeNumber(sourceNode, "frequency") : 0;
+  const oscLevel = sourceType === "osc" ? nodeGraphReadNodeNumber(sourceNode, "level") : 0;
+  const noiseLevel = sourceType === "noise" ? nodeGraphReadNodeNumber(sourceNode, "level") : 0;
   let phase = 0;
   let seed = 0x12345678;
   let peak = 0;
@@ -6981,13 +7210,14 @@ function renderNodeGraphAudio() {
     seed = (Math.imul(1664525, seed) + 1013904223) >>> 0;
     const noise = (seed / 0xffffffff) * 2 - 1;
     const osc = Math.sin(phase) * oscLevel;
-    let output = sourceNode === "noise" ? noise * noiseLevel : osc;
+    let output = sourceType === "noise" ? noise * noiseLevel : osc;
     for (const node of validation.plan) {
-      if (node === "gain") {
-        output *= gainAmount;
+      const type = nodeGraphNodeType(node);
+      if (type === "gain") {
+        output *= nodeGraphReadNodeNumber(node, "amount");
       }
-      if (node === "bias") {
-        output += biasAmount;
+      if (type === "bias") {
+        output += nodeGraphReadNodeNumber(node, "offset");
       }
     }
     output = Math.max(-0.95, Math.min(0.95, output));
@@ -7011,7 +7241,7 @@ function renderNodeGraphAudio() {
   renderStatus.textContent = "render ready";
   renderStatus.className = "pill good";
   document.getElementById("nodeAudioStats").textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
-  const route = validation.route.map((node) => nodeGraphNodeLabels[node]).join(" -> ");
+  const route = validation.route.map((node) => nodeGraphNodeDisplayName(node)).join(" -> ");
   document.getElementById("nodeOutputSummary").textContent = route;
   drawNodeRenderedAudio();
 }
@@ -7132,16 +7362,7 @@ async function playNodeGraphAudio() {
 }
 
 function initNodeGraphMvp() {
-  for (const port of document.querySelectorAll(".node-port.output")) {
-    port.addEventListener("pointerdown", beginNodeGraphWireDrag);
-  }
-  for (const node of document.querySelectorAll(".dsp-node")) {
-    node.addEventListener("pointerdown", beginNodeGraphNodeDrag);
-    node.addEventListener("pointermove", dragNodeGraphNode);
-    node.addEventListener("pointerup", endNodeGraphNodeDrag);
-    node.addEventListener("pointercancel", endNodeGraphNodeDrag);
-    node.addEventListener("lostpointercapture", endNodeGraphNodeDrag);
-  }
+  registerExistingNodeGraphNodes();
   for (const button of document.querySelectorAll("[data-palette-node]")) {
     button.addEventListener("click", () => showPaletteNode(button.dataset.paletteNode));
   }
@@ -7190,20 +7411,6 @@ function initNodeGraphMvp() {
     .addEventListener("click", resetNodeMetadataCurrentToDefault);
   for (const button of document.querySelectorAll("[data-context-module]")) {
     button.addEventListener("click", addNodeGraphModuleFromContext);
-  }
-  for (const id of [
-    "nodeOscFrequency",
-    "nodeOscLevel",
-    "nodeNoiseLevel",
-    "nodeGainAmount",
-    "nodeBiasAmount",
-  ]) {
-    const slider = document.getElementById(id);
-    createNodeSliderReadout(slider);
-    slider.addEventListener("input", () => {
-      syncNodeSliderReadout(slider);
-      renderNodeGraphAudio();
-    });
   }
 
   document.addEventListener("pointermove", dragNodeSlider);
