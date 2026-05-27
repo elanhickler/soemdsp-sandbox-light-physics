@@ -8214,6 +8214,8 @@ function handleNodeInteractionHelp(event) {
 function attachNodeInteractionHelpTarget(element) {
   element.dataset.interactionHelpReady = "true";
   const showHelp = () => setNodeInteractionHelp(nodeInteractionHelpText(element));
+  element.addEventListener("pointerover", showHelp);
+  element.addEventListener("mouseover", showHelp);
   element.addEventListener("pointerdown", showHelp);
   element.addEventListener("click", showHelp);
   element.addEventListener("focus", showHelp);
@@ -8447,6 +8449,8 @@ async function playNodeGraphAudio() {
 
 function initNodeGraphMvp() {
   const nodePanel = document.querySelector(".node-wiring-panel");
+  nodePanel?.addEventListener("pointerover", handleNodeInteractionHelp);
+  nodePanel?.addEventListener("mouseover", handleNodeInteractionHelp);
   nodePanel?.addEventListener("pointerdown", handleNodeInteractionHelp);
   nodePanel?.addEventListener("click", handleNodeInteractionHelp);
   nodePanel?.addEventListener("focusin", handleNodeInteractionHelp);

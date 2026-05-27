@@ -3129,6 +3129,10 @@ def require_node_graph_mvp_contract() -> None:
         "function attachNodeInteractionHelpTarget(element)",
         "element.dataset.interactionHelpReady = \"true\"",
         "const showHelp = () => setNodeInteractionHelp(nodeInteractionHelpText(element))",
+        ".addEventListener(\"pointerover\", handleNodeInteractionHelp)",
+        ".addEventListener(\"pointerover\", showHelp)",
+        ".addEventListener(\"mouseover\", handleNodeInteractionHelp)",
+        ".addEventListener(\"mouseover\", showHelp)",
         ".addEventListener(\"pointerdown\", handleNodeInteractionHelp)",
         ".addEventListener(\"pointerdown\", showHelp)",
         ".addEventListener(\"click\", showHelp)",
@@ -3163,8 +3167,6 @@ def require_node_graph_mvp_contract() -> None:
         "nodeHoverTooltipMouseHint",
         "handleNodeHoverTooltip",
         "attachNodeHoverTooltipTarget",
-        'addEventListener("pointerover"',
-        'addEventListener("mouseover"',
         'addEventListener("mouseout"',
     ]:
         require(snippet not in app_source, f"node graph obsolete interaction code should be absent: {snippet}")
