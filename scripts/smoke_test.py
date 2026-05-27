@@ -223,8 +223,8 @@ REQUIRED_SHELL_IDS = {
     "nodeScriptView",
     "nodeScriptViewButton",
     "nodeSignalPlotCanvas",
-    "nodeStartLiveButton",
-    "nodeStopLiveButton",
+    "nodeLiveInputButton",
+    "nodeLiveOutputButton",
     "nodeUndoButton",
     "nodeWaveformCanvas",
     "nodeWireSvg",
@@ -535,15 +535,15 @@ def require_shell_contract(html: str) -> None:
     )
     require_shell_element(
         parser,
-        "nodeStartLiveButton",
+        "nodeLiveInputButton",
         "button",
-        {"type": "button"},
+        {"type": "button", "aria-pressed": "false"},
     )
     require_shell_element(
         parser,
-        "nodeStopLiveButton",
+        "nodeLiveOutputButton",
         "button",
-        {"type": "button", "disabled": ""},
+        {"type": "button", "aria-pressed": "false"},
     )
     require_shell_element(
         parser,
@@ -2902,8 +2902,8 @@ def require_node_graph_mvp_contract() -> None:
         "nodePatchNameHeader",
         "nodePatchTagsHeader",
         "Live Audio",
-        "nodeStartLiveButton",
-        "nodeStopLiveButton",
+        "nodeLiveInputButton",
+        "nodeLiveOutputButton",
         "nodeLiveStatus",
         "nodeLiveMeter",
         "nodeLiveMonitor",
@@ -3181,8 +3181,8 @@ def require_node_graph_mvp_contract() -> None:
         "function sendNodeGraphLivePlan()",
         'audioWorklet.addModule("/public/node-live-audio-worklet.js")',
         '"node-live-audio-processor"',
-        'document.getElementById("nodeStartLiveButton").addEventListener("click", startNodeGraphLiveAudio)',
-        'document.getElementById("nodeStopLiveButton").addEventListener("click", stopNodeGraphLiveAudio)',
+        'document.getElementById("nodeLiveInputButton").addEventListener("click", toggleNodeGraphLiveInput)',
+        'document.getElementById("nodeLiveOutputButton").addEventListener("click", toggleNodeGraphLiveOutput)',
         "function nodeGraphStableSeed(text)",
         "function drawNodeRenderedWaveform()",
         "function drawNodeRenderedSignalPlot()",
@@ -3408,7 +3408,7 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(amplitude.get("unit") == "amp", "amplitude metadata unit mismatch")
     require(decibels.get("label") == "Decibels", "decibels metadata label mismatch")
     require(decibels.get("unit") == "dB", "decibels metadata unit mismatch")
-    require(decimal_bipolar.get("unit") == "lin", "decimal_bipolar metadata unit mismatch")
+    require(decimal_bipolar.get("unit") == "", "decimal_bipolar metadata unit mismatch")
     require(decimal_bipolar.get("showPlusMinus") is True, "decimal_bipolar showPlusMinus mismatch")
     require("showPlusMinus" not in decibels, "decibels should not default showPlusMinus")
     require(frequency.get("unit") == "Hz", "frequency metadata unit mismatch")

@@ -6015,7 +6015,7 @@ const nodeGraphDefaultPatch = Object.freeze({
 });
 
 const fallbackNodeMetadataKindTemplates = Object.freeze({
-  decimal: { def: 0, label: "Decimal", max: 1, mid: 0.5, min: 0, step: 0.01, unit: "lin" },
+  decimal: { def: 0, label: "Decimal", max: 1, mid: 0.5, min: 0, step: 0.01, unit: "" },
   decimal_bipolar: {
     def: 0,
     label: "Decimal Bipolar",
@@ -6024,7 +6024,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     min: -1,
     showPlusMinus: true,
     step: 0.01,
-    unit: "lin",
+    unit: "",
   },
   amplitude: { def: 1, label: "Amplitude", max: 3, mid: 1, min: 0, step: 0.01, unit: "amp" },
   decibels: {
@@ -6157,6 +6157,7 @@ const nodeGraphMvp = {
   live: {
     context: null,
     bufferSource: null,
+    inputActive: false,
     mediaDestination: null,
     meterGain: null,
     node: null,
@@ -8295,8 +8296,33 @@ function setNodeGraphLiveRouteStatus(text, state = "") {
 
 function renderNodeGraphLiveControls(running = Boolean(nodeGraphMvp.live.node)) {
   const starting = document.getElementById("nodeLiveStatus")?.textContent === "starting";
-  document.getElementById("nodeStartLiveButton").disabled = running || starting;
-  document.getElementById("nodeStopLiveButton").disabled = !running && !starting;
+  const inputButton = document.getElementById("nodeLiveInputButton");
+  const outputButton = document.getElementById("nodeLiveOutputButton");
+  if (inputButton) {
+    inputButton.classList.toggle("active", Boolean(nodeGraphMvp.live.inputActive));
+    inputButton.setAttribute("aria-pressed", nodeGraphMvp.live.inputActive ? "true" : "false");
+  }
+  if (outputButton) {
+    outputButton.disabled = starting;
+    outputButton.classList.toggle("active", running || starting);
+    outputButton.setAttribute("aria-pressed", running || starting ? "true" : "false");
+  }
+}
+
+function toggleNodeGraphLiveInput() {
+  nodeGraphMvp.live.inputActive = !nodeGraphMvp.live.inputActive;
+  renderNodeGraphLiveControls();
+}
+
+function toggleNodeGraphLiveOutput() {
+  if (document.getElementById("nodeLiveStatus")?.textContent === "starting") {
+    return;
+  }
+  if (nodeGraphMvp.live.node || nodeGraphMvp.live.context) {
+    stopNodeGraphLiveAudio();
+  } else {
+    startNodeGraphLiveAudio();
+  }
 }
 
 function nodeGraphBuildLivePlan() {
@@ -8920,8 +8946,8 @@ function initNodeGraphMvp() {
   });
   document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio);
   document.getElementById("nodePlayButton").addEventListener("click", playNodeGraphAudio);
-  document.getElementById("nodeStartLiveButton").addEventListener("click", startNodeGraphLiveAudio);
-  document.getElementById("nodeStopLiveButton").addEventListener("click", stopNodeGraphLiveAudio);
+  document.getElementById("nodeLiveInputButton").addEventListener("click", toggleNodeGraphLiveInput);
+  document.getElementById("nodeLiveOutputButton").addEventListener("click", toggleNodeGraphLiveOutput);
   document.getElementById("nodeDefaultButton").addEventListener("click", restoreDefaultNodeGraph);
   document.getElementById("nodeDeleteButton").addEventListener("click", deleteSelectedNodeGraphItem);
   document.getElementById("nodeUndoButton").addEventListener("click", undoNodeGraphPatch);

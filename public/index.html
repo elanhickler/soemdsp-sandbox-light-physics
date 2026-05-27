@@ -172,8 +172,16 @@
         <button id="nodeRenderButton" type="button">Render Sample</button>
         <button id="nodePlayButton" type="button" disabled>Play Render</button>
         <div class="node-live-controls" aria-label="Live Audio">
-          <button id="nodeStartLiveButton" type="button">Start Live</button>
-          <button id="nodeStopLiveButton" type="button" disabled>Stop Live</button>
+          <button
+            id="nodeLiveInputButton"
+            class="node-live-toggle"
+            type="button"
+            aria-pressed="false">INPUT</button>
+          <button
+            id="nodeLiveOutputButton"
+            class="node-live-toggle"
+            type="button"
+            aria-pressed="false">OUTPUT</button>
           <span id="nodeLiveStatus" class="pill">stopped</span>
           <span id="nodeLiveMeter" class="pill">live peak 0 / rms 0</span>
           <span id="nodeLiveRouteStatus" class="pill">route stopped</span>

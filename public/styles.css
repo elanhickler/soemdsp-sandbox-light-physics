@@ -840,6 +840,12 @@ audio {
   border-right: 1px solid var(--line);
 }
 
+.node-live-toggle.active {
+  border-color: rgba(242, 93, 93, 0.76);
+  background: rgba(122, 28, 28, 0.72);
+  color: #ffd6d6;
+}
+
 .node-live-monitor {
   width: 190px;
   height: 32px;

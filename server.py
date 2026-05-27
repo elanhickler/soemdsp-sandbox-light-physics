@@ -29,7 +29,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "mid": 0.5,
         "min": 0,
         "step": 0.01,
-        "unit": "lin",
+        "unit": "",
     },
     "decimal_bipolar": {
         "def": 0,
@@ -39,7 +39,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "min": -1,
         "showPlusMinus": True,
         "step": 0.01,
-        "unit": "lin",
+        "unit": "",
     },
     "amplitude": {
         "def": 1,
