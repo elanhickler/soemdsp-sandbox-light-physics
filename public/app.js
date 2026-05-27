@@ -4347,7 +4347,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["phase audio stats probe", waveformReady && Boolean(document.getElementById("phaseAudioStatsProbe"))],
     ["phase audio stats probe labels", waveformReady && phaseAudioStatsProbeLabeled()],
     ["phase audio stats item labels", waveformReady && phaseAudioStatsItemsLabeled()],
-    ["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))],
+    ["signal inspection", waveformReady && signalPlotCanvasLabeled()],
     ["signal plot probe", waveformReady && Boolean(document.getElementById("signalPlotProbe"))],
     ["signal plot source probe", waveformReady && Boolean(document.getElementById("signalPlotProbeSource"))],
     ["signal plot probe labels", waveformReady && signalPlotProbeLabeled()],

@@ -2103,7 +2103,7 @@ def require_waveform_seek_source_contract() -> None:
         '["phase audio stats probe", waveformReady && Boolean(document.getElementById("phaseAudioStatsProbe"))]',
         '["phase audio stats probe labels", waveformReady && phaseAudioStatsProbeLabeled()]',
         '["phase audio stats item labels", waveformReady && phaseAudioStatsItemsLabeled()]',
-        '["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))]',
+        '["signal inspection", waveformReady && signalPlotCanvasLabeled()]',
         '["signal plot probe", waveformReady && Boolean(document.getElementById("signalPlotProbe"))]',
         '["signal plot probe labels", waveformReady && signalPlotProbeLabeled()]',
         "function renderUnavailableHandsOnReadiness()",
