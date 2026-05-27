@@ -68,6 +68,16 @@ NODE_METADATA_KIND_TEMPLATES = {
         "step": 1,
         "unit": "Hz",
     },
+    "phase": {
+        "def": 0,
+        "label": "Phase",
+        "max": 1,
+        "mid": 0.5,
+        "min": 0,
+        "step": 0.01,
+        "unit": "cycle",
+        "wraparound": True,
+    },
     "pitch": {
         "def": 0,
         "label": "Pitch",

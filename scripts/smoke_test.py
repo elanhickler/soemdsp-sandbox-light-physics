@@ -38,6 +38,7 @@ EXPECTED_META_KINDS = {
     "integer_bipolar",
     "momentary",
     "onoff",
+    "phase",
     "pitch",
     "plusminus",
     "seconds",
@@ -244,6 +245,7 @@ REQUIRED_SHELL_IDS = {
     "metadataPopoverTitle",
     "metadataSetDefaultButton",
     "metadataShowSignValue",
+    "metadataWraparoundValue",
     "metadataStepValue",
     "metadataUnitValue",
     "parameterSummary",
@@ -2946,6 +2948,8 @@ def require_node_graph_mvp_contract() -> None:
         "Display choices",
         "metadataShowSignValue",
         "Always show +/-",
+        "metadataWraparoundValue",
+        "Wraparound",
         "metadataPopoverDragHandle",
         "Set Defaults from Kind",
     ]:
@@ -2994,6 +2998,9 @@ def require_node_graph_mvp_contract() -> None:
         'label: "Decibels"',
         'decimal_bipolar: {',
         'frequency: { def: 1000, label: "Frequency"',
+        'phase: {',
+        'label: "Phase"',
+        'wraparound: true',
         'descrete: { def: 0, label: "Descrete"',
         'integer_bipolar: {',
         'label: "Integer Bipolar"',
@@ -3026,12 +3033,14 @@ def require_node_graph_mvp_contract() -> None:
         "function parseNodeMetadataChoices(value)",
         "function formatNodeMetadataChoices(choices)",
         "function nodeSliderShouldDisplayChoices(slider)",
+        "function nodeSliderShouldWraparound(slider)",
         "function nodeSliderChoiceLabel(slider)",
         "function nodeSliderShouldShowSign(slider)",
         "function nodeSliderMetadata(slider)",
         "function formatNodeSliderMetadataTooltip(slider)",
         "reserveSignSpace",
         "showPlusMinus",
+        "wraparound",
         "function syncNodeSliderMetadataTooltip(slider)",
         "function nodeSliderDebugPath(slider)",
         "function nodeGraphNodeType(node)",
@@ -3091,6 +3100,8 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeSliderSkewExponent(slider)",
         "function nodeSliderValueFromTravel(slider, travel)",
         "function nodeSliderTravelFromValue(slider, value)",
+        "function wrapNodeSliderValue(value, min, max)",
+        "function normalizeNodeSliderValue(slider, value",
         "function openNodeMetadataPopover(event, readout)",
         "function beginNodeMetadataPopoverDrag(event)",
         "function dragNodeMetadataPopover(event)",
@@ -3130,6 +3141,7 @@ def require_node_graph_mvp_contract() -> None:
         "slider.dataset.choices",
         "slider.dataset.displayChoices",
         "slider.dataset.showSign",
+        "slider.dataset.wraparound",
         "function beginNodeSliderReadoutEdit(readout)",
         "function commitNodeSliderReadoutEdit(input)",
         'input.type = "text"',
@@ -3167,6 +3179,8 @@ def require_node_graph_mvp_contract() -> None:
         "function createNodeGraphLiveRuntime(plan)",
         "function evaluateNodeGraphLiveNode(",
         "function renderNodeGraphLiveScriptBlock(event)",
+        "function nodeGraphPhaseRadians(value)",
+        'nodeGraphReadNodeNumber(node, "phase")',
         "function setNodeGraphLiveMeter(",
         "function setNodeGraphLiveRouteStatus(",
         "createScriptProcessor(512, 0, 2)",
@@ -3383,6 +3397,7 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     decibels = templates.get("decibels")
     decimal_bipolar = templates.get("decimal_bipolar")
     frequency = templates.get("frequency")
+    phase = templates.get("phase")
     descrete = templates.get("descrete")
     integer_bipolar = templates.get("integer_bipolar")
     waveform = templates.get("waveform")
@@ -3394,6 +3409,7 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(isinstance(decibels, dict), "decibels metadata kind missing")
     require(isinstance(decimal_bipolar, dict), "decimal_bipolar metadata kind missing")
     require(isinstance(frequency, dict), "frequency metadata kind missing")
+    require(isinstance(phase, dict), "phase metadata kind missing")
     require(isinstance(descrete, dict), "descrete metadata kind missing")
     require(isinstance(integer_bipolar, dict), "integer_bipolar metadata kind missing")
     require(isinstance(waveform, dict), "waveform metadata kind missing")
@@ -3409,6 +3425,8 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(decimal_bipolar.get("showPlusMinus") is True, "decimal_bipolar showPlusMinus mismatch")
     require("showPlusMinus" not in decibels, "decibels should not default showPlusMinus")
     require(frequency.get("unit") == "Hz", "frequency metadata unit mismatch")
+    require(phase.get("unit") == "cycle", "phase metadata unit mismatch")
+    require(phase.get("wraparound") is True, "phase wraparound mismatch")
     require("showPlusMinus" not in templates.get("pitch", {}), "pitch should not default showPlusMinus")
     require(descrete.get("unit") == "idx", "descrete metadata unit mismatch")
     require(integer_bipolar.get("label") == "Integer Bipolar", "integer_bipolar metadata label mismatch")

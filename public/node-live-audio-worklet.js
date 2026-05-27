@@ -48,8 +48,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.inputConnections.set(key, connections);
     }
     for (const id of ids) {
-      if (!this.phases.has(id)) {
-        this.phases.set(id, 0);
+      const node = this.nodes.get(id);
+      if (node?.type === "osc") {
+        this.phases.set(id, this.phaseRadians(this.readParam(node, "phase", 0)));
       }
       if (!this.noiseSeeds.has(id)) {
         this.noiseSeeds.set(id, this.stableSeed(id));
@@ -72,6 +73,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   readParam(node, key, fallback = 0) {
     const value = Number(node?.params?.[key]);
     return Number.isFinite(value) ? value : fallback;
+  }
+
+  phaseRadians(value) {
+    return ((((Number(value) || 0) % 1) + 1) % 1) * Math.PI * 2;
   }
 
   mixNodeInput(nodeId, frameValues, visiting) {

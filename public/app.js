@@ -5922,6 +5922,18 @@ const nodeGraphModuleDefinitions = Object.freeze({
         step: "1",
       },
       {
+        defaultValue: "0",
+        key: "phase",
+        kind: "phase",
+        label: "Phase",
+        max: "1",
+        mid: "0.5",
+        min: "0",
+        step: "0.01",
+        unit: "cycle",
+        wraparound: true,
+      },
+      {
         defaultValue: "0.35",
         key: "level",
         label: "Level",
@@ -6040,6 +6052,16 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     unit: "dB",
   },
   frequency: { def: 1000, label: "Frequency", max: 20000, mid: 1000, min: 0, step: 1, unit: "Hz" },
+  phase: {
+    def: 0,
+    label: "Phase",
+    max: 1,
+    mid: 0.5,
+    min: 0,
+    step: 0.01,
+    unit: "cycle",
+    wraparound: true,
+  },
   pitch: {
     def: 0,
     label: "Pitch",
@@ -6594,6 +6616,10 @@ function nodeSliderShouldDisplayChoices(slider) {
   return slider.dataset.displayChoices === "true";
 }
 
+function nodeSliderShouldWraparound(slider) {
+  return slider.dataset.wraparound === "true";
+}
+
 function formatNodeSliderCompactNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Number(number.toFixed(6)).toString() : "";
@@ -6649,6 +6675,7 @@ function nodeSliderMetadata(slider) {
     def,
     displayChoices: nodeSliderShouldDisplayChoices(slider),
     showSign: nodeSliderShouldShowSign(slider),
+    wraparound: nodeSliderShouldWraparound(slider),
     unit: slider.dataset.unit ?? "",
     kind: slider.dataset.kind || "decimal",
     max,
@@ -6673,6 +6700,7 @@ function formatNodeSliderMetadataTooltip(slider) {
     `choices ${metadata.choices.length ? formatNodeMetadataChoices(metadata.choices) : "none"}`,
     `display choices ${metadata.displayChoices}`,
     `show sign ${metadata.showSign}`,
+    `wraparound ${metadata.wraparound}`,
   ].join(" / ");
 }
 
@@ -6685,6 +6713,23 @@ function syncNodeSliderMetadataTooltip(slider) {
 
 function clampNodeSliderValue(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function wrapNodeSliderValue(value, min, max) {
+  const range = max - min;
+  if (!Number.isFinite(range) || range <= 0) {
+    return min;
+  }
+  return min + ((((value - min) % range) + range) % range);
+}
+
+function normalizeNodeSliderValue(slider, value, min = Number(slider.min), max = Number(slider.max)) {
+  if (!Number.isFinite(value)) {
+    return Number.isFinite(min) ? min : 0;
+  }
+  return nodeSliderShouldWraparound(slider)
+    ? wrapNodeSliderValue(value, min, max)
+    : clampNodeSliderValue(value, min, max);
 }
 
 function normalizedNodeSliderMid(slider) {
@@ -6712,7 +6757,9 @@ function nodeSliderValueFromTravel(slider, travel) {
   }
 
   const exponent = nodeSliderSkewExponent(slider);
-  const normalizedTravel = clampNodeSliderValue(travel, 0, 1);
+  const normalizedTravel = nodeSliderShouldWraparound(slider)
+    ? wrapNodeSliderValue(travel, 0, 1)
+    : clampNodeSliderValue(travel, 0, 1);
   return min + range * normalizedTravel ** exponent;
 }
 
@@ -6742,7 +6789,8 @@ function setNodeSliderMetadata(slider, metadata) {
   slider.dataset.choices = formatNodeMetadataChoices(metadata.choices || []);
   slider.dataset.displayChoices = metadata.displayChoices ? "true" : "false";
   slider.dataset.showSign = metadata.showSign ? "true" : "false";
-  slider.value = String(clampNodeSliderValue(Number(slider.value), metadata.min, metadata.max));
+  slider.dataset.wraparound = metadata.wraparound ? "true" : "false";
+  slider.value = String(normalizeNodeSliderValue(slider, Number(slider.value), metadata.min, metadata.max));
   syncNodeSliderReadout(slider);
 }
 
@@ -6949,6 +6997,7 @@ function fillNodeMetadataPopover(slider) {
     formatNodeMetadataChoices(metadata.choices);
   document.getElementById("metadataDisplayChoicesValue").checked = metadata.displayChoices;
   document.getElementById("metadataShowSignValue").checked = metadata.showSign;
+  document.getElementById("metadataWraparoundValue").checked = metadata.wraparound;
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
 
@@ -7013,6 +7062,7 @@ function readNodeMetadataEditorValues(slider) {
       ? 0
       : Math.max(0, parseNodeMetadataNumber(stepInput, current.step)),
     showSign: document.getElementById("metadataShowSignValue").checked,
+    wraparound: document.getElementById("metadataWraparoundValue").checked,
     unit: document.getElementById("metadataUnitValue").value.trim(),
   };
 }
@@ -7050,6 +7100,7 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataChoicesValue").value = formatNodeMetadataChoices(choices);
   document.getElementById("metadataDisplayChoicesValue").checked = Boolean(template.displayChoices);
   document.getElementById("metadataShowSignValue").checked = Boolean(template.showPlusMinus);
+  document.getElementById("metadataWraparoundValue").checked = Boolean(template.wraparound);
   applyNodeMetadataEditor();
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
@@ -7078,7 +7129,7 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
     return;
   }
 
-  slider.value = String(clampNodeSliderValue(value, Number(slider.min), Number(slider.max)));
+  slider.value = String(normalizeNodeSliderValue(slider, value));
   syncNodeSliderReadout(slider);
   if (nodeGraphMvp.metadataEditorTarget === slider.id) {
     fillNodeMetadataPopover(slider);
@@ -7089,7 +7140,7 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
 
 function setNodeSliderValue(slider, value) {
   slider.value = String(
-    clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
+    normalizeNodeSliderValue(slider, value),
   );
   syncNodeSliderReadout(slider);
   markNodeGraphRenderPending();
@@ -7249,6 +7300,7 @@ function createNodeSliderReadout(slider) {
   slider.dataset.choices ??= "";
   slider.dataset.displayChoices ??= "false";
   slider.dataset.showSign ??= "false";
+  slider.dataset.wraparound ??= "false";
 
   const readout = document.createElement("button");
   readout.type = "button";
@@ -7353,6 +7405,7 @@ function createNodeGraphParameter(node, type, parameter) {
     "noise.level": "nodeNoiseLevel",
     "osc.frequency": "nodeOscFrequency",
     "osc.level": "nodeOscLevel",
+    "osc.phase": "nodeOscPhase",
   };
   input.id = legacyIds[`${node}.${parameter.key}`] || `node-${node}-${parameter.key}`;
   input.dataset.param = parameter.key;
@@ -7364,8 +7417,12 @@ function createNodeGraphParameter(node, type, parameter) {
   input.dataset.step = parameter.step;
   input.dataset.mid = parameter.mid;
   input.dataset.default = parameter.defaultValue;
-  input.dataset.kind = "decimal";
-  input.dataset.unit = "";
+  input.dataset.kind = parameter.kind || "decimal";
+  input.dataset.unit = parameter.unit ?? "";
+  input.dataset.choices = formatNodeMetadataChoices(parameter.choices || []);
+  input.dataset.displayChoices = parameter.displayChoices ? "true" : "false";
+  input.dataset.showSign = parameter.showSign ? "true" : "false";
+  input.dataset.wraparound = parameter.wraparound ? "true" : "false";
   input.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${parameter.label}`);
   label.append(input);
   row.append(label);
@@ -8388,7 +8445,7 @@ function createNodeGraphLiveRuntime(plan) {
   const noiseSeeds = new Map();
   for (const node of plan.nodes || []) {
     if (node.type === "osc") {
-      phases.set(node.id, 0);
+      phases.set(node.id, nodeGraphPhaseRadians(readNodeGraphLiveParam(node, "phase", 0)));
     }
     if (node.type === "noise") {
       noiseSeeds.set(node.id, nodeGraphStableSeed(node.id));
@@ -8410,6 +8467,10 @@ function createNodeGraphLiveRuntime(plan) {
 function readNodeGraphLiveParam(node, key, fallback = 0) {
   const value = Number(node?.params?.[key]);
   return Number.isFinite(value) ? value : fallback;
+}
+
+function nodeGraphPhaseRadians(value) {
+  return wrapNodeSliderValue(Number(value) || 0, 0, 1) * Math.PI * 2;
 }
 
 function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampleRate) {
@@ -8672,7 +8733,7 @@ function renderNodeGraphAudio() {
   for (const node of nodeGraphMvp.activeNodes) {
     const type = nodeGraphNodeType(node);
     if (type === "osc") {
-      phases.set(node, 0);
+      phases.set(node, nodeGraphPhaseRadians(nodeGraphReadNodeNumber(node, "phase")));
     }
     if (type === "noise") {
       noiseSeeds.set(node, nodeGraphStableSeed(node));
