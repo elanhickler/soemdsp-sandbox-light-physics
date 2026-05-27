@@ -61,6 +61,12 @@
       <div class="node-view-toolbar" aria-label="Modular view mode">
         <div class="node-view-tabs" role="group" aria-label="Node graph view">
           <button
+            id="nodeSettingsViewButton"
+            type="button"
+            aria-label="Patch settings"
+            aria-pressed="false"
+            title="Patch settings">&#9881;</button>
+          <button
             id="nodeModularViewButton"
             class="active"
             type="button"
@@ -100,6 +106,23 @@
           id="nodePatchScript"
           spellcheck="false"
           aria-label="Node graph patch script"></textarea>
+      </div>
+
+      <div id="nodeSettingsView" class="node-settings-view" hidden>
+        <div class="node-settings-grid">
+          <label>Patch Name
+            <input id="patchNameValue" type="text" autocomplete="off" data-patch-info-field>
+          </label>
+          <label>Patch Author
+            <input id="patchAuthorValue" type="text" autocomplete="off" data-patch-info-field>
+          </label>
+          <label>Patch Tags
+            <input id="patchTagsValue" type="text" autocomplete="off" data-patch-info-field>
+          </label>
+          <label class="node-settings-description">Patch Description
+            <textarea id="patchDescriptionValue" spellcheck="true" data-patch-info-field></textarea>
+          </label>
+        </div>
       </div>
 
       <div

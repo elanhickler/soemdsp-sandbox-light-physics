@@ -6003,6 +6003,12 @@ const nodeGraphDefaultConnections = Object.freeze([
 ]);
 
 const nodeGraphDefaultPatch = Object.freeze({
+  info: {
+    author: "",
+    description: "",
+    name: "",
+    tags: "",
+  },
   grid: { ...nodeGraphGrid },
   nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node })),
   connections: nodeGraphDefaultConnections.map((connection) => ({ ...connection })),
@@ -6117,10 +6123,24 @@ const nodeMetadataKindAliases = Object.freeze({
 });
 let nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates;
 
+function nodeGraphOneLineText(value) {
+  return String(value ?? "").replace(/[\r\n]+/g, " ").trim();
+}
+
+function normalizeNodeGraphPatchInfo(info = {}) {
+  return {
+    author: nodeGraphOneLineText(info.author),
+    description: String(info.description ?? "").trim(),
+    name: nodeGraphOneLineText(info.name),
+    tags: nodeGraphOneLineText(info.tags),
+  };
+}
+
 function cloneNodeGraphPatch(patch) {
   return {
     connections: (patch.connections || []).map((connection) => ({ ...connection })),
     grid: { sizePx: Number(patch.grid?.sizePx) || nodeGraphGrid.sizePx },
+    info: normalizeNodeGraphPatchInfo(patch.info),
     modulations: (patch.modulations || []).map((modulation) => ({ ...modulation })),
     nodes: (patch.nodes || []).map((node) => ({ ...node })),
   };
@@ -6226,6 +6246,7 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
     {
       connections: patch.connections,
       grid: patch.grid,
+      info: normalizeNodeGraphPatchInfo(patch.info),
       modulations: patch.modulations || [],
       nodes: patch.nodes,
     },
@@ -6318,6 +6339,7 @@ function validateNodeGraphPatch(patch) {
   return {
     connections,
     grid: { sizePx: gridSize },
+    info: normalizeNodeGraphPatchInfo(patch.info),
     modulations,
     nodes,
   };
@@ -6342,6 +6364,40 @@ function syncNodeGraphScriptView(message = "script synced", ok = true) {
     script.value = serializeNodeGraphPatch();
   }
   setNodeGraphScriptStatus(message, ok);
+}
+
+function setNodeGraphSettingsField(id, value) {
+  const field = document.getElementById(id);
+  if (field && document.activeElement !== field) {
+    field.value = value;
+  }
+}
+
+function syncNodeGraphSettingsView() {
+  const info = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch.info);
+  setNodeGraphSettingsField("patchNameValue", info.name);
+  setNodeGraphSettingsField("patchAuthorValue", info.author);
+  setNodeGraphSettingsField("patchTagsValue", info.tags);
+  setNodeGraphSettingsField("patchDescriptionValue", info.description);
+}
+
+function readNodeGraphSettingsView() {
+  return normalizeNodeGraphPatchInfo({
+    author: document.getElementById("patchAuthorValue")?.value,
+    description: document.getElementById("patchDescriptionValue")?.value,
+    name: document.getElementById("patchNameValue")?.value,
+    tags: document.getElementById("patchTagsValue")?.value,
+  });
+}
+
+function handleNodeGraphSettingsInput() {
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  patch.info = readNodeGraphSettingsView();
+  commitNodeGraphPatch(patch, {
+    markPending: false,
+    record: false,
+    status: "settings synced",
+  });
 }
 
 function renderNodeGraphHistoryControls() {
@@ -6413,6 +6469,7 @@ function commitNodeGraphPatch(patch, options = {}) {
   }
   renderNodePalette();
   renderNodeGraphConnectionList();
+  syncNodeGraphSettingsView();
   syncNodeGraphScriptView(options.status || "script synced", options.ok ?? true);
   if (options.record !== false) {
     recordNodeGraphHistory();
@@ -7955,15 +8012,22 @@ function addNodeGraphModuleFromContext(event) {
 }
 
 function setNodeGraphViewMode(mode) {
+  const settingsMode = mode === "settings";
   const scriptMode = mode === "script";
-  document.getElementById("nodeGraphWorkspace").hidden = scriptMode;
+  const modularMode = !settingsMode && !scriptMode;
+  document.getElementById("nodeGraphWorkspace").hidden = !modularMode;
   document.getElementById("nodeScriptView").hidden = !scriptMode;
-  document.getElementById("nodeModularViewButton").classList.toggle("active", !scriptMode);
+  document.getElementById("nodeSettingsView").hidden = !settingsMode;
+  document.getElementById("nodeSettingsViewButton").classList.toggle("active", settingsMode);
+  document.getElementById("nodeModularViewButton").classList.toggle("active", modularMode);
   document.getElementById("nodeScriptViewButton").classList.toggle("active", scriptMode);
-  document.getElementById("nodeModularViewButton").setAttribute("aria-pressed", String(!scriptMode));
+  document.getElementById("nodeSettingsViewButton").setAttribute("aria-pressed", String(settingsMode));
+  document.getElementById("nodeModularViewButton").setAttribute("aria-pressed", String(modularMode));
   document.getElementById("nodeScriptViewButton").setAttribute("aria-pressed", String(scriptMode));
   if (scriptMode) {
     syncNodeGraphScriptView();
+  } else if (settingsMode) {
+    syncNodeGraphSettingsView();
   } else {
     drawNodeGraphWires();
   }
@@ -8284,12 +8348,18 @@ function initNodeGraphMvp() {
     .getElementById("nodeZoomInButton")
     .addEventListener("click", () => zoomNodeGraphBy(nodeGraphZoomLimits.step));
   document
+    .getElementById("nodeSettingsViewButton")
+    .addEventListener("click", () => setNodeGraphViewMode("settings"));
+  document
     .getElementById("nodeModularViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("modular"));
   document
     .getElementById("nodeScriptViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("script"));
   document.getElementById("nodePatchScript").addEventListener("input", handleNodePatchScriptInput);
+  for (const field of document.querySelectorAll("[data-patch-info-field]")) {
+    field.addEventListener("input", handleNodeGraphSettingsInput);
+  }
   document.getElementById("toggleDebugButton").addEventListener("click", toggleDebugSections);
   document
     .getElementById("nodeParameterMetadataPopover")

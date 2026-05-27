@@ -193,6 +193,66 @@ audio {
   margin-top: 16px;
 }
 
+.node-settings-view {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #111418;
+}
+
+.node-settings-view[hidden] {
+  display: none;
+}
+
+.node-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.node-settings-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.node-settings-grid input,
+.node-settings-grid textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #101214;
+  color: var(--text);
+  font: inherit;
+  text-transform: none;
+}
+
+.node-settings-grid input {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.node-settings-grid textarea {
+  min-height: 150px;
+  padding: 10px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.node-settings-description {
+  grid-column: 1 / -1;
+}
+
+.node-settings-grid input:focus,
+.node-settings-grid textarea:focus {
+  outline: none;
+  border-color: rgba(127, 199, 217, 0.58);
+}
+
 .node-script-view textarea {
   width: 100%;
   min-height: 420px;
