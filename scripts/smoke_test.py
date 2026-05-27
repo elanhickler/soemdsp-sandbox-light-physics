@@ -23,9 +23,26 @@ PUBLIC = ROOT / "public"
 DEFAULT_MANIFEST = (
     ROOT.parent / "soemdsp" / "runtime_dsp_object_bound_wav_resync_demo.manifest.json"
 )
+SOEMDSP_META_HEADER = ROOT.parent / "soemdsp" / "include" / "soemdsp" / "meta.hpp"
 EXPECTED_CONTRACT = "soemdsp-demo-local-sandbox-handoff"
 EXPECTED_CONTRACT_VERSION = 1
 EXPECTED_INSPECTION_MODE = "mouse-and-ears"
+EXPECTED_META_KINDS = {
+    "amplitude",
+    "bypass",
+    "decibels",
+    "decimal",
+    "decimal_bipolar",
+    "descrete",
+    "frequency",
+    "momentary",
+    "onoff",
+    "pitch",
+    "plusminus",
+    "seconds",
+    "sustain",
+    "waveform",
+}
 REQUIRED_FLAGS = {
     "callerOwnsProcessingOrder": True,
     "callerOwnsDspObjects": True,
@@ -328,6 +345,19 @@ def request(
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def read_soemdsp_meta_kinds() -> set[str]:
+    source = SOEMDSP_META_HEADER.read_text(encoding="utf-8")
+    enum_start = source.index("enum class MetaType")
+    body_start = source.index("{", enum_start) + 1
+    body_end = source.index("};", body_start)
+    names: set[str] = set()
+    for line in source[body_start:body_end].splitlines():
+        line = line.split("//", 1)[0].strip().rstrip(",")
+        if line:
+            names.add(line)
+    return names
 
 
 def find_free_port() -> int:
@@ -2857,6 +2887,14 @@ def require_node_graph_mvp_contract() -> None:
         "let nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates",
         'amplitude: { def: 1, label: "Amplitude"',
         'decibels: { def: 0, label: "Decibels"',
+        'decimal_bipolar: {',
+        'frequency: { def: 1000, label: "Frequency"',
+        'descrete: { def: 0, label: "Descrete"',
+        'waveform: {',
+        'bypass: {',
+        'plusminus: {',
+        'onoff: {',
+        'momentary: {',
         'unit: "dB"',
         "const nodeMetadataKindAliases",
         "function normalizeNodeMetadataKind(kind)",
@@ -3037,14 +3075,43 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(payload.get("ok") is True, "node metadata kinds payload was not ok")
     templates = payload.get("templates")
     require(isinstance(templates, dict), "node metadata kind templates missing")
+    meta_kinds = read_soemdsp_meta_kinds()
+    require(meta_kinds == EXPECTED_META_KINDS, "soemdsp meta kind fixture drifted")
+    template_kinds = set(templates)
+    missing = meta_kinds - template_kinds
+    require(not missing, f"node metadata kind templates missing meta.hpp kinds: {sorted(missing)}")
     amplitude = templates.get("amplitude")
     decibels = templates.get("decibels")
+    decimal_bipolar = templates.get("decimal_bipolar")
+    frequency = templates.get("frequency")
+    descrete = templates.get("descrete")
+    waveform = templates.get("waveform")
+    bypass = templates.get("bypass")
+    plusminus = templates.get("plusminus")
+    onoff = templates.get("onoff")
+    momentary = templates.get("momentary")
     require(isinstance(amplitude, dict), "amplitude metadata kind missing")
     require(isinstance(decibels, dict), "decibels metadata kind missing")
+    require(isinstance(decimal_bipolar, dict), "decimal_bipolar metadata kind missing")
+    require(isinstance(frequency, dict), "frequency metadata kind missing")
+    require(isinstance(descrete, dict), "descrete metadata kind missing")
+    require(isinstance(waveform, dict), "waveform metadata kind missing")
+    require(isinstance(bypass, dict), "bypass metadata kind missing")
+    require(isinstance(plusminus, dict), "plusminus metadata kind missing")
+    require(isinstance(onoff, dict), "onoff metadata kind missing")
+    require(isinstance(momentary, dict), "momentary metadata kind missing")
     require(amplitude.get("label") == "Amplitude", "amplitude metadata label mismatch")
     require(amplitude.get("unit") == "amp", "amplitude metadata unit mismatch")
     require(decibels.get("label") == "Decibels", "decibels metadata label mismatch")
     require(decibels.get("unit") == "dB", "decibels metadata unit mismatch")
+    require(decimal_bipolar.get("unit") == "lin", "decimal_bipolar metadata unit mismatch")
+    require(frequency.get("unit") == "Hz", "frequency metadata unit mismatch")
+    require(descrete.get("unit") == "idx", "descrete metadata unit mismatch")
+    require(waveform.get("choices") == ["Sine", "Saw", "Square", "Noise"], "waveform choices mismatch")
+    require(bypass.get("choices") == ["active", "BYPASSED"], "bypass choices mismatch")
+    require(plusminus.get("choices") == ["-", "+"], "plusminus choices mismatch")
+    require(onoff.get("choices") == ["off", "on"], "onoff choices mismatch")
+    require(momentary.get("choices") == ["idle", "on"], "momentary choices mismatch")
 
 
 def require_manifest_contracts(payload: dict[str, object]) -> None:

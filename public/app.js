@@ -5999,18 +5999,78 @@ const nodeGraphDefaultConnections = Object.freeze([
 ]);
 
 const fallbackNodeMetadataKindTemplates = Object.freeze({
-  decimal: { def: 0.5, label: "Decimal", max: 1, mid: 0.5, min: 0, step: 0.01, unit: "" },
-  bipolar: { def: 0, label: "Bipolar", max: 1, mid: 0, min: -1, step: 0.01, unit: "" },
+  decimal: { def: 0, label: "Decimal", max: 1, mid: 0.5, min: 0, step: 0.01, unit: "lin" },
+  decimal_bipolar: {
+    def: 0,
+    label: "Decimal Bipolar",
+    max: 1,
+    mid: 0,
+    min: -1,
+    step: 0.01,
+    unit: "lin",
+  },
   amplitude: { def: 1, label: "Amplitude", max: 3, mid: 1, min: 0, step: 0.01, unit: "amp" },
   decibels: { def: 0, label: "Decibels", max: 12, mid: 0, min: -60, step: 0.1, unit: "dB" },
-  percent: { def: 50, label: "Percent", max: 100, mid: 50, min: 0, step: 1, unit: "%" },
-  pitch: { def: 440, label: "Pitch", max: 20000, mid: 440, min: 20, step: 1, unit: "Hz" },
-  seconds: { def: 1, label: "Seconds", max: 10, mid: 1, min: 0, step: 0.01, unit: "s" },
-  milliseconds: { def: 250, label: "Milliseconds", max: 5000, mid: 250, min: 0, step: 1, unit: "ms" },
-  sustain: { def: 0.7, label: "Sustain", max: 1, mid: 0.7, min: 0, step: 0.01, unit: "" },
-  pan: { def: 0, label: "Pan", max: 1, mid: 0, min: -1, step: 0.01, unit: "pan" },
+  frequency: { def: 1000, label: "Frequency", max: 20000, mid: 1000, min: 0, step: 1, unit: "Hz" },
+  pitch: { def: 0, label: "Pitch", max: 12, mid: 0, min: -12, step: 0.1, unit: "st" },
+  seconds: { def: 0, label: "Seconds", max: 5, mid: 2.5, min: 0, step: 0.01, unit: "s" },
+  sustain: { def: 1, label: "Sustain", max: 1, mid: 0.7, min: 0, step: 0.01, unit: "amp" },
+  descrete: { def: 0, label: "Descrete", max: 9, mid: 4, min: 0, step: 1, unit: "idx" },
+  waveform: {
+    choices: ["Sine", "Saw", "Square", "Noise"],
+    def: 0,
+    label: "Waveform",
+    max: 9,
+    mid: 4,
+    min: 0,
+    step: 1,
+    unit: "",
+  },
+  bypass: {
+    choices: ["active", "BYPASSED"],
+    def: 0,
+    label: "Bypass",
+    max: 1,
+    mid: 0.5,
+    min: 0,
+    step: 1,
+    unit: "bypass",
+  },
+  plusminus: {
+    choices: ["-", "+"],
+    def: -1,
+    label: "Plus Minus",
+    max: 1,
+    mid: 0,
+    min: -1,
+    step: 1,
+    unit: "plusminus",
+  },
+  onoff: {
+    choices: ["off", "on"],
+    def: 1,
+    label: "On Off",
+    max: 1,
+    mid: 0.5,
+    min: 0,
+    step: 1,
+    unit: "onoff",
+  },
+  momentary: {
+    choices: ["idle", "on"],
+    def: 0,
+    label: "Momentary",
+    max: 1,
+    mid: 0.5,
+    min: 0,
+    step: 1,
+    unit: "momentary",
+  },
 });
-const nodeMetadataKindAliases = Object.freeze({ gain: "amplitude" });
+const nodeMetadataKindAliases = Object.freeze({
+  bipolar: "decimal_bipolar",
+  gain: "amplitude",
+});
 let nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates;
 
 const nodeGraphMvp = {
