@@ -3905,15 +3905,19 @@ function waveformHeaderPillsLabeled(ids) {
 }
 
 function currentParameterPillsLabeled() {
+  return (
+    waveformHeaderPillsLabeled(["currentFrequency", "currentAmplitude", "currentParameterStatus"]) &&
+    currentMeasuredAudioPillsLabeled()
+  );
+}
+
+function currentMeasuredAudioPillsLabeled() {
   return waveformHeaderPillsLabeled([
-    "currentFrequency",
-    "currentAmplitude",
     "currentMeasuredFrequency",
     "currentMeasuredPeak",
     "currentMeasuredFrequencyDelta",
     "currentMeasuredPeakDelta",
     "currentMeasuredStatus",
-    "currentParameterStatus",
   ]);
 }
 
@@ -4282,7 +4286,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["parameter timeline preview", waveformReady && Boolean(document.querySelector(".parameter-segment"))],
     ["probe frame labels", waveformReady && typeof formatProbeFrame === "function"],
     ["follow/free view", Boolean(document.getElementById("followAudioButton"))],
-    ["current measured audio", waveformReady && Boolean(document.getElementById("currentMeasuredStatus"))],
+    ["current measured audio", waveformReady && currentMeasuredAudioPillsLabeled()],
     ["current parameter labels", waveformReady && currentParameterPillsLabeled()],
     [
       "phase jump controls",
