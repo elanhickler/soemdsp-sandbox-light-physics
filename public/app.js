@@ -5998,10 +5998,11 @@ const nodeGraphDefaultConnections = Object.freeze([
   { sourceNode: "bias", sourcePort: "Out", destinationNode: "output", destinationPort: "In" },
 ]);
 
-const nodeMetadataKindTemplates = Object.freeze({
+const fallbackNodeMetadataKindTemplates = Object.freeze({
   decimal: { def: 0.5, label: "Decimal", max: 1, mid: 0.5, min: 0, step: 0.01, unit: "" },
   bipolar: { def: 0, label: "Bipolar", max: 1, mid: 0, min: -1, step: 0.01, unit: "" },
-  gain: { def: 1, label: "Gain", max: 3, mid: 1, min: 0, step: 0.01, unit: "x" },
+  amplitude: { def: 1, label: "Amplitude", max: 3, mid: 1, min: 0, step: 0.01, unit: "amp" },
+  decibels: { def: 0, label: "Decibels", max: 12, mid: 0, min: -60, step: 0.1, unit: "dB" },
   percent: { def: 50, label: "Percent", max: 100, mid: 50, min: 0, step: 1, unit: "%" },
   pitch: { def: 440, label: "Pitch", max: 20000, mid: 440, min: 20, step: 1, unit: "Hz" },
   seconds: { def: 1, label: "Seconds", max: 10, mid: 1, min: 0, step: 0.01, unit: "s" },
@@ -6009,6 +6010,8 @@ const nodeMetadataKindTemplates = Object.freeze({
   sustain: { def: 0.7, label: "Sustain", max: 1, mid: 0.7, min: 0, step: 0.01, unit: "" },
   pan: { def: 0, label: "Pan", max: 1, mid: 0, min: -1, step: 0.01, unit: "pan" },
 });
+const nodeMetadataKindAliases = Object.freeze({ gain: "amplitude" });
+let nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates;
 
 const nodeGraphMvp = {
   activeNodes: new Set(["osc", "noise", "gain", "bias", "output"]),
@@ -6271,6 +6274,44 @@ function populateNodeMetadataKindChoices() {
   }
 }
 
+function normalizeNodeMetadataKind(kind) {
+  return nodeMetadataKindAliases[kind] || kind || "decimal";
+}
+
+function applyNodeMetadataKindTemplates(templates) {
+  if (!templates || typeof templates !== "object") {
+    return;
+  }
+
+  nodeMetadataKindTemplates = Object.freeze(templates);
+  const select = document.getElementById("metadataKindValue");
+  if (select) {
+    select.replaceChildren();
+    populateNodeMetadataKindChoices();
+  }
+  if (nodeGraphMvp.metadataEditorTarget) {
+    const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
+    if (slider) {
+      fillNodeMetadataPopover(slider);
+    }
+  }
+}
+
+async function loadNodeMetadataKindTemplates() {
+  try {
+    const response = await fetch("/api/node-metadata-kinds", { cache: "no-store" });
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    if (payload?.ok === true) {
+      applyNodeMetadataKindTemplates(payload.templates);
+    }
+  } catch (_error) {
+    nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates;
+  }
+}
+
 function fillNodeMetadataPopover(slider) {
   populateNodeMetadataKindChoices();
   const metadata = nodeSliderMetadata(slider);
@@ -6281,7 +6322,7 @@ function fillNodeMetadataPopover(slider) {
   document.getElementById("metadataDefaultValue").value =
     formatNodeSliderCompactNumber(metadata.def);
   document.getElementById("metadataStepValue").value = formatNodeMetadataStep(metadata.step);
-  document.getElementById("metadataKindValue").value = metadata.kind;
+  document.getElementById("metadataKindValue").value = normalizeNodeMetadataKind(metadata.kind);
   document.getElementById("metadataUnitValue").value = metadata.unit;
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
@@ -6332,7 +6373,7 @@ function readNodeMetadataEditorValues(slider) {
   const stepInput = document.getElementById("metadataStepValue").value.trim();
   return {
     def: parseNodeMetadataNumber(document.getElementById("metadataDefaultValue").value, current.def),
-    kind: document.getElementById("metadataKindValue").value || "decimal",
+    kind: normalizeNodeMetadataKind(document.getElementById("metadataKindValue").value),
     max,
     mid: parseNodeMetadataNumber(document.getElementById("metadataMidValue").value, current.mid),
     min,
@@ -6358,7 +6399,7 @@ function setNodeMetadataDefaultsFromKind() {
   if (!slider) {
     return;
   }
-  const kind = document.getElementById("metadataKindValue").value || "decimal";
+  const kind = normalizeNodeMetadataKind(document.getElementById("metadataKindValue").value);
   const template = nodeMetadataKindTemplates[kind] || nodeMetadataKindTemplates.decimal;
   document.getElementById("metadataMinValue").value = formatNodeSliderCompactNumber(template.min);
   document.getElementById("metadataMidValue").value = formatNodeSliderCompactNumber(template.mid);
@@ -7169,6 +7210,7 @@ function restoreDefaultNodeGraph() {
   renderNodeVisibility();
   renderNodeGraphConnectionList();
   markNodeGraphRenderPending();
+  loadNodeMetadataKindTemplates();
 }
 
 function clearNodeGraphWires() {
@@ -7564,6 +7606,7 @@ function initNodeGraphMvp() {
   renderNodeVisibility();
   renderNodeGraphConnectionList();
   markNodeGraphRenderPending();
+  loadNodeMetadataKindTemplates();
 }
 
 loadSignalPlotSettings();

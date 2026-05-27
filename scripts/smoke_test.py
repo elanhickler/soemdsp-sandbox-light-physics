@@ -1710,6 +1710,7 @@ def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None
 def require_read_only_method_rejections(base_url: str) -> None:
     for method, path in [
         ("POST", "/api/manifest"),
+        ("POST", "/api/node-metadata-kinds"),
         ("PUT", "/artifact?path=runtime_dsp_object_bound_wav_resync_demo.wav"),
         ("PATCH", "/public/app.js"),
         ("DELETE", "/"),
@@ -2852,7 +2853,16 @@ def require_node_graph_mvp_contract() -> None:
         "const nodeGraphDefaultConnections",
         "const nodeGraphModuleDefinitions",
         "const nodeGraphDefaultNodeConfigs",
-        "const nodeMetadataKindTemplates",
+        "const fallbackNodeMetadataKindTemplates",
+        "let nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates",
+        'amplitude: { def: 1, label: "Amplitude"',
+        'decibels: { def: 0, label: "Decibels"',
+        'unit: "dB"',
+        "const nodeMetadataKindAliases",
+        "function normalizeNodeMetadataKind(kind)",
+        "function applyNodeMetadataKindTemplates(templates)",
+        "async function loadNodeMetadataKindTemplates()",
+        'fetch("/api/node-metadata-kinds"',
         "function beginNodeGraphWireDrag(event)",
         "function dragNodeGraphWire(event)",
         "function endNodeGraphWireDrag(event)",
@@ -3018,6 +3028,25 @@ def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
     return payload
 
 
+def require_node_metadata_kinds_transport(base_url: str) -> None:
+    response = request(f"{base_url}/api/node-metadata-kinds")
+    require(response.status == 200, "node metadata kinds endpoint did not return 200")
+    require_json_response_metadata(response, "node metadata kinds endpoint")
+    payload = json.loads(response.body.decode("utf-8"))
+    require(isinstance(payload, dict), "node metadata kinds payload was not object")
+    require(payload.get("ok") is True, "node metadata kinds payload was not ok")
+    templates = payload.get("templates")
+    require(isinstance(templates, dict), "node metadata kind templates missing")
+    amplitude = templates.get("amplitude")
+    decibels = templates.get("decibels")
+    require(isinstance(amplitude, dict), "amplitude metadata kind missing")
+    require(isinstance(decibels, dict), "decibels metadata kind missing")
+    require(amplitude.get("label") == "Amplitude", "amplitude metadata label mismatch")
+    require(amplitude.get("unit") == "amp", "amplitude metadata unit mismatch")
+    require(decibels.get("label") == "Decibels", "decibels metadata label mismatch")
+    require(decibels.get("unit") == "dB", "decibels metadata unit mismatch")
+
+
 def require_manifest_contracts(payload: dict[str, object]) -> None:
     require_producer_proof(payload)
     require_handoff_contract(payload)
@@ -3098,6 +3127,10 @@ def require_server_error_contracts(base_url: str) -> None:
     require(manifest_head.status == 405, "manifest HEAD did not return 405")
     require_no_store(manifest_head, "manifest HEAD")
 
+    metadata_head = request(f"{base_url}/api/node-metadata-kinds", method="HEAD")
+    require(metadata_head.status == 405, "node metadata kinds HEAD did not return 405")
+    require_no_store(metadata_head, "node metadata kinds HEAD")
+
     require_read_only_method_rejections(base_url)
 
 
@@ -3165,6 +3198,10 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         run_step("manifest error surface contract", require_manifest_error_surface_contract)
         run_step("follow/free seek contract", require_follow_free_seek_contract)
         run_step("node graph MVP contract", require_node_graph_mvp_contract)
+        run_step(
+            "node metadata kinds transport",
+            lambda: require_node_metadata_kinds_transport(base_url),
+        )
 
         payload: dict[str, object] = {}
 

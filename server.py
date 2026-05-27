@@ -20,6 +20,99 @@ STATIC_MIME_TYPES = {
     ".css": "text/css",
     ".js": "application/javascript",
 }
+# Mirrors soemdsp::meta::MetaType defaults from ../soemdsp/include/soemdsp/meta.hpp.
+NODE_METADATA_KIND_TEMPLATES = {
+    "decimal": {
+        "def": 0.5,
+        "label": "Decimal",
+        "max": 1,
+        "mid": 0.5,
+        "min": 0,
+        "step": 0.01,
+        "unit": "",
+    },
+    "bipolar": {
+        "def": 0,
+        "label": "Bipolar",
+        "max": 1,
+        "mid": 0,
+        "min": -1,
+        "step": 0.01,
+        "unit": "",
+    },
+    "amplitude": {
+        "def": 1,
+        "label": "Amplitude",
+        "max": 3,
+        "mid": 1,
+        "min": 0,
+        "step": 0.01,
+        "unit": "amp",
+    },
+    "decibels": {
+        "def": 0,
+        "label": "Decibels",
+        "max": 12,
+        "mid": 0,
+        "min": -60,
+        "step": 0.1,
+        "unit": "dB",
+    },
+    "percent": {
+        "def": 50,
+        "label": "Percent",
+        "max": 100,
+        "mid": 50,
+        "min": 0,
+        "step": 1,
+        "unit": "%",
+    },
+    "pitch": {
+        "def": 440,
+        "label": "Pitch",
+        "max": 20000,
+        "mid": 440,
+        "min": 20,
+        "step": 1,
+        "unit": "Hz",
+    },
+    "seconds": {
+        "def": 1,
+        "label": "Seconds",
+        "max": 10,
+        "mid": 1,
+        "min": 0,
+        "step": 0.01,
+        "unit": "s",
+    },
+    "milliseconds": {
+        "def": 250,
+        "label": "Milliseconds",
+        "max": 5000,
+        "mid": 250,
+        "min": 0,
+        "step": 1,
+        "unit": "ms",
+    },
+    "sustain": {
+        "def": 0.7,
+        "label": "Sustain",
+        "max": 1,
+        "mid": 0.7,
+        "min": 0,
+        "step": 0.01,
+        "unit": "",
+    },
+    "pan": {
+        "def": 0,
+        "label": "Pan",
+        "max": 1,
+        "mid": 0,
+        "min": -1,
+        "step": 0.01,
+        "unit": "pan",
+    },
+}
 
 
 class SandboxServer(BaseHTTPRequestHandler):
@@ -89,6 +182,13 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.serve_manifest()
             return
 
+        if parsed.path == "/api/node-metadata-kinds":
+            if not send_body:
+                self.send_error(405, "Method not allowed")
+                return
+            self.serve_node_metadata_kinds()
+            return
+
         if parsed.path == "/artifact":
             self.serve_artifact(parsed.query, send_body=send_body)
             return
@@ -149,6 +249,14 @@ class SandboxServer(BaseHTTPRequestHandler):
                 },
                 "manifest": manifest,
             }
+        )
+
+    def serve_node_metadata_kinds(self) -> None:
+        self.send_json(
+            {
+                "ok": True,
+                "templates": NODE_METADATA_KIND_TEMPLATES,
+            },
         )
 
     def serve_artifact(self, query: str, send_body: bool) -> None:
