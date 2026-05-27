@@ -5917,7 +5917,7 @@ const nodeGraphDefaultConnections = Object.freeze([
 
 const nodeGraphAllowedInputs = Object.freeze({
   "gain.In": new Set(["osc.Out", "noise.Out"]),
-  "bias.In": new Set(["gain.Out"]),
+  "bias.In": new Set(["gain.Out", "osc.Out"]),
   "output.In": new Set(["bias.Out"]),
 });
 
@@ -5957,21 +5957,23 @@ function nodeGraphFindInputConnection(node, port) {
 }
 
 function nodeGraphValidate() {
-  const sourceConnection = nodeGraphFindInputConnection("gain", "In");
+  const gainSourceConnection = nodeGraphFindInputConnection("gain", "In");
   const biasConnection = nodeGraphFindInputConnection("bias", "In");
   const outputConnection = nodeGraphFindInputConnection("output", "In");
-  const sourceNode = sourceConnection?.sourceNode || "";
-  const sourceValid = sourceNode === "osc" || sourceNode === "noise";
-  const gainValid = biasConnection?.sourceNode === "gain";
+  const gainSourceNode = gainSourceConnection?.sourceNode || "";
+  const directBiasSourceNode = biasConnection?.sourceNode === "osc" ? "osc" : "";
+  const gainSourceValid = gainSourceNode === "osc" || gainSourceNode === "noise";
+  const gainToBiasValid = biasConnection?.sourceNode === "gain" && gainSourceValid;
+  const directBiasValid = directBiasSourceNode === "osc";
   const biasValid = outputConnection?.sourceNode === "bias";
-  const valid = sourceValid && gainValid && biasValid;
+  const sourceNode = directBiasSourceNode || gainSourceNode;
+  const usesGain = gainToBiasValid;
+  const valid = (gainToBiasValid || directBiasValid) && biasValid;
   const missing = [];
 
-  if (!sourceValid) {
+  if (!gainToBiasValid && !directBiasValid) {
     missing.push("Osc/Noise -> Gain");
-  }
-  if (!gainValid) {
-    missing.push("Gain -> Bias");
+    missing.push("Gain/Osc -> Bias");
   }
   if (!biasValid) {
     missing.push("Bias -> Output");
@@ -5980,6 +5982,7 @@ function nodeGraphValidate() {
   return {
     missing,
     sourceNode,
+    usesGain,
     valid,
   };
 }
@@ -6305,7 +6308,8 @@ function renderNodeGraphAudio() {
     const noise = (seed / 0xffffffff) * 2 - 1;
     const osc = Math.sin(phase) * oscLevel;
     const sourceSample = sourceNode === "noise" ? noise * noiseLevel : osc;
-    const output = Math.max(-0.95, Math.min(0.95, sourceSample * gainAmount + biasAmount));
+    const biasedInput = validation.usesGain ? sourceSample * gainAmount : sourceSample;
+    const output = Math.max(-0.95, Math.min(0.95, biasedInput + biasAmount));
     samples[frame] = output;
     peak = Math.max(peak, Math.abs(output));
     squareSum += output * output;
@@ -6326,7 +6330,10 @@ function renderNodeGraphAudio() {
   renderStatus.textContent = "render ready";
   renderStatus.className = "pill good";
   document.getElementById("nodeAudioStats").textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
-  document.getElementById("nodeOutputSummary").textContent = `${nodeGraphNodeLabels[sourceNode]} -> Gain -> Bias -> Output`;
+  const route = validation.usesGain
+    ? `${nodeGraphNodeLabels[sourceNode]} -> Gain -> Bias -> Output`
+    : `${nodeGraphNodeLabels[sourceNode]} -> Bias -> Output`;
+  document.getElementById("nodeOutputSummary").textContent = route;
   drawNodeRenderedAudio();
 }
 

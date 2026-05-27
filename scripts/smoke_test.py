@@ -2801,6 +2801,7 @@ def require_node_graph_mvp_contract() -> None:
     for snippet in [
         "const nodeGraphDefaultConnections",
         "const nodeGraphAllowedInputs",
+        "\"bias.In\": new Set([\"gain.Out\", \"osc.Out\"])",
         "function beginNodeGraphWireDrag(event)",
         "function dragNodeGraphWire(event)",
         "function endNodeGraphWireDrag(event)",
@@ -2817,7 +2818,8 @@ def require_node_graph_mvp_contract() -> None:
         "function drawNodeRenderedSignalPlot()",
         "async function playNodeGraphAudio()",
         "sourceNode === \"noise\" ? noise * noiseLevel : osc",
-        "sourceSample * gainAmount + biasAmount",
+        "validation.usesGain ? sourceSample * gainAmount : sourceSample",
+        "`${nodeGraphNodeLabels[sourceNode]} -> Bias -> Output`",
         "disconnect-wire-button",
         "new AudioContext({ sampleRate: nodeGraphMvp.sampleRate })",
         "initNodeGraphMvp();",
