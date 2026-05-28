@@ -6375,6 +6375,7 @@ const nodeGraphMvp = {
   sceneContextPoint: null,
   sceneContextTargetNode: null,
   scriptCommitDelayMs: 250,
+  scriptDirty: false,
   scriptCommitTimer: 0,
   selected: null,
   sampleRate: 44100,
@@ -6647,6 +6648,7 @@ function syncNodeGraphScriptView(message = "script synced", ok = true) {
   const script = document.getElementById("nodePatchScript");
   if (script && document.activeElement !== script) {
     script.value = serializeNodeGraphPatch();
+    nodeGraphMvp.scriptDirty = false;
   }
   setNodeGraphScriptStatus(message, ok);
 }
@@ -6809,8 +6811,12 @@ function commitNodeGraphScript(text) {
     commitNodeGraphPatch(loadNodeGraphPatchFromScript(text), {
       status: "script synced",
     });
+    nodeGraphMvp.scriptDirty = false;
+    return true;
   } catch (error) {
+    nodeGraphMvp.scriptDirty = true;
     setNodeGraphScriptStatus(error.message, false);
+    return false;
   }
 }
 
@@ -6824,6 +6830,7 @@ function clearNodeGraphScriptCommitTimer() {
 
 function scheduleNodeGraphScriptCommit(text) {
   clearNodeGraphScriptCommitTimer();
+  nodeGraphMvp.scriptDirty = true;
   setNodeGraphScriptStatus("script editing", true);
   nodeGraphMvp.scriptCommitTimer = window.setTimeout(() => {
     nodeGraphMvp.scriptCommitTimer = 0;
@@ -6833,14 +6840,25 @@ function scheduleNodeGraphScriptCommit(text) {
 
 function flushNodeGraphScriptCommit() {
   if (!nodeGraphMvp.scriptCommitTimer) {
-    return;
+    return !nodeGraphMvp.scriptDirty;
   }
   const script = document.getElementById("nodePatchScript");
   clearNodeGraphScriptCommitTimer();
-  commitNodeGraphScript(script?.value || "");
+  return commitNodeGraphScript(script?.value || "");
+}
+
+function nodeGraphScriptReadyForGraphAction(action = "graph action") {
+  if (flushNodeGraphScriptCommit()) {
+    return true;
+  }
+  setNodeGraphScriptStatus(`Fix script before ${action}`, false);
+  return false;
 }
 
 function undoNodeGraphPatch() {
+  if (!nodeGraphScriptReadyForGraphAction("undo")) {
+    return;
+  }
   if (nodeGraphMvp.historyIndex <= 0) {
     return;
   }
@@ -6852,6 +6870,9 @@ function undoNodeGraphPatch() {
 }
 
 function redoNodeGraphPatch() {
+  if (!nodeGraphScriptReadyForGraphAction("redo")) {
+    return;
+  }
   if (nodeGraphMvp.historyIndex >= nodeGraphMvp.historySnapshots.length - 1) {
     return;
   }
@@ -9685,6 +9706,9 @@ function endNodeGraphNodeDrag(event) {
 }
 
 function restoreDefaultNodeGraph() {
+  if (!nodeGraphScriptReadyForGraphAction("default chain")) {
+    return;
+  }
   setNodeGraphSelection(null);
   commitNodeGraphPatch(cloneNodeGraphPatch(nodeGraphDefaultPatch), {
     status: "default chain",
@@ -9800,6 +9824,9 @@ function nodeGraphPatchFileName() {
 }
 
 function saveNodeGraphScript() {
+  if (!nodeGraphScriptReadyForGraphAction("save")) {
+    return;
+  }
   const blob = new Blob([`${serializeNodeGraphPatch()}\n`], {
     type: "application/json",
   });
@@ -9815,6 +9842,9 @@ function saveNodeGraphScript() {
 }
 
 function loadNodeGraphScript() {
+  if (!nodeGraphScriptReadyForGraphAction("load")) {
+    return;
+  }
   document.getElementById("nodePatchScriptFileInput")?.click();
 }
 
@@ -9843,6 +9873,9 @@ function handleNodeGraphScriptFileLoad(event) {
 }
 
 function deleteSelectedNodeGraphItem() {
+  if (!nodeGraphScriptReadyForGraphAction("delete")) {
+    return;
+  }
   const selection = nodeGraphMvp.selected;
   if (!selection) {
     return;
@@ -10868,6 +10901,9 @@ function createNodeGraphLiveScriptProcessorNode(context, plan) {
 
 async function startNodeGraphLiveAudio() {
   try {
+    if (!nodeGraphScriptReadyForGraphAction("live audio")) {
+      return;
+    }
     setNodeGraphLiveStatus("starting", "warn");
     renderNodeGraphLiveControls(false);
     stopNodeGraphRenderedPlayback();
@@ -10923,6 +10959,9 @@ async function startNodeGraphLiveAudio() {
 }
 
 function renderNodeGraphAudio() {
+  if (!nodeGraphScriptReadyForGraphAction("render")) {
+    return;
+  }
   const validation = nodeGraphValidate();
   const renderStatus = document.getElementById("nodeGraphRenderStatus");
   const playButton = document.getElementById("nodePlayButton");
