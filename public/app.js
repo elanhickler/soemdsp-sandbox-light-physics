@@ -6010,6 +6010,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
 
 const nodeGraphOutputInputPorts = Object.freeze(["Left", "Right"]);
 const nodeGraphAudioBlockSize = 512;
+const nodeGraphOutputClipLimit = 0.95;
 
 const nodeGraphGrid = Object.freeze({
   sizePx: 28,
@@ -7622,6 +7623,21 @@ function nodeGraphPlayBlockedTitle() {
   }
 }
 
+function nodeGraphOutputClipCountText(count = 0) {
+  return count === 1 ? "1 clip" : `${count} clips`;
+}
+
+function nodeGraphClampOutputSample(value) {
+  return Math.max(
+    -nodeGraphOutputClipLimit,
+    Math.min(nodeGraphOutputClipLimit, value),
+  );
+}
+
+function nodeGraphOutputSampleClipped(value) {
+  return value < -nodeGraphOutputClipLimit || value > nodeGraphOutputClipLimit;
+}
+
 function setNodeGraphAudioStats(peak = 0, rms = 0, details = {}) {
   const audioStats = document.getElementById("nodeAudioStats");
   if (!audioStats) {
@@ -7630,15 +7646,20 @@ function setNodeGraphAudioStats(peak = 0, rms = 0, details = {}) {
   const frames = Number(details.frames) || 0;
   const sampleRate = Number(details.sampleRate) || nodeGraphMvp.sampleRate;
   const stateReadCount = Number(details.stateReadCount) || 0;
+  const clipCount = Number(details.clipCount) || 0;
   const durationSeconds = frames > 0 && sampleRate > 0 ? frames / sampleRate : 0;
-  audioStats.textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
+  const clipText = clipCount ? ` / ${nodeGraphOutputClipCountText(clipCount)}` : "";
+  audioStats.textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}${clipText}`;
+  audioStats.className = `pill ${clipCount ? "warn" : ""}`.trim();
+  audioStats.dataset.renderClips = String(clipCount);
   audioStats.dataset.renderFrames = String(frames);
   audioStats.dataset.renderSampleRate = String(sampleRate);
   audioStats.dataset.renderDuration = durationSeconds.toFixed(3);
   audioStats.dataset.renderStateReads = String(stateReadCount);
   const stateReadText = stateReadCount ? ` / ${nodeGraphStateReadText(stateReadCount)}` : "";
+  const clipTitle = clipCount ? ` / ${nodeGraphOutputClipCountText(clipCount)}` : "";
   audioStats.title = frames > 0
-    ? `Rendered sample: ${frames} frames / ${durationSeconds.toFixed(3)}s / ${sampleRate} Hz${stateReadText}`
+    ? `Rendered sample: ${frames} frames / ${durationSeconds.toFixed(3)}s / ${sampleRate} Hz${stateReadText}${clipTitle}`
     : "Rendered sample unavailable";
 }
 
@@ -10341,13 +10362,15 @@ function nodeGraphLivePlanAppliedStatusText(message) {
   return `plan${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.connectionCount) || 0} wires / ${Number(message.modulationCount) || 0} mods${feedbackText}`;
 }
 
-function setNodeGraphLiveMeter(peak = 0, rms = 0) {
+function setNodeGraphLiveMeter(peak = 0, rms = 0, clipCount = 0) {
   const meter = document.getElementById("nodeLiveMeter");
   if (!meter) {
     return;
   }
-  meter.textContent = `live peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
-  meter.className = `pill ${peak > 0.001 ? "good" : ""}`.trim();
+  const clipText = clipCount ? ` / ${nodeGraphOutputClipCountText(clipCount)}` : "";
+  meter.textContent = `live peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}${clipText}`;
+  meter.dataset.liveClips = String(clipCount);
+  meter.className = `pill ${clipCount ? "warn" : peak > 0.001 ? "good" : ""}`.trim();
 }
 
 function setNodeGraphLiveOutputMuted(muted) {
@@ -10494,6 +10517,7 @@ function createNodeGraphLiveRuntime(plan) {
   return {
     inputConnections,
     meterCounter: 0,
+    meterClipCount: 0,
     meterPeak: 0,
     meterSamples: 0,
     meterSquareSum: 0,
@@ -10805,20 +10829,14 @@ function renderNodeGraphLiveScriptBlock(event) {
     : nodeGraphMvp.live.context?.sampleRate || nodeGraphMvp.sampleRate;
   for (let frame = 0; frame < frames; frame += 1) {
     const frameOutput = evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames);
-    const left = Math.max(
-      -0.95,
-      Math.min(
-        0.95,
-        frameOutput.left,
-      ),
-    );
-    const right = Math.max(
-      -0.95,
-      Math.min(
-        0.95,
-        frameOutput.right,
-      ),
-    );
+    if (nodeGraphOutputSampleClipped(frameOutput.left)) {
+      runtime.meterClipCount += 1;
+    }
+    if (nodeGraphOutputSampleClipped(frameOutput.right)) {
+      runtime.meterClipCount += 1;
+    }
+    const left = nodeGraphClampOutputSample(frameOutput.left);
+    const right = nodeGraphClampOutputSample(frameOutput.right);
     const value = Math.max(Math.abs(left), Math.abs(right));
     runtime.meterPeak = Math.max(runtime.meterPeak, Math.abs(value));
     runtime.meterSquareSum += (left * left + right * right) * 0.5;
@@ -10833,8 +10851,10 @@ function renderNodeGraphLiveScriptBlock(event) {
     setNodeGraphLiveMeter(
       runtime.meterPeak,
       Math.sqrt(runtime.meterSquareSum / Math.max(1, runtime.meterSamples)),
+      runtime.meterClipCount,
     );
     runtime.meterCounter = 0;
+    runtime.meterClipCount = 0;
     runtime.meterPeak = 0;
     runtime.meterSamples = 0;
     runtime.meterSquareSum = 0;
@@ -10847,7 +10867,11 @@ function handleNodeGraphLiveWorkletMessage(event) {
     if (message.sessionId !== nodeGraphMvp.live.sessionId || !nodeGraphMvp.live.node) {
       return;
     }
-    setNodeGraphLiveMeter(Number(message.peak) || 0, Number(message.rms) || 0);
+    setNodeGraphLiveMeter(
+      Number(message.peak) || 0,
+      Number(message.rms) || 0,
+      Number(message.clipCount) || 0,
+    );
   } else if (message.type === "planApplied") {
     if (
       message.sessionId !== nodeGraphMvp.live.sessionId ||
@@ -11150,6 +11174,7 @@ function renderNodeGraphAudio() {
   const plan = nodeGraphBuildLivePlan();
   const stateReadCount = nodeGraphStateReadCount(plan);
   const runtime = createNodeGraphLiveRuntime(plan);
+  let clipCount = 0;
   let peak = 0;
   let squareSum = 0;
 
@@ -11163,20 +11188,14 @@ function renderNodeGraphAudio() {
         blockFrame,
         blockFrames,
       );
-      const left = Math.max(
-        -0.95,
-        Math.min(
-          0.95,
-          frameOutput.left,
-        ),
-      );
-      const right = Math.max(
-        -0.95,
-        Math.min(
-          0.95,
-          frameOutput.right,
-        ),
-      );
+      if (nodeGraphOutputSampleClipped(frameOutput.left)) {
+        clipCount += 1;
+      }
+      if (nodeGraphOutputSampleClipped(frameOutput.right)) {
+        clipCount += 1;
+      }
+      const left = nodeGraphClampOutputSample(frameOutput.left);
+      const right = nodeGraphClampOutputSample(frameOutput.right);
       const output = (left + right) * 0.5;
       leftSamples[frame] = left;
       rightSamples[frame] = right;
@@ -11198,6 +11217,7 @@ function renderNodeGraphAudio() {
     rms,
     sampleRate: nodeGraphMvp.sampleRate,
     samples,
+    clipCount,
     sourceNodes: validation.sourceNodes,
     stateReadCount,
   };
@@ -11208,6 +11228,7 @@ function renderNodeGraphAudio() {
   setNodeGraphAudioStats(peak, rms, {
     frames,
     sampleRate: nodeGraphMvp.sampleRate,
+    clipCount,
     stateReadCount,
   });
   document.getElementById("nodeOutputSummary").textContent = validation.scheduleText;

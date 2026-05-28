@@ -2,6 +2,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.inputConnections = new Map();
+    this.meterClipCount = 0;
     this.meterCounter = 0;
     this.meterPeak = 0;
     this.meterSamples = 0;
@@ -35,6 +36,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   clearPlan() {
     this.inputConnections = new Map();
+    this.meterClipCount = 0;
+    this.meterCounter = 0;
+    this.meterPeak = 0;
+    this.meterSamples = 0;
+    this.meterSquareSum = 0;
     this.modulationConnections = new Map();
     this.nodeOutputs = new Map();
     this.nodes = new Map();
@@ -200,6 +206,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   clampValue(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  outputSampleClipped(value) {
+    return value < -0.95 || value > 0.95;
   }
 
   shortestWrapDelta(from, to, min, max) {
@@ -397,6 +407,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
     for (let frame = 0; frame < frames; frame += 1) {
       const frameOutput = this.evaluateFrame(frame, frames);
+      if (this.outputSampleClipped(frameOutput.left)) {
+        this.meterClipCount += 1;
+      }
+      if (this.outputSampleClipped(frameOutput.right)) {
+        this.meterClipCount += 1;
+      }
       const left = this.clampValue(frameOutput.left, -0.95, 0.95);
       const right = this.clampValue(frameOutput.right, -0.95, 0.95);
       this.meterPeak = Math.max(this.meterPeak, Math.abs(left), Math.abs(right));
@@ -410,12 +426,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.meterCounter += frames;
     if (this.meterCounter >= sampleRate / 10) {
       this.port.postMessage({
+        clipCount: this.meterClipCount,
         peak: this.meterPeak,
         sessionId: this.sessionId,
         rms: Math.sqrt(this.meterSquareSum / Math.max(1, this.meterSamples)),
         type: "meter",
       });
       this.meterCounter = 0;
+      this.meterClipCount = 0;
       this.meterPeak = 0;
       this.meterSamples = 0;
       this.meterSquareSum = 0;
