@@ -6201,6 +6201,7 @@ const nodeGraphMvp = {
     syncFrame: 0,
     syncTimer: 0,
   },
+  marqueeSelection: null,
   metadataDragging: null,
   metadataEditorTarget: null,
   metadataPopoverPosition: null,
@@ -6512,11 +6513,14 @@ function commitNodeGraphPatch(patch, options = {}) {
   nodeGraphMvp.patch = cloneNodeGraphPatch(validateNodeGraphPatch(patch));
   syncNodeGraphRuntimeFromPatch();
   applyNodeGraphPatchToDom();
-  if (
-    nodeGraphMvp.selected?.type === "node" &&
-    !nodeGraphMvp.activeNodes.has(nodeGraphMvp.selected.id)
-  ) {
-    setNodeGraphSelection(null);
+  if (nodeGraphSelectedNodeIds().size) {
+    const selectedNodeIds = nodeGraphSelectedNodeIds();
+    const activeSelectedNodes = [...selectedNodeIds].filter((id) =>
+      nodeGraphMvp.activeNodes.has(id),
+    );
+    if (activeSelectedNodes.length !== selectedNodeIds.size) {
+      setNodeGraphNodeSelection(activeSelectedNodes);
+    }
   }
   renderNodePalette();
   renderNodeGraphConnectionList();
@@ -7790,17 +7794,48 @@ function setNodeGraphSelection(selection) {
   renderNodeGraphSelection();
 }
 
+function nodeGraphSelectedNodeIds(selection = nodeGraphMvp.selected) {
+  if (selection?.type === "node" && selection.id) {
+    return new Set([selection.id]);
+  }
+  if (selection?.type === "nodes" && Array.isArray(selection.ids)) {
+    return new Set(selection.ids);
+  }
+  return new Set();
+}
+
+function setNodeGraphNodeSelection(ids) {
+  const uniqueIds = [...new Set(ids)].filter((id) => nodeGraphMvp.activeNodes.has(id));
+  if (!uniqueIds.length) {
+    setNodeGraphSelection(null);
+    return;
+  }
+  if (uniqueIds.length === 1) {
+    setNodeGraphSelection({ type: "node", id: uniqueIds[0] });
+    return;
+  }
+  setNodeGraphSelection({ type: "nodes", ids: uniqueIds });
+}
+
 function sameNodeGraphSelection(a, b) {
-  return a?.type === b?.type && a?.id === b?.id && a?.index === b?.index;
+  if (a?.type !== b?.type) {
+    return false;
+  }
+  if (a?.type === "nodes") {
+    return (
+      Array.isArray(a.ids) &&
+      Array.isArray(b.ids) &&
+      a.ids.length === b.ids.length &&
+      a.ids.every((id, index) => id === b.ids[index])
+    );
+  }
+  return a?.id === b?.id && a?.index === b?.index;
 }
 
 function renderNodeGraphSelection() {
+  const selectedNodeIds = nodeGraphSelectedNodeIds();
   for (const node of document.querySelectorAll(".dsp-node")) {
-    const selected = sameNodeGraphSelection(nodeGraphMvp.selected, {
-      type: "node",
-      id: node.dataset.node,
-    });
-    node.classList.toggle("selected", selected);
+    node.classList.toggle("selected", selectedNodeIds.has(node.dataset.node));
   }
 
   for (const path of document.querySelectorAll(".node-wire-path")) {
@@ -8112,6 +8147,140 @@ function positionNodeGraphNode(node, point, options = {}) {
   node.style.setProperty("--node-y", `${y}px`);
 }
 
+function nodeGraphRectFromPoints(a, b) {
+  const left = Math.min(a.x, b.x);
+  const top = Math.min(a.y, b.y);
+  const right = Math.max(a.x, b.x);
+  const bottom = Math.max(a.y, b.y);
+  return {
+    bottom,
+    height: bottom - top,
+    left,
+    right,
+    top,
+    width: right - left,
+  };
+}
+
+function nodeGraphNodeBounds(node) {
+  const x = Number.parseFloat(node.style.getPropertyValue("--node-x")) || 0;
+  const y = Number.parseFloat(node.style.getPropertyValue("--node-y")) || 0;
+  return {
+    bottom: y + node.offsetHeight,
+    left: x,
+    right: x + node.offsetWidth,
+    top: y,
+  };
+}
+
+function nodeGraphRectsIntersect(a, b) {
+  return a.left <= b.right && a.right >= b.left && a.top <= b.bottom && a.bottom >= b.top;
+}
+
+function renderNodeGraphMarqueeSelection() {
+  const marquee = document.getElementById("nodeSelectionMarquee");
+  const drag = nodeGraphMvp.marqueeSelection;
+  if (!marquee || !drag) {
+    if (marquee) {
+      marquee.hidden = true;
+    }
+    return;
+  }
+
+  const rect = nodeGraphRectFromPoints(drag.start, drag.current);
+  marquee.hidden = false;
+  marquee.style.left = `${rect.left}px`;
+  marquee.style.top = `${rect.top}px`;
+  marquee.style.width = `${rect.width}px`;
+  marquee.style.height = `${rect.height}px`;
+}
+
+function nodeGraphNodesInsideRect(rect) {
+  const ids = [];
+  for (const node of document.querySelectorAll(".dsp-node:not(.removed)")) {
+    if (nodeGraphRectsIntersect(rect, nodeGraphNodeBounds(node))) {
+      ids.push(node.dataset.node);
+    }
+  }
+  return ids;
+}
+
+function updateNodeGraphMarqueeSelection() {
+  const drag = nodeGraphMvp.marqueeSelection;
+  if (!drag) {
+    return;
+  }
+
+  const rect = nodeGraphRectFromPoints(drag.start, drag.current);
+  const ids = nodeGraphNodesInsideRect(rect);
+  setNodeGraphNodeSelection(ids);
+  renderNodeGraphMarqueeSelection();
+}
+
+function beginNodeGraphMarqueeSelection(event) {
+  if (
+    event.button !== 0 ||
+    event.target.closest(
+      ".dsp-node, .node-port, .node-slider-readout, .node-wire-hit-path, button, input, textarea, select",
+    )
+  ) {
+    return;
+  }
+
+  const workspace = event.currentTarget;
+  const point = nodeGraphClientPoint(event);
+  nodeGraphMvp.marqueeSelection = {
+    current: point,
+    moved: false,
+    pointerId: event.pointerId,
+    start: point,
+  };
+  setNodeGraphSelection(null);
+  renderNodeGraphMarqueeSelection();
+  workspace.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphMarqueeSelection(event) {
+  const drag = nodeGraphMvp.marqueeSelection;
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+
+  drag.current = nodeGraphClientPoint(event);
+  drag.moved ||=
+    Math.abs(drag.current.x - drag.start.x) > 3 ||
+    Math.abs(drag.current.y - drag.start.y) > 3;
+  if (drag.moved) {
+    updateNodeGraphMarqueeSelection();
+  } else {
+    renderNodeGraphMarqueeSelection();
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function endNodeGraphMarqueeSelection(event) {
+  const drag = nodeGraphMvp.marqueeSelection;
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+
+  if (drag.moved) {
+    updateNodeGraphMarqueeSelection();
+  } else {
+    setNodeGraphSelection(null);
+  }
+  nodeGraphMvp.marqueeSelection = null;
+  renderNodeGraphMarqueeSelection();
+  if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
 function positionNodeSceneContextMenu(menu, x, y) {
   const margin = 12;
   menu.hidden = false;
@@ -8147,19 +8316,36 @@ function beginNodeGraphNodeDrag(event) {
   if (!node) {
     return;
   }
-  setNodeGraphSelection({ type: "node", id: node.dataset.node });
-  const surface = nodeGraphZoomSurface();
-  const nodeRect = node.getBoundingClientRect();
-  const surfaceRect = surface.getBoundingClientRect();
+
+  const selectedNodeIds = nodeGraphSelectedNodeIds();
+  if (!selectedNodeIds.has(node.dataset.node)) {
+    setNodeGraphSelection({ type: "node", id: node.dataset.node });
+  }
   const point = nodeGraphClientPoint(event);
-  const zoom = nodeGraphZoom();
+  const draggedNodeIds = nodeGraphSelectedNodeIds();
+  const draggedNodes = [...draggedNodeIds]
+    .map((id) => nodeGraphNodeElement(id))
+    .filter(Boolean)
+    .map((element) => {
+      const x = Number.parseFloat(element.style.getPropertyValue("--node-x")) || 0;
+      const y = Number.parseFloat(element.style.getPropertyValue("--node-y")) || 0;
+      return {
+        element,
+        id: element.dataset.node,
+        startX: x,
+        startY: y,
+      };
+    });
+
   nodeGraphMvp.nodeDragging = {
+    draggedNodes,
     handle,
     node,
-    offsetX: point.x - (nodeRect.left - surfaceRect.left) / zoom,
-    offsetY: point.y - (nodeRect.top - surfaceRect.top) / zoom,
+    startPoint: point,
   };
-  node.classList.add("dragging");
+  for (const dragged of draggedNodes) {
+    dragged.element.classList.add("dragging");
+  }
   handle.classList.add("dragging");
   handle.setPointerCapture(event.pointerId);
   event.preventDefault();
@@ -8171,12 +8357,16 @@ function dragNodeGraphNode(event) {
     return;
   }
 
-  const { node, offsetX, offsetY } = nodeGraphMvp.nodeDragging;
+  const { draggedNodes, startPoint } = nodeGraphMvp.nodeDragging;
   const point = nodeGraphClientPoint(event);
-  positionNodeGraphNode(node, {
-    x: point.x - offsetX,
-    y: point.y - offsetY,
-  }, { snap: false });
+  const deltaX = point.x - startPoint.x;
+  const deltaY = point.y - startPoint.y;
+  for (const dragged of draggedNodes) {
+    positionNodeGraphNode(dragged.element, {
+      x: dragged.startX + deltaX,
+      y: dragged.startY + deltaY,
+    }, { snap: false });
+  }
   drawNodeGraphWires();
 }
 
@@ -8185,20 +8375,24 @@ function endNodeGraphNodeDrag(event) {
     return;
   }
 
-  const { handle, node } = nodeGraphMvp.nodeDragging;
-  node.classList.remove("dragging");
+  const { draggedNodes, handle } = nodeGraphMvp.nodeDragging;
+  for (const dragged of draggedNodes) {
+    dragged.element.classList.remove("dragging");
+  }
   handle.classList.remove("dragging");
   if (handle.hasPointerCapture?.(event.pointerId)) {
     handle.releasePointerCapture(event.pointerId);
   }
-  const x = Number.parseFloat(node.style.getPropertyValue("--node-x")) || 0;
-  const y = Number.parseFloat(node.style.getPropertyValue("--node-y")) || 0;
-  const gridPoint = nodeGraphPixelToGrid({ x, y });
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-  const patchNode = patch.nodes.find((candidate) => candidate.id === node.dataset.node);
-  if (patchNode) {
-    patchNode.gx = gridPoint.gx;
-    patchNode.gy = gridPoint.gy;
+  for (const dragged of draggedNodes) {
+    const x = Number.parseFloat(dragged.element.style.getPropertyValue("--node-x")) || 0;
+    const y = Number.parseFloat(dragged.element.style.getPropertyValue("--node-y")) || 0;
+    const gridPoint = nodeGraphPixelToGrid({ x, y });
+    const patchNode = patch.nodes.find((candidate) => candidate.id === dragged.id);
+    if (patchNode) {
+      patchNode.gx = gridPoint.gx;
+      patchNode.gy = gridPoint.gy;
+    }
   }
   nodeGraphMvp.nodeDragging = null;
   commitNodeGraphPatch(patch, { status: "layout snapped" });
@@ -8367,15 +8561,22 @@ function deleteSelectedNodeGraphItem() {
     return;
   }
 
-  if (selection.type === "node" && selection.id !== "output") {
+  const selectedNodeIds = nodeGraphSelectedNodeIds(selection);
+  if (selectedNodeIds.size) {
+    selectedNodeIds.delete("output");
+  }
+  if (selectedNodeIds.size) {
     const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-    patch.nodes = patch.nodes.filter((node) => node.id !== selection.id);
+    patch.nodes = patch.nodes.filter((node) => !selectedNodeIds.has(node.id));
     patch.connections = patch.connections.filter(
       (connection) =>
-        connection.sourceNode !== selection.id && connection.destinationNode !== selection.id,
+        !selectedNodeIds.has(connection.sourceNode) &&
+        !selectedNodeIds.has(connection.destinationNode),
     );
     setNodeGraphSelection(null);
-    commitNodeGraphPatch(patch, { status: "module deleted" });
+    commitNodeGraphPatch(patch, {
+      status: selectedNodeIds.size === 1 ? "module deleted" : "modules deleted",
+    });
   }
 }
 
@@ -8422,7 +8623,7 @@ function nodeInteractionHelpText(target) {
 
 function nodeInteractionMouseHint(element) {
   if (element.classList.contains("node-drag-handle")) {
-    return "Mouse: drag to move module.";
+    return "Mouse: drag to move selected module(s).";
   }
   if (element.classList.contains("node-slider-readout")) {
     return "Mouse: drag adjusts, double-click types, right-click edits metadata.";
@@ -9201,6 +9402,18 @@ function initNodeGraphMvp() {
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("contextmenu", openNodeSceneContextMenu);
+  document
+    .getElementById("nodeGraphWorkspace")
+    .addEventListener("pointerdown", beginNodeGraphMarqueeSelection);
+  document
+    .getElementById("nodeGraphWorkspace")
+    .addEventListener("pointermove", dragNodeGraphMarqueeSelection);
+  document
+    .getElementById("nodeGraphWorkspace")
+    .addEventListener("pointerup", endNodeGraphMarqueeSelection);
+  document
+    .getElementById("nodeGraphWorkspace")
+    .addEventListener("pointercancel", endNodeGraphMarqueeSelection);
 
   document.addEventListener("pointermove", dragNodeGraphWire);
   document.addEventListener("pointerup", endNodeGraphWireDrag);

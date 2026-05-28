@@ -369,6 +369,16 @@ audio {
   pointer-events: none;
 }
 
+.node-selection-marquee {
+  position: absolute;
+  z-index: 3;
+  border: 1px solid rgba(127, 199, 217, 0.78);
+  border-radius: 3px;
+  background: rgba(127, 199, 217, 0.12);
+  box-shadow: 0 0 0 1px rgba(127, 199, 217, 0.16) inset;
+  pointer-events: none;
+}
+
 .dsp-node {
   position: absolute;
   left: var(--node-x);
