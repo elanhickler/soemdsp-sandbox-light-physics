@@ -3104,6 +3104,8 @@ def require_node_graph_mvp_contract() -> None:
         "function loadNodeGraphPatchFromScript(text)",
         "script JSON parse failed:",
         "function commitNodeGraphPatch(patch, options = {})",
+        "function nodeGraphPatchScriptStatus(message = \"script synced\", ok = true)",
+        "message: `${message}; schedule blocked`, ok: false",
         "function recordNodeGraphHistory()",
         "function undoNodeGraphPatch()",
         "function redoNodeGraphPatch()",

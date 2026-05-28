@@ -6631,6 +6631,16 @@ function syncNodeGraphScriptView(message = "script synced", ok = true) {
   setNodeGraphScriptStatus(message, ok);
 }
 
+function nodeGraphPatchScriptStatus(message = "script synced", ok = true) {
+  if (!ok) {
+    return { message, ok };
+  }
+  const plan = compileNodeGraphExecutionPlan();
+  return plan.valid
+    ? { message, ok: true }
+    : { message: `${message}; schedule blocked`, ok: false };
+}
+
 function setNodeGraphSettingsField(id, value) {
   const field = document.getElementById(id);
   if (field && document.activeElement !== field) {
@@ -6748,7 +6758,11 @@ function commitNodeGraphPatch(patch, options = {}) {
   renderNodePalette();
   renderNodeGraphConnectionList();
   syncNodeGraphSettingsView();
-  syncNodeGraphScriptView(options.status || "script synced", options.ok ?? true);
+  const scriptStatus = nodeGraphPatchScriptStatus(
+    options.status || "script synced",
+    options.ok ?? true,
+  );
+  syncNodeGraphScriptView(scriptStatus.message, scriptStatus.ok);
   if (options.record !== false) {
     recordNodeGraphHistory();
   } else {
