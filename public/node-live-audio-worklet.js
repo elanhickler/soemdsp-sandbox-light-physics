@@ -25,6 +25,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     if (message.type === "setPlan") {
       this.setPlan(message.plan, message);
+      return;
+    }
+    if (message.type === "setParams") {
+      this.setParams(message.nodes, message);
     }
   }
 
@@ -95,6 +99,35 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       planSerial: this.planSerial,
       sessionId: this.sessionId,
       type: "planApplied",
+    });
+  }
+
+  setParams(nodes, message = {}) {
+    this.planSerial = message.planSerial || 0;
+    this.sessionId = message.sessionId || 0;
+    for (const node of Array.isArray(nodes) ? nodes : []) {
+      const current = this.nodes.get(node.id);
+      if (!current) {
+        continue;
+      }
+      current.params = { ...(node.params || {}) };
+      current.paramMeta = { ...(node.paramMeta || {}) };
+      for (const [key, value] of Object.entries(current.params || {})) {
+        const smootherKey = this.parameterKey(node.id, key);
+        const metadata = current.paramMeta?.[key];
+        if (!this.smoothers.has(smootherKey)) {
+          this.smoothers.set(smootherKey, this.createSmoother(value, metadata));
+        } else {
+          this.updateSmoother(this.smoothers.get(smootherKey), value, metadata);
+        }
+      }
+    }
+    this.port.postMessage({
+      nodeCount: this.nodes.size,
+      order: [...this.order],
+      planSerial: this.planSerial,
+      sessionId: this.sessionId,
+      type: "paramsApplied",
     });
   }
 

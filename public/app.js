@@ -6347,6 +6347,7 @@ const nodeGraphMvp = {
     sessionId: 0,
     scriptNode: null,
     syncFrame: 0,
+    syncMode: "",
     syncTimer: 0,
     usesWorklet: false,
   },
@@ -7544,7 +7545,7 @@ function syncNodeGraphPatchMetadataFromSlider(slider, options = {}) {
   };
   syncNodeGraphScriptView(options.status || "metadata synced", true);
   renderNodeGraphExecutionPlanDebug();
-  scheduleNodeGraphLivePlanSync();
+  scheduleNodeGraphLiveParameterSync();
   if (options.record) {
     recordNodeGraphHistory();
   } else {
@@ -7614,7 +7615,7 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
     fillNodeMetadataPopover(slider);
   }
   markNodeGraphRenderPending();
-  scheduleNodeGraphLivePlanSync();
+  scheduleNodeGraphLiveParameterSync();
 }
 
 function setNodeSliderValue(slider, value) {
@@ -7624,7 +7625,7 @@ function setNodeSliderValue(slider, value) {
   syncNodeSliderReadout(slider);
   syncNodeGraphPatchParameterFromSlider(slider, { deferUi: true });
   markNodeGraphRenderPending();
-  scheduleNodeGraphLivePlanSync();
+  scheduleNodeGraphLiveParameterSync();
 }
 
 function beginNodeSliderDrag(event) {
@@ -7831,7 +7832,7 @@ function attachNodeGraphNodeEvents(node) {
       syncNodeSliderReadout(slider);
       syncNodeGraphPatchParameterFromSlider(slider);
       markNodeGraphRenderPending();
-      scheduleNodeGraphLivePlanSync();
+      scheduleNodeGraphLiveParameterSync();
     });
   }
 }
@@ -9548,6 +9549,17 @@ function nodeGraphLivePlanSentStatusText(serial = nodeGraphMvp.live.planSerial) 
   return `plan${serialText} sent`;
 }
 
+function nodeGraphLiveParametersSentStatusText(serial = nodeGraphMvp.live.planSerial) {
+  const serialText = serial ? ` #${serial}` : "";
+  return `params${serialText} sent`;
+}
+
+function nodeGraphLiveParametersAppliedStatusText(message) {
+  const serial = Number(message.planSerial) || 0;
+  const serialText = serial ? ` #${serial}` : "";
+  return `params${serialText} applied`;
+}
+
 function nodeGraphLivePlanAppliedStatusText(message) {
   const serial = Number(message.planSerial) || 0;
   const serialText = serial ? ` #${serial}` : "";
@@ -9612,28 +9624,32 @@ function nodeGraphBuildLivePlan() {
   return {
     connections: nodeGraphMvp.patch.connections.map((connection) => ({ ...connection })),
     modulations: nodeGraphMvp.patch.modulations.map((modulation) => ({ ...modulation })),
-    nodes: nodeGraphMvp.patch.nodes.map((node) => {
-      const definition = nodeGraphModuleDefinitions[node.type];
-      const params = {};
-      const paramMeta = {};
-      for (const parameter of definition.parameters || []) {
-        const value = nodeGraphReadPatchParameterValue(node, parameter.key);
-        params[parameter.key] = Number.isFinite(value)
-          ? value
-          : nodeGraphParameterFallback(node.type, parameter.key);
-        paramMeta[parameter.key] = nodeGraphReadPatchParameterMetadata(node, parameter.key);
-      }
-      return {
-        id: node.id,
-        paramMeta,
-        params,
-        type: node.type,
-      };
-    }),
+    nodes: nodeGraphBuildLiveParameterNodes(),
     order: [...compiled.order],
     outputNode: compiled.outputNode,
     sourceNodes: [...compiled.sourceNodes],
   };
+}
+
+function nodeGraphBuildLiveParameterNodes() {
+  return nodeGraphMvp.patch.nodes.map((node) => {
+    const definition = nodeGraphModuleDefinitions[node.type];
+    const params = {};
+    const paramMeta = {};
+    for (const parameter of definition.parameters || []) {
+      const value = nodeGraphReadPatchParameterValue(node, parameter.key);
+      params[parameter.key] = Number.isFinite(value)
+        ? value
+        : nodeGraphParameterFallback(node.type, parameter.key);
+      paramMeta[parameter.key] = nodeGraphReadPatchParameterMetadata(node, parameter.key);
+    }
+    return {
+      id: node.id,
+      paramMeta,
+      params,
+      type: node.type,
+    };
+  });
 }
 
 function createNodeGraphLiveRuntime(plan) {
@@ -9738,6 +9754,32 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     const [nodeId, parameter] = key.split(".");
     if (!nodeIds.has(nodeId) || !runtime.nodes.get(nodeId)?.params || !(parameter in runtime.nodes.get(nodeId).params)) {
       runtime.smoothers.delete(key);
+    }
+  }
+}
+
+function updateNodeGraphLiveRuntimeParameters(runtime, nodes) {
+  if (!runtime) {
+    return;
+  }
+  for (const node of nodes || []) {
+    const current = runtime.nodes.get(node.id);
+    if (!current) {
+      continue;
+    }
+    current.params = { ...(node.params || {}) };
+    current.paramMeta = cloneNodeGraphParamMeta(node.paramMeta);
+    for (const [key, value] of Object.entries(current.params || {})) {
+      const smootherKey = nodeGraphParameterKey(node.id, key);
+      const metadata = current.paramMeta?.[key];
+      if (!runtime.smoothers.has(smootherKey)) {
+        runtime.smoothers.set(
+          smootherKey,
+          createNodeGraphParameterSmoother(value, metadata),
+        );
+      } else {
+        updateNodeGraphParameterSmoother(runtime.smoothers.get(smootherKey), value, metadata);
+      }
     }
   }
 }
@@ -9990,6 +10032,16 @@ function handleNodeGraphLiveWorkletMessage(event) {
     }
     setNodeGraphLivePlanStatus(nodeGraphLivePlanAppliedStatusText(message), "good");
     setNodeGraphLivePlanTitle(nodeGraphLivePlanScheduleTitle(message.order));
+  } else if (message.type === "paramsApplied") {
+    if (
+      message.sessionId !== nodeGraphMvp.live.sessionId ||
+      message.planSerial !== nodeGraphMvp.live.planSerial ||
+      !nodeGraphMvp.live.node
+    ) {
+      return;
+    }
+    setNodeGraphLivePlanStatus(nodeGraphLiveParametersAppliedStatusText(message), "good");
+    setNodeGraphLivePlanTitle(nodeGraphLivePlanScheduleTitle(message.order));
   }
 }
 
@@ -10033,13 +10085,59 @@ function sendNodeGraphLivePlan() {
   }
 }
 
-function scheduleNodeGraphLivePlanSync() {
-  if (!nodeGraphMvp.live.node || nodeGraphMvp.live.syncFrame || nodeGraphMvp.live.syncTimer) {
+function sendNodeGraphLiveParameterUpdate() {
+  if (!nodeGraphMvp.live.node && !nodeGraphMvp.live.context) {
     return;
   }
+
+  try {
+    const nodes = nodeGraphBuildLiveParameterNodes();
+    nodeGraphMvp.live.planSerial += 1;
+    if (nodeGraphMvp.live.usesWorklet) {
+      setNodeGraphLivePlanStatus(nodeGraphLiveParametersSentStatusText(), "warn");
+      nodeGraphMvp.live.node?.port?.postMessage({
+        nodes,
+        planSerial: nodeGraphMvp.live.planSerial,
+        sessionId: nodeGraphMvp.live.sessionId,
+        type: "setParams",
+      });
+    } else if (nodeGraphMvp.live.runtime) {
+      updateNodeGraphLiveRuntimeParameters(nodeGraphMvp.live.runtime, nodes);
+      setNodeGraphLivePlanStatus(
+        nodeGraphLiveParametersAppliedStatusText({
+          planSerial: nodeGraphMvp.live.planSerial,
+        }),
+        "good",
+      );
+    }
+    setNodeGraphLiveStatus("running", "good");
+  } catch (error) {
+    setNodeGraphLivePlanStatus("params blocked", "warn");
+    setNodeGraphLivePlanTitle(error.message);
+    setNodeGraphLiveStatus("error", "warn");
+    document.getElementById("nodeLiveStatus").title = error.message;
+  }
+}
+
+function scheduleNodeGraphLiveSync(mode = "plan") {
+  if (!nodeGraphMvp.live.node || nodeGraphMvp.live.syncFrame || nodeGraphMvp.live.syncTimer) {
+    if (mode === "plan") {
+      nodeGraphMvp.live.syncMode = "plan";
+    }
+    return;
+  }
+  nodeGraphMvp.live.syncMode = mode;
   const flush = () => flushNodeGraphLivePlanSync();
   nodeGraphMvp.live.syncFrame = window.requestAnimationFrame(flush);
   nodeGraphMvp.live.syncTimer = window.setTimeout(flush, 50);
+}
+
+function scheduleNodeGraphLivePlanSync() {
+  scheduleNodeGraphLiveSync("plan");
+}
+
+function scheduleNodeGraphLiveParameterSync() {
+  scheduleNodeGraphLiveSync("params");
 }
 
 function clearNodeGraphLivePlanSync() {
@@ -10054,8 +10152,14 @@ function clearNodeGraphLivePlanSync() {
 }
 
 function flushNodeGraphLivePlanSync() {
+  const mode = nodeGraphMvp.live.syncMode || "plan";
+  nodeGraphMvp.live.syncMode = "";
   clearNodeGraphLivePlanSync();
-  sendNodeGraphLivePlan();
+  if (mode === "params") {
+    sendNodeGraphLiveParameterUpdate();
+  } else {
+    sendNodeGraphLivePlan();
+  }
 }
 
 async function stopNodeGraphLiveAudio() {
@@ -10071,6 +10175,7 @@ async function stopNodeGraphLiveAudio() {
   nodeGraphMvp.live.runtime = null;
   nodeGraphMvp.live.scriptNode = null;
   nodeGraphMvp.live.sessionId += 1;
+  nodeGraphMvp.live.syncMode = "";
   nodeGraphMvp.live.usesWorklet = false;
 
   try {
