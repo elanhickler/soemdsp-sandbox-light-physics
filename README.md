@@ -77,6 +77,16 @@ stored-output:
 - disconnected modules remain in the editable patch but are omitted from the
   audio runtime plan until they become reachable from Output
 
+Render Sample and Live Audio expose patch evidence for debugging:
+
+- rendered samples store the patch fingerprint that produced them
+- the execution debug panel reports whether the last render still matches the
+  current patch
+- Live Audio plan and parameter acknowledgements show the current patch
+  fingerprint in the plan status pill
+- `window.soemdspSandboxDebug` exposes `compileExecutionPlan()`,
+  `currentPatchFingerprint()`, and `lastRender()` for direct inspection
+
 That compiler is demo-scoped UI machinery, not a `soemdsp` runtime scheduler,
 not a Circuit-owned executor, and not a production project format. Feedback
 routing is intentionally simple stateful patch behavior, not algebraic loop
