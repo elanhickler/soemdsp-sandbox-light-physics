@@ -110,6 +110,8 @@ Render Sample and Live Audio expose patch evidence for debugging:
   future caller-owned block-processing shape without adding a production API
 - the Runtime Sketch panel renders that pseudo-C++ block separately from the
   full JSON debug dump so the C++ mapping can be read directly in the browser
+- the Runtime Sketch panel can copy the pseudo-C++ sketch to the clipboard for
+  handoff or comparison
 - `window.soemdspSandboxDebug` exposes `compileExecutionPlan()`,
   `currentPatchFingerprint()`, `lastRender()`, `live()`, and
   `soemdspMapping()` / `soemdspRuntimeSketch()` for direct inspection

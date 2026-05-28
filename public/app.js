@@ -9361,6 +9361,63 @@ function renderNodeGraphExecutionPlanDebug(plan = compileNodeGraphExecutionPlan(
   debug.textContent = serializeNodeGraphExecutionPlanDebug(plan);
 }
 
+function fallbackCopyTextToClipboard(text) {
+  const fallback = document.createElement("textarea");
+  fallback.value = text;
+  fallback.setAttribute("readonly", "");
+  fallback.style.position = "fixed";
+  fallback.style.opacity = "0";
+  document.body.append(fallback);
+  fallback.select();
+  const copied = document.execCommand("copy");
+  fallback.remove();
+  if (!copied) {
+    throw new Error("clipboard fallback failed");
+  }
+}
+
+async function copyTextToClipboard(text) {
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("Clipboard API unavailable");
+    }
+    await navigator.clipboard.writeText(text);
+  } catch (_error) {
+    fallbackCopyTextToClipboard(text);
+  }
+}
+
+async function copyNodeGraphRuntimeSketch() {
+  const sketch = document.getElementById("nodeRuntimeSketch");
+  const sketchStatus = document.getElementById("nodeRuntimeSketchStatus");
+  const text = sketch?.textContent || "";
+  if (!text || text === "waiting for graph") {
+    if (sketchStatus) {
+      sketchStatus.textContent = "nothing to copy";
+      sketchStatus.className = "pill warn";
+    }
+    return;
+  }
+  try {
+    await copyTextToClipboard(text);
+    if (sketchStatus) {
+      sketchStatus.textContent = "copied";
+      sketchStatus.className = "pill good";
+    }
+  } catch (error) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(sketch);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    if (sketchStatus) {
+      sketchStatus.textContent = "selected";
+      sketchStatus.title = error.message;
+      sketchStatus.className = "pill good";
+    }
+  }
+}
+
 function renderNodeGraphExecutionOrderBadges(plan) {
   const orderIndex = new Map((plan.order || []).map((nodeId, index) => [nodeId, index + 1]));
   const bypassedNodes = nodeGraphPlanBypassedNodeIds(plan);
@@ -10901,6 +10958,9 @@ function nodeInteractionMouseHint(element) {
   }
   if (element.id === "nodePlayButton") {
     return "Mouse: click to play rendered sample.";
+  }
+  if (element.id === "nodeCopyRuntimeSketchButton") {
+    return "Mouse: click to copy the caller-owned C++ runtime sketch.";
   }
   if (element.id === "nodeDeleteButton") {
     return "Mouse: click to delete selected item.";
@@ -12490,6 +12550,7 @@ function initNodeGraphMvp() {
   });
   document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio);
   document.getElementById("nodePlayButton").addEventListener("click", playNodeGraphAudio);
+  document.getElementById("nodeCopyRuntimeSketchButton").addEventListener("click", copyNodeGraphRuntimeSketch);
   document.getElementById("nodeSaveVisualOutputButton").addEventListener("click", saveNodeGraphVisualOutputPng);
   document.getElementById("nodeLiveInputButton").addEventListener("click", toggleNodeGraphLiveInput);
   document.getElementById("nodeLiveOutputButton").addEventListener("click", toggleNodeGraphLiveOutput);
