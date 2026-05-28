@@ -6055,6 +6055,7 @@ function nodeGraphParameterDefinitionMetadata(parameter) {
     choices: normalizeNodeGraphMetadataChoices(parameter.choices || []),
     def: clampNodeSliderValue(Number.isFinite(def) ? def : safeMin, safeMin, safeMax),
     displayChoices: Boolean(parameter.displayChoices),
+    divideChoicesVisibly: Boolean(parameter.divideChoicesVisibly),
     kind: parameter.kind || "decimal",
     linearSmoothing: parameter.linearSmoothing !== false,
     max: safeMax,
@@ -6122,6 +6123,9 @@ function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
     displayChoices: Object.hasOwn(source, "displayChoices")
       ? Boolean(source.displayChoices)
       : fallback.displayChoices,
+    divideChoicesVisibly: Object.hasOwn(source, "divideChoicesVisibly")
+      ? Boolean(source.divideChoicesVisibly)
+      : fallback.divideChoicesVisibly,
     kind: normalizeNodeMetadataKind(source.kind || fallback.kind),
     linearSmoothing: Object.hasOwn(source, "linearSmoothing")
       ? Boolean(source.linearSmoothing)
@@ -7230,6 +7234,10 @@ function nodeSliderShouldDisplayChoices(slider) {
   return slider.dataset.displayChoices === "true";
 }
 
+function nodeSliderShouldDivideChoicesVisibly(slider) {
+  return slider.dataset.divideChoicesVisibly === "true";
+}
+
 function nodeSliderShouldWraparound(slider) {
   return slider.dataset.wraparound === "true";
 }
@@ -7326,6 +7334,7 @@ function nodeSliderMetadata(slider) {
     cur,
     def,
     displayChoices: nodeSliderShouldDisplayChoices(slider),
+    divideChoicesVisibly: nodeSliderShouldDivideChoicesVisibly(slider),
     linearSmoothing: nodeSliderShouldUseLinearSmoothing(slider),
     showSign: nodeSliderShouldShowSign(slider),
     wraparound: nodeSliderShouldWraparound(slider),
@@ -7352,6 +7361,7 @@ function formatNodeSliderMetadataTooltip(slider) {
     `unit ${metadata.unit}`,
     `choices ${metadata.choices.length ? formatNodeMetadataChoices(metadata.choices) : "none"}`,
     `display choices ${metadata.displayChoices}`,
+    `divide choices visibly ${metadata.divideChoicesVisibly}`,
     `linear smoothing ${metadata.linearSmoothing}`,
     `show sign ${metadata.showSign}`,
     `wraparound ${metadata.wraparound}`,
@@ -7508,6 +7518,7 @@ function setNodeSliderMetadata(slider, metadata) {
   slider.dataset.unit = metadata.unit ?? "";
   slider.dataset.choices = formatNodeMetadataChoices(metadata.choices || []);
   slider.dataset.displayChoices = metadata.displayChoices ? "true" : "false";
+  slider.dataset.divideChoicesVisibly = metadata.divideChoicesVisibly ? "true" : "false";
   slider.dataset.linearSmoothing = metadata.linearSmoothing ? "true" : "false";
   slider.dataset.showSign = metadata.showSign ? "true" : "false";
   slider.dataset.wraparound = metadata.wraparound ? "true" : "false";
@@ -7544,6 +7555,7 @@ function syncNodeSliderReadout(slider) {
   const choiceLabel = nodeSliderChoiceLabel(slider);
   const choices = parseNodeMetadataChoices(slider.dataset.choices || "");
   const usesChoices = nodeSliderShouldDisplayChoices(slider) && choices.length > 0;
+  const dividesChoices = usesChoices && nodeSliderShouldDivideChoicesVisibly(slider);
   if (labelText) {
     labelText.textContent = readout.dataset.paramLabel || nodeSliderLabelText(slider);
   }
@@ -7557,15 +7569,18 @@ function syncNodeSliderReadout(slider) {
   readout.dataset.value = slider.value;
   readout.dataset.unit = unit;
   readout.dataset.choiceCount = usesChoices ? String(choices.length) : "0";
+  readout.classList.toggle("choices-divided", dividesChoices);
   readout.removeAttribute("title");
-  if (usesChoices) {
+  if (dividesChoices) {
     const choiceIndex = Math.max(0, Math.min(choices.length - 1, Math.round(Number(slider.value))));
     readout.style.setProperty("--value-start", `${(choiceIndex / choices.length) * 100}%`);
     readout.style.setProperty("--value-end", `${((choiceIndex + 1) / choices.length) * 100}%`);
+    readout.style.setProperty("--choice-divider-width", `${100 / choices.length}%`);
   } else {
     const boundedPosition = Math.max(0, Math.min(100, position));
     readout.style.setProperty("--value-start", `calc(${boundedPosition}% - 4px)`);
     readout.style.setProperty("--value-end", `calc(${boundedPosition}% + 4px)`);
+    readout.style.setProperty("--choice-divider-width", "100%");
   }
   syncNodeSliderMetadataTooltip(slider);
 }
@@ -7745,6 +7760,7 @@ function fillNodeMetadataPopover(slider) {
   document.getElementById("metadataChoicesValue").value =
     formatNodeMetadataChoices(metadata.choices);
   document.getElementById("metadataDisplayChoicesValue").checked = metadata.displayChoices;
+  document.getElementById("metadataDivideChoicesValue").checked = metadata.divideChoicesVisibly;
   document.getElementById("metadataLinearSmoothingValue").checked = metadata.linearSmoothing;
   document.getElementById("metadataShowSignValue").checked = metadata.showSign;
   document.getElementById("metadataWraparoundValue").checked = metadata.wraparound;
@@ -7968,6 +7984,7 @@ function readNodeMetadataEditorValues(slider) {
     min,
     choices: parseNodeMetadataChoices(document.getElementById("metadataChoicesValue").value),
     displayChoices: document.getElementById("metadataDisplayChoicesValue").checked,
+    divideChoicesVisibly: document.getElementById("metadataDivideChoicesValue").checked,
     linearSmoothing: document.getElementById("metadataLinearSmoothingValue").checked,
     step: stepInput.toLowerCase() === "any"
       ? 0
@@ -8013,6 +8030,7 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataUnitValue").value = template.unit;
   document.getElementById("metadataChoicesValue").value = formatNodeMetadataChoices(choices);
   document.getElementById("metadataDisplayChoicesValue").checked = Boolean(template.displayChoices);
+  document.getElementById("metadataDivideChoicesValue").checked = Boolean(template.divideChoicesVisibly);
   document.getElementById("metadataLinearSmoothingValue").checked = template.linearSmoothing !== false;
   document.getElementById("metadataShowSignValue").checked = Boolean(template.showPlusMinus);
   document.getElementById("metadataWraparoundValue").checked = Boolean(template.wraparound);
@@ -8305,6 +8323,7 @@ function createNodeSliderReadout(slider) {
   slider.dataset.unit ??= "";
   slider.dataset.choices ??= "";
   slider.dataset.displayChoices ??= "false";
+  slider.dataset.divideChoicesVisibly ??= "false";
   slider.dataset.linearSmoothing ??= "true";
   slider.dataset.showSign ??= "false";
   slider.dataset.wraparound ??= "false";
@@ -8433,6 +8452,7 @@ function createNodeGraphParameter(node, type, parameter) {
   input.dataset.unit = parameter.unit ?? "";
   input.dataset.choices = formatNodeMetadataChoices(parameter.choices || []);
   input.dataset.displayChoices = parameter.displayChoices ? "true" : "false";
+  input.dataset.divideChoicesVisibly = parameter.divideChoicesVisibly ? "true" : "false";
   input.dataset.linearSmoothing = parameter.linearSmoothing === false ? "false" : "true";
   input.dataset.showSign = parameter.showSign ? "true" : "false";
   input.dataset.wraparound = parameter.wraparound ? "true" : "false";

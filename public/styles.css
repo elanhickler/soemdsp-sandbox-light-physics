@@ -668,6 +668,22 @@ audio {
   touch-action: none;
 }
 
+.node-slider-readout.choices-divided {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 var(--value-start, calc(0% - 4px)),
+      rgba(127, 199, 217, 0.42) var(--value-start, calc(0% - 4px)) var(--value-end, calc(0% + 4px)),
+      transparent var(--value-end, calc(0% + 4px)) 100%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 calc(var(--choice-divider-width, 100%) - 1px),
+      rgba(243, 241, 236, 0.13) calc(var(--choice-divider-width, 100%) - 1px) var(--choice-divider-width, 100%)
+    ),
+    rgba(11, 14, 18, 0.96);
+}
+
 .node-slider-readout-label {
   grid-column: 1 / -1;
   min-width: 0;
