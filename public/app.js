@@ -8118,15 +8118,24 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
   const issues = [];
   const nodeList = Array.isArray(patch.nodes) ? patch.nodes.map((node) => ({ ...node })) : [];
   const nodeMap = new Map(nodeList.map((node) => [node.id, node]));
+  const nodeOrderIndex = new Map(nodeList.map((node, index) => [node.id, index]));
   const dependencies = new Map(nodeList.map((node) => [node.id, new Set()]));
+  const orderDependencies = new Map(nodeList.map((node) => [node.id, new Set()]));
   const inputConnections = new Map();
   const modulationConnections = new Map();
 
-  function addDependency(destinationNode, sourceNode) {
-    if (!dependencies.has(destinationNode)) {
-      dependencies.set(destinationNode, new Set());
+  function addDependency(map, destinationNode, sourceNode) {
+    if (!map.has(destinationNode)) {
+      map.set(destinationNode, new Set());
     }
-    dependencies.get(destinationNode).add(sourceNode);
+    map.get(destinationNode).add(sourceNode);
+  }
+
+  function addSchedulingDependency(destinationNode, sourceNode) {
+    addDependency(dependencies, destinationNode, sourceNode);
+    if ((nodeOrderIndex.get(sourceNode) ?? -1) < (nodeOrderIndex.get(destinationNode) ?? -1)) {
+      addDependency(orderDependencies, destinationNode, sourceNode);
+    }
   }
 
   for (const node of nodeList) {
@@ -8156,7 +8165,7 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
     const connections = inputConnections.get(key) || [];
     connections.push({ ...connection });
     inputConnections.set(key, connections);
-    addDependency(connection.destinationNode, connection.sourceNode);
+    addSchedulingDependency(connection.destinationNode, connection.sourceNode);
   }
 
   for (const modulation of patch.modulations || []) {
@@ -8180,7 +8189,7 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
     const modulations = modulationConnections.get(key) || [];
     modulations.push({ ...modulation });
     modulationConnections.set(key, modulations);
-    addDependency(modulation.destinationNode, modulation.sourceNode);
+    addSchedulingDependency(modulation.destinationNode, modulation.sourceNode);
   }
 
   return {
@@ -8190,6 +8199,7 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
     modulationConnections,
     nodeMap,
     nodes: nodeList,
+    orderDependencies,
   };
 }
 
@@ -8304,7 +8314,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     }
   }
 
-  const topology = nodeGraphTopologicalOrder(graph.nodes, graph.dependencies, reachableNodes);
+  const topology = nodeGraphTopologicalOrder(graph.nodes, graph.orderDependencies, reachableNodes);
   const order = topology.order.filter((nodeId) => reachableNodes.has(nodeId));
   const feedback = nodeGraphClassifyFeedbackEdges(graph, order);
   const sourceNodes = order.filter((nodeId) => {
@@ -8323,6 +8333,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     modulationConnections: graph.modulationConnections,
     nodeMap: graph.nodeMap,
     nodes: graph.nodes,
+    orderDependencies: graph.orderDependencies,
     order,
     outputNode,
     sourceNodes,
