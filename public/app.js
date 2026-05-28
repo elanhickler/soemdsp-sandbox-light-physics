@@ -7816,7 +7816,10 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   };
 }
 
-function nodeGraphScheduleText(order) {
+function nodeGraphScheduleText(order, issues = []) {
+  if (issues.length) {
+    return `schedule blocked: ${issues.join(", ")}`;
+  }
   return order.length
     ? `schedule: ${order.map((node) => nodeGraphNodeDisplayName(node)).join(" -> ")}`
     : "schedule missing";
@@ -7828,7 +7831,7 @@ function nodeGraphValidate() {
     issues: plan.issues,
     order: plan.order,
     route: plan.order,
-    scheduleText: nodeGraphScheduleText(plan.order),
+    scheduleText: nodeGraphScheduleText(plan.order, plan.issues),
     sourceNode: plan.sourceNodes[0] || "",
     sourceNodes: plan.sourceNodes,
     valid: plan.valid,
@@ -9445,7 +9448,7 @@ function sendNodeGraphLivePlan() {
     nodeGraphMvp.live.runtime = null;
     nodeGraphMvp.live.node?.port?.postMessage({ type: "stop" });
     setNodeGraphLiveMeter();
-    setNodeGraphLiveRouteStatus("route muted", "warn");
+    setNodeGraphLiveRouteStatus(`schedule blocked: ${error.message}`, "warn");
     setNodeGraphLiveStatus("error", "warn");
     document.getElementById("nodeLiveStatus").title = error.message;
   }

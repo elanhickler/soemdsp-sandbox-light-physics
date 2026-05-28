@@ -3191,6 +3191,7 @@ def require_node_graph_mvp_contract() -> None:
         "function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames)",
         "nodeGraphScheduleText(plan.order)",
         "schedule:",
+        "schedule blocked:",
         "function beginNodeGraphNodeDrag(event)",
         "node.querySelector(\".node-drag-handle\")?.addEventListener(\"pointerdown\", beginNodeGraphNodeDrag)",
         "node.querySelector(\".node-action-button\")?.addEventListener(\"click\", openNodeModuleActionMenu)",
