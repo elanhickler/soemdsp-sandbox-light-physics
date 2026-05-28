@@ -7440,11 +7440,15 @@ function closeNodeSceneContextMenu() {
   nodeGraphMvp.sceneContextTargetNode = null;
 }
 
-function markNodeGraphRenderPending() {
+function markNodeGraphRenderPending(summary = "waiting for render") {
   nodeGraphMvp.rendered = null;
   document.getElementById("nodePlayButton").disabled = true;
   document.getElementById("nodeGraphRenderStatus").textContent = "render pending";
   document.getElementById("nodeGraphRenderStatus").className = "pill warn";
+  const outputSummary = document.getElementById("nodeOutputSummary");
+  if (outputSummary) {
+    outputSummary.textContent = summary;
+  }
 }
 
 function readNodeMetadataEditorValues(slider) {
@@ -9231,11 +9235,7 @@ function clearNodeGraphWires() {
   patch.connections = [];
   patch.modulations = [];
   setNodeGraphSelection(null);
-  nodeGraphMvp.rendered = null;
-  document.getElementById("nodePlayButton").disabled = true;
-  document.getElementById("nodeGraphRenderStatus").textContent = "render pending";
-  document.getElementById("nodeGraphRenderStatus").className = "pill warn";
-  document.getElementById("nodeOutputSummary").textContent = "waiting for render";
+  markNodeGraphRenderPending();
   commitNodeGraphPatch(patch, { status: "wires cleared" });
   drawNodeRenderedAudio();
 }
