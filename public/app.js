@@ -6015,6 +6015,11 @@ const nodeGraphGrid = Object.freeze({
   sizePx: 28,
 });
 
+const nodeGraphPatchFormat = Object.freeze({
+  kind: "soemdsp-sandbox-node-patch",
+  version: 1,
+});
+
 function nodeGraphDefaultParamsForType(type) {
   const params = {};
   for (const parameter of nodeGraphModuleDefinitions[type]?.parameters || []) {
@@ -6445,6 +6450,7 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
   return JSON.stringify(
     {
       connections: patch.connections,
+      format: { ...nodeGraphPatchFormat },
       grid: patch.grid,
       info: normalizeNodeGraphPatchInfo(patch.info),
       modulations: patch.modulations || [],
@@ -6596,6 +6602,7 @@ function validateNodeGraphPatch(patch) {
 
   return {
     connections,
+    format: { ...nodeGraphPatchFormat },
     grid: { sizePx: gridSize },
     info: normalizeNodeGraphPatchInfo(patch.info),
     modulations,
