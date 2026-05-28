@@ -6163,6 +6163,7 @@ const nodeGraphDefaultPatch = Object.freeze({
   },
   visual: {
     mode: "auto",
+    style: "glow",
   },
   grid: { ...nodeGraphGrid },
   nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node })),
@@ -6313,8 +6314,10 @@ function normalizeNodeGraphPatchInfo(info = {}) {
 
 function normalizeNodeGraphPatchVisual(visual = {}) {
   const mode = String(visual.mode || "auto").trim();
+  const style = String(visual.style || "glow").trim();
   return {
     mode: ["auto", "stereo-xy", "mono-lag-xy"].includes(mode) ? mode : "auto",
+    style: ["glow", "trace", "points"].includes(style) ? style : "glow",
   };
 }
 
@@ -6741,7 +6744,9 @@ function syncNodeGraphSettingsView() {
   setNodeGraphSettingsField("patchAuthorValue", info.author);
   setNodeGraphSettingsField("patchTagsValue", info.tags);
   setNodeGraphSettingsField("patchDescriptionValue", info.description);
-  setNodeGraphSettingsField("patchVisualModeValue", normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual).mode);
+  const visual = normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual);
+  setNodeGraphSettingsField("patchVisualModeValue", visual.mode);
+  setNodeGraphSettingsField("patchVisualStyleValue", visual.style);
 }
 
 function readNodeGraphSettingsView() {
@@ -6756,6 +6761,7 @@ function readNodeGraphSettingsView() {
 function readNodeGraphVisualSettingsView() {
   return normalizeNodeGraphPatchVisual({
     mode: document.getElementById("patchVisualModeValue")?.value,
+    style: document.getElementById("patchVisualStyleValue")?.value,
   });
 }
 
@@ -11977,41 +11983,47 @@ function drawNodeRenderedVisualOutput() {
   const firstFrame = useStereo ? 0 : lag;
   const step = Math.max(1, Math.floor(sourceSamples.length / 2600));
 
-  context.lineWidth = 4;
-  context.strokeStyle = "rgba(177, 132, 255, 0.14)";
-  context.beginPath();
-  for (let frame = firstFrame; frame < sourceSamples.length; frame += step) {
+  function visualPoint(frame) {
     const xSample = useStereo ? sourceSamples[frame] || 0 : sourceSamples[frame - lag] || 0;
     const ySample = useStereo ? rightSamples[frame] || 0 : sourceSamples[frame] || 0;
-    const x = width / 2 + xSample * (width * 0.42);
-    const y = height / 2 - ySample * (height * 0.42);
-    if (frame === firstFrame) {
-      context.moveTo(x, y);
-    } else {
-      context.lineTo(x, y);
-    }
+    return {
+      x: width / 2 + xSample * (width * 0.42),
+      y: height / 2 - ySample * (height * 0.42),
+    };
   }
-  context.stroke();
 
-  context.lineWidth = 1.3;
-  context.strokeStyle = "#7fc7d9";
-  context.beginPath();
-  for (let frame = firstFrame; frame < sourceSamples.length; frame += step) {
-    const xSample = useStereo ? sourceSamples[frame] || 0 : sourceSamples[frame - lag] || 0;
-    const ySample = useStereo ? rightSamples[frame] || 0 : sourceSamples[frame] || 0;
-    const x = width / 2 + xSample * (width * 0.42);
-    const y = height / 2 - ySample * (height * 0.42);
-    if (frame === firstFrame) {
-      context.moveTo(x, y);
-    } else {
-      context.lineTo(x, y);
+  function drawVisualTrace({ lineWidth, strokeStyle }) {
+    context.lineWidth = lineWidth;
+    context.strokeStyle = strokeStyle;
+    context.beginPath();
+    for (let frame = firstFrame; frame < sourceSamples.length; frame += step) {
+      const point = visualPoint(frame);
+      if (frame === firstFrame) {
+        context.moveTo(point.x, point.y);
+      } else {
+        context.lineTo(point.x, point.y);
+      }
     }
+    context.stroke();
   }
-  context.stroke();
+
+  if (visualSettings.style === "points") {
+    context.fillStyle = "rgba(127, 199, 217, 0.72)";
+    for (let frame = firstFrame; frame < sourceSamples.length; frame += Math.max(step * 3, 3)) {
+      const point = visualPoint(frame);
+      context.fillRect(point.x - 1, point.y - 1, 2, 2);
+    }
+  } else {
+    if (visualSettings.style === "glow") {
+      drawVisualTrace({ lineWidth: 4, strokeStyle: "rgba(177, 132, 255, 0.14)" });
+    }
+    drawVisualTrace({ lineWidth: 1.3, strokeStyle: "#7fc7d9" });
+  }
 
   canvas.dataset.visualSource = "node graph rendered audio";
   canvas.dataset.visualMode = visualMode;
   canvas.dataset.visualModeSetting = visualSettings.mode;
+  canvas.dataset.visualStyle = visualSettings.style;
   canvas.dataset.visualFrames = String(sourceSamples.length);
   canvas.dataset.visualPeak = formatCompactNumber(rendered.peak || 0);
   canvas.dataset.visualRms = formatCompactNumber(rendered.rms || 0);
@@ -12024,6 +12036,7 @@ function drawNodeRenderedVisualOutput() {
     Peak: canvas.dataset.visualPeak,
     RMS: canvas.dataset.visualRms,
     Source: canvas.dataset.visualSource,
+    Style: visualSettings.style,
   });
   if (status) {
     status.textContent = visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode;

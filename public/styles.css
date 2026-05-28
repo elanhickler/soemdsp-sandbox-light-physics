@@ -263,6 +263,7 @@ audio {
 }
 
 .node-settings-grid input,
+.node-settings-grid select,
 .node-settings-grid textarea {
   width: 100%;
   min-width: 0;
@@ -274,7 +275,8 @@ audio {
   text-transform: none;
 }
 
-.node-settings-grid input {
+.node-settings-grid input,
+.node-settings-grid select {
   min-height: 36px;
   padding: 0 10px;
 }
@@ -287,6 +289,7 @@ audio {
 }
 
 .node-settings-grid input:focus,
+.node-settings-grid select:focus,
 .node-settings-grid textarea:focus {
   outline: none;
   border-color: rgba(127, 199, 217, 0.58);
