@@ -7828,8 +7828,35 @@ function renderNodeGraphSelection() {
 }
 
 function nodeGraphPath(from, to) {
-  const span = Math.max(68, Math.abs(to.x - from.x) * 0.48);
+  const horizontalDistance = Math.abs(to.x - from.x);
+  const verticalDistance = Math.abs(to.y - from.y);
+  const span = Math.min(96, horizontalDistance * 0.48 + verticalDistance * 0.12);
   return `M ${from.x} ${from.y} C ${from.x + span} ${from.y}, ${to.x - span} ${to.y}, ${to.x} ${to.y}`;
+}
+
+function createNodeGraphWireGradient(svg, id, from, to) {
+  const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+  gradient.id = id;
+  gradient.setAttribute("gradientUnits", "userSpaceOnUse");
+  gradient.setAttribute("x1", String(from.x));
+  gradient.setAttribute("y1", String(from.y));
+  gradient.setAttribute("x2", String(to.x));
+  gradient.setAttribute("y2", String(to.y));
+
+  for (const [offset, opacity] of [
+    ["0%", "1"],
+    ["50%", "0.16"],
+    ["100%", "1"],
+  ]) {
+    const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+    stop.setAttribute("class", "node-wire-gradient-stop");
+    stop.setAttribute("offset", offset);
+    stop.setAttribute("stop-opacity", opacity);
+    gradient.append(stop);
+  }
+
+  svg.querySelector("defs")?.append(gradient);
+  return `url(#${id})`;
 }
 
 function selectNodeGraphWire(event, index) {
@@ -7847,6 +7874,8 @@ function drawNodeGraphWires() {
   const graphRect = nodeGraphGraphRect();
   svg.setAttribute("viewBox", `0 0 ${graphRect.width} ${graphRect.height}`);
   svg.replaceChildren();
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  svg.append(defs);
 
   for (const node of workspace.querySelectorAll(".dsp-node")) {
     node.classList.remove("connected");
@@ -7867,6 +7896,7 @@ function drawNodeGraphWires() {
       "input",
     );
     const pathData = nodeGraphPath(from, to);
+    const stroke = createNodeGraphWireGradient(svg, `node-wire-gradient-${index}`, from, to);
     const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
     hitPath.setAttribute("class", "node-wire-hit-path");
     hitPath.dataset.connectionIndex = String(index);
@@ -7878,6 +7908,7 @@ function drawNodeGraphWires() {
     path.setAttribute("class", "node-wire-path");
     path.dataset.connectionIndex = String(index);
     path.setAttribute("d", pathData);
+    path.setAttribute("stroke", stroke);
     svg.append(path);
 
     nodeGraphNodeElement(connection.sourceNode)?.classList.add("connected");
@@ -7886,7 +7917,14 @@ function drawNodeGraphWires() {
 
   if (nodeGraphMvp.dragging) {
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const stroke = createNodeGraphWireGradient(
+      svg,
+      "node-wire-gradient-temp",
+      nodeGraphMvp.dragging.from,
+      nodeGraphMvp.dragging.to,
+    );
     path.setAttribute("class", "node-wire-path temp");
+    path.setAttribute("stroke", stroke);
     path.setAttribute(
       "d",
       nodeGraphPath(nodeGraphMvp.dragging.from, nodeGraphMvp.dragging.to),

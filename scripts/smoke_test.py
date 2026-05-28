@@ -3213,6 +3213,11 @@ def require_node_graph_mvp_contract() -> None:
         "function resolveInput(node, port)",
         "function setNodeGraphSelection(selection)",
         "function selectNodeGraphWire(event, index)",
+        "function nodeGraphPath(from, to)",
+        "function createNodeGraphWireGradient(svg, id, from, to)",
+        "linearGradient",
+        "gradientUnits",
+        '["50%", "0.16"]',
         "data-connection-row-index",
         "function deleteSelectedNodeGraphItem()",
         "function showPaletteNode(node)",
@@ -3263,6 +3268,11 @@ def require_node_graph_mvp_contract() -> None:
     ]:
         require(snippet in app_source, f"node graph source missing {snippet}")
 
+    require(
+        "Math.max(68" not in app_source,
+        "node graph wire path should not enforce the old 68px minimum span",
+    )
+
     for snippet in [
         "zoomNodeGraphAt",
         'addEventListener("wheel"',
@@ -3309,6 +3319,7 @@ def require_node_graph_mvp_contract() -> None:
         ".node-wiring-panel .audio-panel",
         ".node-wire-svg",
         ".node-wire-path",
+        ".node-wire-gradient-stop",
         ".node-wire-path.selected",
         ".node-wire-hit-path",
         ".node-wire-path.temp",
