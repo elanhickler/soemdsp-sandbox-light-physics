@@ -7504,11 +7504,15 @@ function syncNodeSliderReadout(slider) {
     readout.textContent = "";
     populateNodeSliderReadoutShell(readout);
   }
+  const labelText = readout.querySelector(".node-slider-readout-label");
   const valueText = readout.querySelector(".node-slider-readout-value");
   const unitText = readout.querySelector(".node-slider-readout-unit");
   const position = nodeSliderTravelFromValue(slider, Number(slider.value)) * 100;
   const unit = (slider.dataset.unit || "").trim();
   const choiceLabel = nodeSliderChoiceLabel(slider);
+  if (labelText) {
+    labelText.textContent = readout.dataset.paramLabel || nodeSliderLabelText(slider);
+  }
   valueText.textContent = choiceLabel ?? formatNodeSliderNumber(slider.value, {
     reserveSignSpace: true,
     showSign: nodeSliderShouldShowSign(slider),
@@ -7527,13 +7531,9 @@ function syncNodeSliderReadout(slider) {
 }
 
 function nodeSliderLabelText(slider) {
-  const rowLabel = slider
-    .closest(".node-parameter-row")
-    ?.querySelector(".node-parameter-name")
-    ?.textContent
-    ?.trim();
-  if (rowLabel) {
-    return rowLabel;
+  const controlLabel = slider.closest(".node-parameter-control")?.dataset.paramLabel?.trim();
+  if (controlLabel) {
+    return controlLabel;
   }
   const label = slider.closest("label");
   if (!label) {
@@ -8159,11 +8159,13 @@ function endNodeSliderDrag(event) {
 }
 
 function populateNodeSliderReadoutShell(readout) {
+  const labelText = document.createElement("span");
+  labelText.className = "node-slider-readout-label";
   const valueText = document.createElement("span");
   valueText.className = "node-slider-readout-value";
   const unitText = document.createElement("span");
   unitText.className = "node-slider-readout-unit";
-  readout.append(valueText, unitText);
+  readout.append(labelText, valueText, unitText);
 }
 
 function commitNodeSliderReadoutEdit(input) {
@@ -8172,6 +8174,7 @@ function commitNodeSliderReadoutEdit(input) {
   readout.type = "button";
   readout.className = "node-slider-readout";
   readout.dataset.sliderTarget = input.dataset.sliderTarget;
+  readout.dataset.paramLabel = input.dataset.paramLabel || "";
   readout.setAttribute("aria-label", input.getAttribute("aria-label"));
   populateNodeSliderReadoutShell(readout);
   input.replaceWith(readout);
@@ -8185,6 +8188,7 @@ function cancelNodeSliderReadoutEdit(input) {
   readout.type = "button";
   readout.className = "node-slider-readout";
   readout.dataset.sliderTarget = input.dataset.sliderTarget;
+  readout.dataset.paramLabel = input.dataset.paramLabel || "";
   readout.setAttribute("aria-label", input.getAttribute("aria-label"));
   populateNodeSliderReadoutShell(readout);
   input.replaceWith(readout);
@@ -8207,6 +8211,7 @@ function beginNodeSliderReadoutEdit(readout) {
     showSign: nodeSliderShouldShowSign(slider),
   });
   input.dataset.sliderTarget = slider.id;
+  input.dataset.paramLabel = readout.dataset.paramLabel || "";
   input.setAttribute("aria-label", readout.getAttribute("aria-label"));
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -8252,6 +8257,7 @@ function createNodeSliderReadout(slider) {
   readout.type = "button";
   readout.className = "node-slider-readout";
   readout.dataset.sliderTarget = slider.id;
+  readout.dataset.paramLabel = label.dataset.paramLabel || nodeSliderLabelText(slider);
   readout.setAttribute("aria-label", `${slider.id} current value`);
   populateNodeSliderReadoutShell(readout);
   attachNodeSliderReadoutEvents(readout);
@@ -8341,15 +8347,11 @@ function createNodeGraphParameter(node, type, parameter) {
   const row = document.createElement("div");
   row.className = "node-parameter-row";
   row.dataset.param = parameter.key;
-
-  const name = document.createElement("span");
-  name.className = "node-parameter-name";
-  name.textContent = parameter.label;
-  row.append(name);
   row.append(createNodeParameterModulationPort(node, type, parameter));
 
   const label = document.createElement("label");
   label.className = "node-parameter-control";
+  label.dataset.paramLabel = parameter.label;
   label.setAttribute("aria-label", parameter.label);
   const input = document.createElement("input");
   const legacyIds = {
