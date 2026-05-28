@@ -7527,6 +7527,14 @@ function syncNodeSliderReadout(slider) {
 }
 
 function nodeSliderLabelText(slider) {
+  const rowLabel = slider
+    .closest(".node-parameter-row")
+    ?.querySelector(".node-parameter-name")
+    ?.textContent
+    ?.trim();
+  if (rowLabel) {
+    return rowLabel;
+  }
   const label = slider.closest("label");
   if (!label) {
     return slider.id;
@@ -8333,11 +8341,16 @@ function createNodeGraphParameter(node, type, parameter) {
   const row = document.createElement("div");
   row.className = "node-parameter-row";
   row.dataset.param = parameter.key;
+
+  const name = document.createElement("span");
+  name.className = "node-parameter-name";
+  name.textContent = parameter.label;
+  row.append(name);
   row.append(createNodeParameterModulationPort(node, type, parameter));
 
   const label = document.createElement("label");
   label.className = "node-parameter-control";
-  label.append(document.createTextNode(parameter.label));
+  label.setAttribute("aria-label", parameter.label);
   const input = document.createElement("input");
   const legacyIds = {
     "bias.offset": "nodeBiasAmount",

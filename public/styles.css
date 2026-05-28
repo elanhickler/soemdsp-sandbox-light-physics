@@ -590,17 +590,36 @@ audio {
 .dsp-node label,
 .node-parameter-control {
   display: grid;
-  gap: 5px;
   color: var(--muted);
   font-size: 0.78rem;
 }
 
 .node-parameter-row {
-  position: relative;
-  display: block;
-  align-items: end;
+  display: grid;
+  grid-template-columns: 13px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 5px;
   min-height: 0;
-  padding: 0 13px 0 23px;
+  padding: 0 13px 0 0;
+}
+
+.node-parameter-name {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-parameter-control {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .dsp-node p {
@@ -952,9 +971,10 @@ audio {
 }
 
 .node-param-port {
-  position: absolute;
-  left: 0;
-  top: calc(50% + 9px);
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
+  justify-self: start;
   display: block;
   width: 13px;
   min-width: 13px;
@@ -966,7 +986,6 @@ audio {
   cursor: crosshair;
   overflow: hidden;
   text-indent: -999px;
-  transform: translateY(-50%);
 }
 
 .node-param-port.modulation-input {
