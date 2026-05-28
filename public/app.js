@@ -8574,6 +8574,10 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   };
 }
 
+function compileValidatedNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
+  return compileNodeGraphExecutionPlan(validateNodeGraphPatch(patch));
+}
+
 function nodeGraphFeedbackText(feedbackConnections = [], feedbackModulations = []) {
   const signal = feedbackConnections.map((connection) =>
     `${nodeGraphNodeDisplayName(connection.sourceNode)}.${connection.sourcePort} -> ` +
@@ -8888,7 +8892,7 @@ function serializeNodeGraphExecutionPlanApiDebug(plan) {
 function installNodeGraphDebugApi() {
   window.soemdspSandboxDebug = Object.freeze({
     compileExecutionPlan(patch = nodeGraphMvp.patch) {
-      return serializeNodeGraphExecutionPlanApiDebug(compileNodeGraphExecutionPlan(patch));
+      return serializeNodeGraphExecutionPlanApiDebug(compileValidatedNodeGraphExecutionPlan(patch));
     },
     currentPatchFingerprint() {
       return nodeGraphPatchFingerprint();
