@@ -9799,15 +9799,23 @@ function configureNodeSceneContextMenu(mode) {
   const menu = document.getElementById("nodeSceneContextMenu");
   const title = menu.querySelector(".scene-context-title");
   const addGroup = menu.querySelector(".scene-context-add-group");
+  const copyButton = document.getElementById("nodeSceneCopyModule");
   const deleteButton = document.getElementById("nodeSceneDeleteModule");
   const moduleMode = mode === "module";
+  const targetNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
+  const canCopy = moduleMode && targetNode?.type !== "output";
   title.textContent = moduleMode ? "Module" : "Add Module";
   addGroup.hidden = moduleMode;
+  copyButton.hidden = !moduleMode;
   deleteButton.hidden = !moduleMode;
   if (moduleMode) {
+    copyButton.disabled = !canCopy;
+    copyButton.title = canCopy ? "Copy module" : "Copy unavailable: Output module is required";
     deleteButton.disabled = !nodeGraphSelectionCanDelete();
     deleteButton.title = nodeGraphDeleteTitle();
   } else {
+    copyButton.disabled = true;
+    copyButton.title = "Copy unavailable: select a module";
     deleteButton.disabled = true;
     deleteButton.title = "Delete unavailable: select a module";
   }
@@ -10019,6 +10027,31 @@ function showPaletteNode(node) {
 
 function addNodeGraphModuleFromContext(event) {
   showNodeGraphModule(event.currentTarget.dataset.contextModule, nodeGraphMvp.sceneContextPoint);
+  closeNodeSceneContextMenu();
+}
+
+function copyNodeGraphModuleFromContext() {
+  const sourceNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
+  if (!sourceNode || sourceNode.type === "output") {
+    closeNodeSceneContextMenu();
+    return;
+  }
+
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const counts = nextNodeGraphTypeCounts(patch.nodes);
+  counts[sourceNode.type] = (counts[sourceNode.type] || 0) + 1;
+  const id = `${sourceNode.type}-${counts[sourceNode.type]}`;
+  patch.nodes.push({
+    ...createNodeGraphPatchNode(sourceNode.type, {
+      gx: sourceNode.gx + 2,
+      gy: sourceNode.gy + 2,
+      id,
+    }),
+    paramMeta: cloneNodeGraphParamMeta(sourceNode.paramMeta),
+    params: { ...(sourceNode.params || {}) },
+  });
+  commitNodeGraphPatch(patch, { status: "module copied" });
+  setNodeGraphSelection({ type: "node", id });
   closeNodeSceneContextMenu();
 }
 
@@ -11630,6 +11663,9 @@ function initNodeGraphMvp() {
   document
     .getElementById("nodeSceneDeleteModule")
     .addEventListener("click", deleteNodeGraphModuleFromContext);
+  document
+    .getElementById("nodeSceneCopyModule")
+    .addEventListener("click", copyNodeGraphModuleFromContext);
 
   document.addEventListener("pointermove", dragNodeSlider);
   document.addEventListener("pointerup", endNodeSliderDrag);
