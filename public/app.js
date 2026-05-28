@@ -6730,10 +6730,17 @@ function nodeSliderChoiceIndexFromText(slider, value) {
   if (!normalized) {
     return null;
   }
-  const index = metadata.choices.findIndex(
+  const exactIndex = metadata.choices.findIndex(
     (choice) => choice.toLowerCase() === normalized,
   );
-  return index >= 0 ? index : null;
+  if (exactIndex >= 0) {
+    return exactIndex;
+  }
+
+  const prefixMatches = metadata.choices
+    .map((choice, index) => ({ choice: choice.toLowerCase(), index }))
+    .filter((choice) => choice.choice.startsWith(normalized));
+  return prefixMatches.length === 1 ? prefixMatches[0].index : null;
 }
 
 function nodeSliderMetadata(slider) {

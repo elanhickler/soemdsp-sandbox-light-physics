@@ -3051,6 +3051,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeSliderShouldWraparound(slider)",
         "function nodeSliderChoiceLabel(slider)",
         "function nodeSliderChoiceIndexFromText(slider, value)",
+        "prefixMatches.length === 1",
         "function nodeSliderShouldShowSign(slider)",
         "function nodeSliderMetadata(slider)",
         "function formatNodeSliderMetadataTooltip(slider)",
