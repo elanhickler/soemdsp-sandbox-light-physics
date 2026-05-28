@@ -8738,6 +8738,22 @@ function nodeGraphExecutionParameterSnapshot(plan) {
   return parametersByNode;
 }
 
+function nodeGraphLastRenderDebug() {
+  const rendered = nodeGraphMvp.rendered;
+  if (!rendered) {
+    return null;
+  }
+  return {
+    clipCount: Number(rendered.clipCount) || 0,
+    durationSeconds: Number(rendered.durationSeconds) || 0,
+    frames: Number(rendered.frames) || 0,
+    peak: Number(rendered.peak) || 0,
+    rms: Number(rendered.rms) || 0,
+    sampleRate: Number(rendered.sampleRate) || nodeGraphMvp.sampleRate,
+    stateReadCount: Number(rendered.stateReadCount) || 0,
+  };
+}
+
 function serializeNodeGraphExecutionPlanDebug(plan) {
   const samePassDependencies = {};
   for (const [nodeId, dependencies] of plan.orderDependencies.entries()) {
@@ -8785,6 +8801,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       inactiveNodes: plan.inactiveNodes || [],
       inactiveWireReads: nodeGraphInactiveWireReads(plan),
       issues: plan.issues,
+      lastRender: nodeGraphLastRenderDebug(),
       modulationInputs,
       order: plan.valid ? plan.order : [],
       outputNode: plan.outputNode,
@@ -8818,6 +8835,7 @@ function serializeNodeGraphExecutionPlanApiDebug(plan) {
     ),
     inactiveNodes: plan.inactiveNodes || [],
     issues: [...plan.issues],
+    lastRender: nodeGraphLastRenderDebug(),
     order: [...plan.order],
     patchNodeCount: plan.nodes?.length || 0,
     patchWireCount: nodeGraphPatchWireCount(plan),
@@ -11231,6 +11249,7 @@ function renderNodeGraphAudio() {
     clipCount,
     stateReadCount,
   });
+  renderNodeGraphExecutionPlanDebug();
   document.getElementById("nodeOutputSummary").textContent = validation.scheduleText;
   drawNodeRenderedAudio();
 }
