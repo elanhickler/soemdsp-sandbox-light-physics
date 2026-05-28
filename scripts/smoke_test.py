@@ -3264,6 +3264,7 @@ def require_node_graph_mvp_contract() -> None:
         "function setNodeGraphLiveMeter(",
         "function setNodeGraphLiveEngineStatus(text = \"engine idle\", state = \"\")",
         "function setNodeGraphLiveEngineTitle(text = \"\")",
+        "function clearNodeGraphLiveStatusTitle()",
         "function setNodeGraphLiveProcessorError(message = \"AudioWorklet processor error\")",
         "function setNodeGraphLivePlanStatus(text = \"plan idle\", state = \"\")",
         "function setNodeGraphLivePlanTitle(text = \"\")",

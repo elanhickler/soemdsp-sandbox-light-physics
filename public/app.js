@@ -9543,6 +9543,10 @@ function setNodeGraphLiveStatus(text, state = "") {
   status.className = `pill ${state}`.trim();
 }
 
+function clearNodeGraphLiveStatusTitle() {
+  document.getElementById("nodeLiveStatus")?.removeAttribute("title");
+}
+
 function setNodeGraphLiveEngineStatus(text = "engine idle", state = "") {
   const status = document.getElementById("nodeLiveEngineStatus");
   if (!status) {
@@ -10164,6 +10168,7 @@ function sendNodeGraphLivePlan() {
       setNodeGraphLivePlanTitle(nodeGraphLivePlanScheduleTitle(plan.order));
     }
     setNodeGraphLiveStatus("running", "good");
+    clearNodeGraphLiveStatusTitle();
     setNodeGraphLiveRouteStatus(nodeGraphScheduleText(plan.order), "good");
   } catch (error) {
     nodeGraphMvp.live.runtime = null;
@@ -10200,6 +10205,7 @@ function sendNodeGraphLiveParameterUpdate() {
       );
     }
     setNodeGraphLiveStatus("running", "good");
+    clearNodeGraphLiveStatusTitle();
   } catch (error) {
     setNodeGraphLiveBlockedError("params", error, { route: false });
   }
@@ -10281,7 +10287,7 @@ async function stopNodeGraphLiveAudio() {
   setNodeGraphLivePlanTitle();
   setNodeGraphLiveMeter();
   setNodeGraphLiveRouteStatus("route stopped");
-  document.getElementById("nodeLiveStatus").removeAttribute("title");
+  clearNodeGraphLiveStatusTitle();
   renderNodeGraphLiveControls(false);
 }
 
@@ -10360,7 +10366,7 @@ async function startNodeGraphLiveAudio() {
       setNodeGraphLiveEngineTitle();
     }
     await context.resume();
-    document.getElementById("nodeLiveStatus").removeAttribute("title");
+    clearNodeGraphLiveStatusTitle();
     renderNodeGraphLiveControls(true);
   } catch (error) {
     await stopNodeGraphLiveAudio();
