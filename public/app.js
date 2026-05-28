@@ -9900,7 +9900,7 @@ function setNodeGraphLiveProcessorError(message = "AudioWorklet processor error"
   setNodeGraphLiveEngineTitle(message);
   setNodeGraphLivePlanStatus("plan blocked", "warn");
   setNodeGraphLiveMeter();
-  setNodeGraphLiveRouteStatus(`processor error: ${message}`, "warn");
+  setNodeGraphLiveScheduleStatus(`processor error: ${message}`, "warn");
   document.getElementById("nodeLiveStatus").title = message;
   renderNodeGraphLiveControls(Boolean(nodeGraphMvp.live.node));
 }
@@ -9945,8 +9945,8 @@ function setNodeGraphLiveBlockedError(kind, error, options = {}) {
   setNodeGraphLivePlanStatus(nodeGraphLiveBlockedStatusText(kind, error), "warn");
   setNodeGraphLivePlanTitle(message);
   setNodeGraphLiveMeter();
-  if (options.route !== false) {
-    setNodeGraphLiveRouteStatus(`schedule blocked: ${message}`, "warn");
+  if (options.schedule !== false) {
+    setNodeGraphLiveScheduleStatus(`schedule blocked: ${message}`, "warn");
   }
   setNodeGraphLiveStatus("error", "warn");
   document.getElementById("nodeLiveStatus").title = message;
@@ -10016,7 +10016,7 @@ function setNodeGraphLiveOutputMuted(muted) {
   }
 }
 
-function setNodeGraphLiveRouteStatus(text, state = "") {
+function setNodeGraphLiveScheduleStatus(text, state = "") {
   const status = document.getElementById("nodeLiveRouteStatus");
   if (!status) {
     return;
@@ -10541,7 +10541,7 @@ function sendNodeGraphLivePlan() {
     setNodeGraphLiveOutputMuted(false);
     setNodeGraphLiveStatus("running", "good");
     clearNodeGraphLiveStatusTitle();
-    setNodeGraphLiveRouteStatus(
+    setNodeGraphLiveScheduleStatus(
       nodeGraphScheduleText(
         plan.order,
         [],
@@ -10589,7 +10589,7 @@ function sendNodeGraphLiveParameterUpdate() {
     setNodeGraphLiveStatus("running", "good");
     clearNodeGraphLiveStatusTitle();
   } catch (error) {
-    setNodeGraphLiveBlockedError("params", error, { route: false });
+    setNodeGraphLiveBlockedError("params", error, { schedule: false });
   }
 }
 
@@ -10668,7 +10668,7 @@ async function stopNodeGraphLiveAudio() {
   setNodeGraphLivePlanStatus();
   setNodeGraphLivePlanTitle();
   setNodeGraphLiveMeter();
-  setNodeGraphLiveRouteStatus("route stopped");
+  setNodeGraphLiveScheduleStatus("schedule stopped");
   clearNodeGraphLiveStatusTitle();
   renderNodeGraphLiveControls(false);
 }
