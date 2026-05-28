@@ -738,6 +738,10 @@ audio {
   gap: 6px;
 }
 
+.scene-context-add-group[hidden] {
+  display: none;
+}
+
 .node-scene-context-menu button {
   min-height: 32px;
   justify-content: flex-start;

@@ -3393,6 +3393,7 @@ def require_node_graph_mvp_contract() -> None:
         ".node-scene-context-menu[hidden]",
         ".scene-context-title",
         ".scene-context-add-group",
+        ".scene-context-add-group[hidden]",
         ".scene-context-danger",
         ".node-scene-context-menu button kbd",
         "display: none;",
