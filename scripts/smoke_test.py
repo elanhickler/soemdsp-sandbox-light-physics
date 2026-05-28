@@ -3247,11 +3247,13 @@ def require_node_graph_mvp_contract() -> None:
         "function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch)",
         "function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch)",
         "function nodeGraphTopologicalOrder(nodes, dependencies, reachableNodes)",
+        "function nodeGraphClassifyFeedbackEdges(planGraph, order)",
+        "function readNodeGraphRuntimeOutput(runtime, frameValues, nodeId)",
         "function nodeGraphExecutionParameterSnapshot(order)",
         "function serializeNodeGraphExecutionPlanDebug(plan)",
         "function renderNodeGraphExecutionPlanDebug(plan = compileNodeGraphExecutionPlan())",
         "function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames)",
-        "nodeGraphScheduleText(plan.order)",
+        "nodeGraphFeedbackText(feedbackConnections = [], feedbackModulations = [])",
         "renderNodeGraphExecutionPlanDebug(plan)",
         "function nodeGraphRenderPendingSummary()",
         "function nodeGraphPlayBlockedTitle()",
@@ -3265,6 +3267,8 @@ def require_node_graph_mvp_contract() -> None:
         "Play rendered sample",
         "signalInputs",
         "modulationInputs",
+        "feedbackSignals",
+        "feedbackModulations",
         "parameters: nodeGraphExecutionParameterSnapshot(plan.order)",
         "partialOrder: plan.valid ? [] : plan.order",
         "schedule:",
@@ -3282,9 +3286,12 @@ def require_node_graph_mvp_contract() -> None:
         'document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio)',
         "function nodeGraphBuildLivePlan()",
         "modulations: nodeGraphMvp.patch.modulations.map",
+        "feedbackConnections: compiled.feedbackConnections.map",
+        "feedbackModulations: compiled.feedbackModulations.map",
         "order: [...compiled.order]",
         "function createNodeGraphLiveRuntime(plan)",
         "const modulationConnections = new Map()",
+        "nodeOutputs: new Map",
         "function updateNodeGraphLiveRuntimePlan(runtime, plan)",
         "runtime.modulationConnections = new Map()",
         "runtime.order = [...(plan.order || [])]",
@@ -3430,9 +3437,8 @@ def require_node_graph_mvp_contract() -> None:
         "function toggleDebugSections()",
         "document.addEventListener(\"keydown\", handleNodeGraphKeydown)",
         "missing Output speaker input",
-        "feedback cycle unsupported at",
         "const mixInput = (nodeId, port = \"In\")",
-        "frameValues.get(modulation.sourceNode)",
+        "readNodeGraphRuntimeOutput(runtime, frameValues, modulation.sourceNode)",
         "\"waveform\"",
         "nodeGraphOscillatorWaveformSample(",
         "sourceNodes",
@@ -3455,6 +3461,11 @@ def require_node_graph_mvp_contract() -> None:
     require(
         "Math.max(68" not in app_source,
         "node graph wire path should not enforce the old 68px minimum span",
+    )
+
+    require(
+        "feedback cycle unsupported at" not in app_source,
+        "node graph scheduler should allow feedback cycles as state reads",
     )
 
     for snippet in [
@@ -3589,9 +3600,12 @@ def require_node_graph_mvp_contract() -> None:
         'type: "paramsApplied"',
         'type: "meter"',
         "buildModulationConnectionMap(modulations, ids)",
+        "this.nodeOutputs = new Map()",
+        "readRuntimeOutput(frameValues, nodeId)",
         "readEffectiveParameter(node, key, fallback, frame, frames, frameValues)",
         "evaluateFrame(frame, frames)",
         'mixInput(this.outputNode || "output", "Left")',
+        "this.readRuntimeOutput(frameValues, modulation.sourceNode)",
         "this.clampValue(frameOutput.left, -0.95, 0.95)",
         "for (const channel of output)",
     ]:

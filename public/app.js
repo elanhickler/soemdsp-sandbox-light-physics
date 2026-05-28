@@ -8194,7 +8194,6 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
 }
 
 function nodeGraphTopologicalOrder(nodes, dependencies, reachableNodes) {
-  const issues = [];
   const order = [];
   const visiting = new Set();
   const visited = new Set();
@@ -8204,7 +8203,6 @@ function nodeGraphTopologicalOrder(nodes, dependencies, reachableNodes) {
       return;
     }
     if (visiting.has(nodeId)) {
-      issues.push(`feedback cycle unsupported at ${nodeGraphNodeDisplayName(nodeId)}`);
       return;
     }
     if (visited.has(nodeId)) {
@@ -8226,7 +8224,43 @@ function nodeGraphTopologicalOrder(nodes, dependencies, reachableNodes) {
     visit(node.id);
   }
 
-  return { issues, order };
+  return { order };
+}
+
+function nodeGraphClassifyFeedbackEdges(planGraph, order) {
+  const indexByNode = new Map(order.map((nodeId, index) => [nodeId, index]));
+  const feedbackConnections = [];
+  const feedbackModulations = [];
+
+  for (const connections of planGraph.inputConnections.values()) {
+    for (const connection of connections) {
+      const sourceIndex = indexByNode.get(connection.sourceNode);
+      const destinationIndex = indexByNode.get(connection.destinationNode);
+      if (
+        Number.isFinite(sourceIndex) &&
+        Number.isFinite(destinationIndex) &&
+        sourceIndex >= destinationIndex
+      ) {
+        feedbackConnections.push({ ...connection });
+      }
+    }
+  }
+
+  for (const modulations of planGraph.modulationConnections.values()) {
+    for (const modulation of modulations) {
+      const sourceIndex = indexByNode.get(modulation.sourceNode);
+      const destinationIndex = indexByNode.get(modulation.destinationNode);
+      if (
+        Number.isFinite(sourceIndex) &&
+        Number.isFinite(destinationIndex) &&
+        sourceIndex >= destinationIndex
+      ) {
+        feedbackModulations.push({ ...modulation });
+      }
+    }
+  }
+
+  return { feedbackConnections, feedbackModulations };
 }
 
 function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
@@ -8271,20 +8305,19 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   }
 
   const topology = nodeGraphTopologicalOrder(graph.nodes, graph.dependencies, reachableNodes);
-  issues.push(...topology.issues);
   const order = topology.order.filter((nodeId) => reachableNodes.has(nodeId));
+  const feedback = nodeGraphClassifyFeedbackEdges(graph, order);
   const sourceNodes = order.filter((nodeId) => {
     const type = graph.nodeMap.get(nodeId)?.type;
     return type === "osc" || type === "noise";
   });
 
   const uniqueIssues = [...new Set(issues)];
-  if (!sourceNodes.length && !uniqueIssues.length) {
-    uniqueIssues.push("missing renderable source");
-  }
 
   return {
     dependencies: graph.dependencies,
+    feedbackConnections: feedback.feedbackConnections,
+    feedbackModulations: feedback.feedbackModulations,
     inputConnections: graph.inputConnections,
     issues: uniqueIssues,
     modulationConnections: graph.modulationConnections,
@@ -8297,12 +8330,26 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   };
 }
 
-function nodeGraphScheduleText(order, issues = []) {
+function nodeGraphFeedbackText(feedbackConnections = [], feedbackModulations = []) {
+  const signal = feedbackConnections.map((connection) =>
+    `${nodeGraphNodeDisplayName(connection.sourceNode)}.${connection.sourcePort} -> ` +
+    `${nodeGraphNodeDisplayName(connection.destinationNode)}.${connection.destinationPort}`,
+  );
+  const modulation = feedbackModulations.map((modulation) =>
+    `${nodeGraphNodeDisplayName(modulation.sourceNode)}.${modulation.sourcePort} -> ` +
+    `${nodeGraphNodeDisplayName(modulation.destinationNode)}.${modulation.destinationParam} mod`,
+  );
+  return [...signal, ...modulation].join(", ");
+}
+
+function nodeGraphScheduleText(order, issues = [], feedbackConnections = [], feedbackModulations = []) {
   if (issues.length) {
     return `schedule blocked: ${issues.join(", ")}`;
   }
+  const feedbackText = nodeGraphFeedbackText(feedbackConnections, feedbackModulations);
+  const suffix = feedbackText ? ` / feedback: ${feedbackText}` : "";
   return order.length
-    ? `schedule: ${order.map((node) => nodeGraphNodeDisplayName(node)).join(" -> ")}`
+    ? `schedule: ${order.map((node) => nodeGraphNodeDisplayName(node)).join(" -> ")}${suffix}`
     : "schedule missing";
 }
 
@@ -8312,7 +8359,12 @@ function nodeGraphValidate() {
     issues: plan.issues,
     order: plan.order,
     route: plan.order,
-    scheduleText: nodeGraphScheduleText(plan.order, plan.issues),
+    scheduleText: nodeGraphScheduleText(
+      plan.order,
+      plan.issues,
+      plan.feedbackConnections,
+      plan.feedbackModulations,
+    ),
     sourceNode: plan.sourceNodes[0] || "",
     sourceNodes: plan.sourceNodes,
     valid: plan.valid,
@@ -8359,6 +8411,12 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
 
   return JSON.stringify(
     {
+      feedbackModulations: plan.feedbackModulations.map((modulation) =>
+        `${modulation.sourceNode}.${modulation.sourcePort} -> ${modulation.destinationNode}.${modulation.destinationParam}`,
+      ),
+      feedbackSignals: plan.feedbackConnections.map((connection) =>
+        `${connection.sourceNode}.${connection.sourcePort} -> ${connection.destinationNode}.${connection.destinationPort}`,
+      ),
       issues: plan.issues,
       modulationInputs,
       order: plan.valid ? plan.order : [],
@@ -8783,7 +8841,12 @@ function renderNodeGraphConnectionList() {
   const plan = compileNodeGraphExecutionPlan();
   const validation = {
     issues: plan.issues,
-    scheduleText: nodeGraphScheduleText(plan.order, plan.issues),
+    scheduleText: nodeGraphScheduleText(
+      plan.order,
+      plan.issues,
+      plan.feedbackConnections,
+      plan.feedbackModulations,
+    ),
     sourceNodes: plan.sourceNodes,
     valid: plan.valid,
   };
@@ -9875,6 +9938,8 @@ function nodeGraphBuildLivePlan() {
 
   return {
     connections: nodeGraphMvp.patch.connections.map((connection) => ({ ...connection })),
+    feedbackConnections: compiled.feedbackConnections.map((connection) => ({ ...connection })),
+    feedbackModulations: compiled.feedbackModulations.map((modulation) => ({ ...modulation })),
     modulations: nodeGraphMvp.patch.modulations.map((modulation) => ({ ...modulation })),
     nodes: nodeGraphBuildLiveParameterNodes(),
     order: [...compiled.order],
@@ -9944,6 +10009,7 @@ function createNodeGraphLiveRuntime(plan) {
     meterSamples: 0,
     meterSquareSum: 0,
     modulationConnections,
+    nodeOutputs: new Map((plan.nodes || []).map((node) => [node.id, 0])),
     nodes,
     noiseSeeds,
     order: [...(plan.order || [])],
@@ -9972,7 +10038,13 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   runtime.order = [...(plan.order || [])];
   runtime.outputNode = plan.outputNode || "output";
   const nodeIds = new Set(runtime.nodes.keys());
+  if (!runtime.nodeOutputs) {
+    runtime.nodeOutputs = new Map();
+  }
   for (const node of plan.nodes || []) {
+    if (!runtime.nodeOutputs.has(node.id)) {
+      runtime.nodeOutputs.set(node.id, 0);
+    }
     if (node.type === "osc" && !runtime.phases.has(node.id)) {
       runtime.phases.set(node.id, 0);
     }
@@ -10000,6 +10072,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.noiseSeeds.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.noiseSeeds.delete(id);
+    }
+  }
+  for (const id of [...runtime.nodeOutputs.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.nodeOutputs.delete(id);
     }
   }
   for (const key of [...runtime.smoothers.keys()]) {
@@ -10060,6 +10137,13 @@ function nodeGraphApplyParameterBounds(value, metadata = {}) {
     : clampNodeSliderValue(value, min, max);
 }
 
+function readNodeGraphRuntimeOutput(runtime, frameValues, nodeId) {
+  if (frameValues?.has(nodeId)) {
+    return frameValues.get(nodeId) || 0;
+  }
+  return runtime.nodeOutputs?.get(nodeId) || 0;
+}
+
 function readNodeGraphLiveEffectiveParam(
   runtime,
   node,
@@ -10077,7 +10161,7 @@ function readNodeGraphLiveEffectiveParam(
   const modulations = runtime.modulationConnections?.get(nodeGraphParameterKey(node?.id, key)) || [];
   const modulationValue = modulations.reduce(
     (sum, modulation) =>
-      sum + (frameValues.get(modulation.sourceNode) || 0) * depth,
+      sum + readNodeGraphRuntimeOutput(runtime, frameValues, modulation.sourceNode) * depth,
     0,
   );
   return nodeGraphApplyParameterBounds(base + modulationValue, metadata);
@@ -10113,7 +10197,7 @@ function nodeGraphOscillatorWaveformSample(runtime, nodeId, phase, waveform) {
 function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
   const frameValues = new Map();
   const mixInput = (nodeId, port = "In") => (runtime.inputConnections.get(`${nodeId}.${port}`) || []).reduce(
-    (sum, connection) => sum + (frameValues.get(connection.sourceNode) || 0),
+    (sum, connection) => sum + readNodeGraphRuntimeOutput(runtime, frameValues, connection.sourceNode),
     0,
   );
 
@@ -10207,6 +10291,7 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
     }
 
     frameValues.set(nodeId, value);
+    runtime.nodeOutputs?.set(nodeId, value);
   }
 
   return {
@@ -10326,7 +10411,15 @@ function sendNodeGraphLivePlan() {
     setNodeGraphLiveOutputMuted(false);
     setNodeGraphLiveStatus("running", "good");
     clearNodeGraphLiveStatusTitle();
-    setNodeGraphLiveRouteStatus(nodeGraphScheduleText(plan.order), "good");
+    setNodeGraphLiveRouteStatus(
+      nodeGraphScheduleText(
+        plan.order,
+        [],
+        plan.feedbackConnections,
+        plan.feedbackModulations,
+      ),
+      "good",
+    );
     renderNodeGraphLiveControls(true);
   } catch (error) {
     setNodeGraphLiveOutputMuted(true);

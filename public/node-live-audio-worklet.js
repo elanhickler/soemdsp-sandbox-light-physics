@@ -7,6 +7,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.meterSamples = 0;
     this.meterSquareSum = 0;
     this.modulationConnections = new Map();
+    this.nodeOutputs = new Map();
     this.nodes = new Map();
     this.noiseSeeds = new Map();
     this.order = [];
@@ -35,6 +36,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   clearPlan() {
     this.inputConnections = new Map();
     this.modulationConnections = new Map();
+    this.nodeOutputs = new Map();
     this.nodes = new Map();
     this.order = [];
     this.smoothers = new Map();
@@ -57,6 +59,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.modulationConnections = this.buildModulationConnectionMap(plan?.modulations, ids);
 
     for (const id of ids) {
+      if (!this.nodeOutputs.has(id)) {
+        this.nodeOutputs.set(id, 0);
+      }
       const node = this.nodes.get(id);
       if (node?.type === "osc" && !this.phases.has(id)) {
         this.phases.set(id, 0);
@@ -85,6 +90,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.noiseSeeds.delete(id);
       }
     }
+    for (const id of [...this.nodeOutputs.keys()]) {
+      if (!ids.has(id)) {
+        this.nodeOutputs.delete(id);
+      }
+    }
     for (const key of [...this.smoothers.keys()]) {
       const [nodeId, parameter] = key.split(".");
       if (!ids.has(nodeId) || !(parameter in (this.nodes.get(nodeId)?.params || {}))) {
@@ -93,6 +103,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     this.port.postMessage({
       connectionCount: Array.isArray(plan?.connections) ? plan.connections.length : 0,
+      feedbackConnectionCount: Array.isArray(plan?.feedbackConnections) ? plan.feedbackConnections.length : 0,
+      feedbackModulationCount: Array.isArray(plan?.feedbackModulations) ? plan.feedbackModulations.length : 0,
       modulationCount: Array.isArray(plan?.modulations) ? plan.modulations.length : 0,
       nodeCount: this.nodes.size,
       order: [...this.order],
@@ -267,6 +279,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       : this.clampValue(value, min, max);
   }
 
+  readRuntimeOutput(frameValues, nodeId) {
+    if (frameValues?.has(nodeId)) {
+      return frameValues.get(nodeId) || 0;
+    }
+    return this.nodeOutputs.get(nodeId) || 0;
+  }
+
   readEffectiveParameter(node, key, fallback, frame, frames, frameValues) {
     const base = this.readSmoothedParameter(node, key, fallback, frame, frames);
     const metadata = node?.paramMeta?.[key] || {};
@@ -275,7 +294,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const depth = Number.isFinite(min) && Number.isFinite(max) ? (max - min) * 0.5 : 0;
     const modulations = this.modulationConnections.get(this.parameterKey(node?.id, key)) || [];
     const modulationValue = modulations.reduce(
-      (sum, modulation) => sum + (frameValues.get(modulation.sourceNode) || 0) * depth,
+      (sum, modulation) => sum + this.readRuntimeOutput(frameValues, modulation.sourceNode) * depth,
       0,
     );
     return this.applyParameterBounds(base + modulationValue, metadata);
@@ -312,7 +331,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const frameValues = new Map();
     const mixInput = (nodeId, port = "In") => (
       this.inputConnections.get(this.inputKey(nodeId, port)) || []
-    ).reduce((sum, connection) => sum + (frameValues.get(connection.sourceNode) || 0), 0);
+    ).reduce((sum, connection) => sum + this.readRuntimeOutput(frameValues, connection.sourceNode), 0);
 
     for (const nodeId of this.order) {
       const node = this.nodes.get(nodeId);
@@ -357,6 +376,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         value = (mixInput(nodeId, "Left") + mixInput(nodeId, "Right")) * 0.5;
       }
       frameValues.set(nodeId, value);
+      this.nodeOutputs.set(nodeId, value);
     }
 
     return {
