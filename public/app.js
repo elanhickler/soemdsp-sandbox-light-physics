@@ -9846,12 +9846,17 @@ function deleteSelectedNodeGraphItem() {
   }
 }
 
+function nodeGraphEventTargetIsEditable(target) {
+  return target instanceof Element &&
+    Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+}
+
 function handleNodeGraphKeydown(event) {
   if (event.key === "Escape" && !document.getElementById("nodeSceneContextMenu").hidden) {
     closeNodeSceneContextMenu();
     return;
   }
-  if (event.target.closest("input, textarea, select")) {
+  if (nodeGraphEventTargetIsEditable(event.target)) {
     return;
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
