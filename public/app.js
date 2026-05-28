@@ -6161,6 +6161,9 @@ const nodeGraphDefaultPatch = Object.freeze({
     name: "Patch name",
     tags: "tags",
   },
+  visual: {
+    mode: "auto",
+  },
   grid: { ...nodeGraphGrid },
   nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node })),
   connections: nodeGraphDefaultConnections.map((connection) => ({ ...connection })),
@@ -6308,6 +6311,13 @@ function normalizeNodeGraphPatchInfo(info = {}) {
   };
 }
 
+function normalizeNodeGraphPatchVisual(visual = {}) {
+  const mode = String(visual.mode || "auto").trim();
+  return {
+    mode: ["auto", "stereo-xy", "mono-lag-xy"].includes(mode) ? mode : "auto",
+  };
+}
+
 function cloneNodeGraphParamMeta(paramMeta = {}) {
   return Object.fromEntries(
     Object.entries(paramMeta || {}).map(([key, metadata]) => [
@@ -6333,6 +6343,7 @@ function cloneNodeGraphPatch(patch) {
       paramMeta: cloneNodeGraphParamMeta(node.paramMeta),
       params: { ...(node.params || {}) },
     })),
+    visual: normalizeNodeGraphPatchVisual(patch.visual),
   };
 }
 
@@ -6474,6 +6485,7 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
       info: normalizeNodeGraphPatchInfo(patch.info),
       modulations: patch.modulations || [],
       nodes: patch.nodes,
+      visual: normalizeNodeGraphPatchVisual(patch.visual),
     },
     null,
     2,
@@ -6671,6 +6683,7 @@ function validateNodeGraphPatch(patch) {
     info: normalizeNodeGraphPatchInfo(patch.info),
     modulations,
     nodes,
+    visual: normalizeNodeGraphPatchVisual(patch.visual),
   };
 }
 
@@ -6728,6 +6741,7 @@ function syncNodeGraphSettingsView() {
   setNodeGraphSettingsField("patchAuthorValue", info.author);
   setNodeGraphSettingsField("patchTagsValue", info.tags);
   setNodeGraphSettingsField("patchDescriptionValue", info.description);
+  setNodeGraphSettingsField("patchVisualModeValue", normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual).mode);
 }
 
 function readNodeGraphSettingsView() {
@@ -6739,14 +6753,22 @@ function readNodeGraphSettingsView() {
   });
 }
 
+function readNodeGraphVisualSettingsView() {
+  return normalizeNodeGraphPatchVisual({
+    mode: document.getElementById("patchVisualModeValue")?.value,
+  });
+}
+
 function handleNodeGraphSettingsInput() {
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   patch.info = readNodeGraphSettingsView();
+  patch.visual = readNodeGraphVisualSettingsView();
   commitNodeGraphPatch(patch, {
     markPending: false,
     record: false,
     status: "settings synced",
   });
+  drawNodeRenderedVisualOutput();
 }
 
 function commitNodeGraphSettingsHistory() {
@@ -11916,7 +11938,10 @@ function drawNodeRenderedVisualOutput() {
   }
 
   const sourceSamples = leftSamples || samples;
-  const useStereo = Boolean(rightSamples?.length);
+  const visualSettings = normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual);
+  const useStereo = visualSettings.mode === "stereo-xy" ||
+    (visualSettings.mode === "auto" && Boolean(rightSamples?.length));
+  const visualMode = useStereo ? "stereo xy" : "mono lag xy";
   const lag = useStereo ? 0 : Math.max(1, Math.floor(nodeGraphMvp.sampleRate * 0.001));
   const firstFrame = useStereo ? 0 : lag;
   const step = Math.max(1, Math.floor(sourceSamples.length / 2600));
@@ -11954,7 +11979,8 @@ function drawNodeRenderedVisualOutput() {
   context.stroke();
 
   canvas.dataset.visualSource = "node graph rendered audio";
-  canvas.dataset.visualMode = useStereo ? "stereo xy" : "mono lag xy";
+  canvas.dataset.visualMode = visualMode;
+  canvas.dataset.visualModeSetting = visualSettings.mode;
   canvas.dataset.visualFrames = String(sourceSamples.length);
   canvas.dataset.visualPeak = formatCompactNumber(rendered.peak || 0);
   canvas.dataset.visualRms = formatCompactNumber(rendered.rms || 0);
@@ -11962,7 +11988,7 @@ function drawNodeRenderedVisualOutput() {
     `Node graph visual output / ${canvas.dataset.visualMode} / ` +
     `${sourceSamples.length} frames / peak ${canvas.dataset.visualPeak} / rms ${canvas.dataset.visualRms}`;
   if (status) {
-    status.textContent = canvas.dataset.visualMode;
+    status.textContent = visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode;
     status.className = "pill good";
   }
 }
@@ -12081,6 +12107,10 @@ function initNodeGraphMvp() {
     .getElementById("nodePatchScriptFileInput")
     .addEventListener("change", handleNodeGraphScriptFileLoad);
   for (const field of document.querySelectorAll("[data-patch-info-field]")) {
+    field.addEventListener("input", handleNodeGraphSettingsInput);
+    field.addEventListener("change", commitNodeGraphSettingsHistory);
+  }
+  for (const field of document.querySelectorAll("[data-patch-visual-field]")) {
     field.addEventListener("input", handleNodeGraphSettingsInput);
     field.addEventListener("change", commitNodeGraphSettingsHistory);
   }
