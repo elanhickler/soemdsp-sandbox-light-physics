@@ -6154,6 +6154,7 @@ const nodeGraphDefaultConnections = Object.freeze([
 ]);
 
 const nodeGraphDefaultPatch = Object.freeze({
+  bypassedNodes: [],
   info: {
     author: "",
     description: "",
@@ -6321,6 +6322,7 @@ function cloneNodeGraphParamMeta(paramMeta = {}) {
 
 function cloneNodeGraphPatch(patch) {
   return {
+    bypassedNodes: Array.isArray(patch.bypassedNodes) ? [...patch.bypassedNodes] : [],
     connections: (patch.connections || []).map((connection) => ({ ...connection })),
     format: { ...(patch.format || nodeGraphPatchFormat) },
     grid: { sizePx: Number(patch.grid?.sizePx) || nodeGraphGrid.sizePx },
@@ -6432,6 +6434,14 @@ function nodeGraphPatchNodeType(id) {
   return nodeGraphPatchNode(id)?.type || id;
 }
 
+function nodeGraphBypassedNodeIds(patch = nodeGraphMvp.patch) {
+  return new Set(Array.isArray(patch.bypassedNodes) ? patch.bypassedNodes : []);
+}
+
+function nodeGraphNodeIsBypassed(nodeId, patch = nodeGraphMvp.patch) {
+  return nodeGraphBypassedNodeIds(patch).has(nodeId);
+}
+
 function nextNodeGraphTypeCounts(nodes = nodeGraphMvp.patch.nodes) {
   const counts = {};
   for (const node of nodes) {
@@ -6457,6 +6467,7 @@ function syncNodeGraphRuntimeFromPatch() {
 function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
   return JSON.stringify(
     {
+      bypassedNodes: patch.bypassedNodes || [],
       connections: patch.connections,
       format: { ...nodeGraphPatchFormat },
       grid: patch.grid,
@@ -6574,6 +6585,28 @@ function validateNodeGraphPatch(patch) {
     throw new Error("output node missing");
   }
 
+  const bypassedNodes = [];
+  const bypassedNodeIds = new Set();
+  if (patch.bypassedNodes !== undefined && !Array.isArray(patch.bypassedNodes)) {
+    throw new Error("bypassedNodes must be an array");
+  }
+  for (const value of patch.bypassedNodes || []) {
+    const id = String(value || "").trim();
+    if (!id) {
+      throw new Error("bypassedNodes entry missing node id");
+    }
+    if (!ids.has(id)) {
+      throw new Error(`bypassed node missing: ${id}`);
+    }
+    if (id === "output") {
+      throw new Error("output module cannot be bypassed");
+    }
+    if (!bypassedNodeIds.has(id)) {
+      bypassedNodeIds.add(id);
+      bypassedNodes.push(id);
+    }
+  }
+
   const connectionKeys = new Set();
   const connections = Array.isArray(patch.connections) ? patch.connections.map((connection) => {
     const sourceNode = String(connection.sourceNode || "").trim();
@@ -6631,6 +6664,7 @@ function validateNodeGraphPatch(patch) {
   }) : [];
 
   return {
+    bypassedNodes,
     connections,
     format: { ...nodeGraphPatchFormat },
     grid: { sizePx: gridSize },
@@ -6779,6 +6813,16 @@ function applyNodeGraphPatchToDom() {
     positionNodeGraphNode(element, point, { clamp: false, snap: false });
     element.dataset.gridX = String(patchNode.gx);
     element.dataset.gridY = String(patchNode.gy);
+    const bypassed = nodeGraphNodeIsBypassed(patchNode.id);
+    element.classList.toggle("bypassed", bypassed);
+    const bypassButton = element.querySelector(".node-bypass-button");
+    if (bypassButton) {
+      bypassButton.setAttribute("aria-pressed", bypassed ? "true" : "false");
+      bypassButton.textContent = bypassed ? "Bypassed" : "Bypass";
+      bypassButton.title = bypassed
+        ? "Click to include this module in the compiled engine"
+        : "Click to bypass this module";
+    }
     for (const parameter of nodeGraphModuleDefinitions[patchNode.type]?.parameters || []) {
       const input = element.querySelector(`input[data-param="${CSS.escape(parameter.key)}"]`);
       if (!input) {
@@ -8082,6 +8126,7 @@ function ensureNodeGraphDragHandle(node) {
 function attachNodeGraphNodeEvents(node) {
   ensureNodeGraphDragHandle(node);
   node.querySelector(".node-drag-handle")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
+  node.querySelector(".node-bypass-button")?.addEventListener("click", toggleNodeGraphModuleBypass);
   node.querySelector(".node-action-button")?.addEventListener("click", openNodeModuleActionMenu);
   node.addEventListener("pointermove", dragNodeGraphNode);
   node.addEventListener("pointerup", endNodeGraphNodeDrag);
@@ -8217,6 +8262,17 @@ function createNodeGraphModuleElement(type, node) {
   const titleText = document.createElement("span");
   titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
   header.append(titleText);
+  if (!definition.output) {
+    const bypassButton = document.createElement("button");
+    bypassButton.className = "node-bypass-button";
+    bypassButton.type = "button";
+    bypassButton.dataset.node = node;
+    bypassButton.textContent = "Bypass";
+    bypassButton.setAttribute("aria-label", `Bypass ${nodeGraphNodeLabels[type]} module`);
+    bypassButton.setAttribute("aria-pressed", "false");
+    bypassButton.setAttribute("title", "Click to bypass this module");
+    header.append(bypassButton);
+  }
   const actionButton = document.createElement("button");
   actionButton.className = "node-action-button";
   actionButton.type = "button";
@@ -8279,6 +8335,7 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
   const issues = [];
   const nodeList = Array.isArray(patch.nodes) ? patch.nodes.map((node) => ({ ...node })) : [];
   const nodeMap = new Map(nodeList.map((node) => [node.id, node]));
+  const bypassedNodes = nodeGraphBypassedNodeIds(patch);
   const dependencies = new Map(nodeList.map((node) => [node.id, new Set()]));
   const inputConnections = new Map();
   const modulationConnections = new Map();
@@ -8313,6 +8370,9 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
       issues.push(`connection destination port invalid: ${connection.destinationNode}.${connection.destinationPort}`);
       continue;
     }
+    if (bypassedNodes.has(connection.sourceNode) || bypassedNodes.has(connection.destinationNode)) {
+      continue;
+    }
     const key = nodeGraphInputKey(connection.destinationNode, connection.destinationPort);
     const connections = inputConnections.get(key) || [];
     connections.push({ ...connection });
@@ -8337,6 +8397,9 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
       issues.push(`modulation destination parameter invalid: ${modulation.destinationNode}.${modulation.destinationParam}`);
       continue;
     }
+    if (bypassedNodes.has(modulation.sourceNode) || bypassedNodes.has(modulation.destinationNode)) {
+      continue;
+    }
     const key = nodeGraphParameterKey(modulation.destinationNode, modulation.destinationParam);
     const modulations = modulationConnections.get(key) || [];
     modulations.push({ ...modulation });
@@ -8345,6 +8408,7 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
   }
 
   return {
+    bypassedNodes: [...bypassedNodes],
     connections: (patch.connections || []).map((connection) => ({ ...connection })),
     dependencies,
     inputConnections,
@@ -8568,6 +8632,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   return {
     connections: graph.connections,
     dependencies: graph.dependencies,
+    bypassedNodes: graph.bypassedNodes,
     feedbackConnections: scheduling.feedbackConnections,
     feedbackModulations: scheduling.feedbackModulations,
     inactiveNodes,
@@ -8631,6 +8696,15 @@ function nodeGraphActiveNodeIds(plan) {
   return new Set(plan.reachableNodes || plan.order || []);
 }
 
+function nodeGraphPlanBypassedNodeIds(plan) {
+  return new Set(plan.bypassedNodes || []);
+}
+
+function nodeGraphWireTouchesBypassed(wire, plan) {
+  const bypassedNodeIds = nodeGraphPlanBypassedNodeIds(plan);
+  return bypassedNodeIds.has(wire.sourceNode) || bypassedNodeIds.has(wire.destinationNode);
+}
+
 function nodeGraphSignalConnectionIsActive(connection, activeNodeIds) {
   return activeNodeIds.has(connection.sourceNode) && activeNodeIds.has(connection.destinationNode);
 }
@@ -8660,12 +8734,14 @@ function nodeGraphInactiveWireReads(plan) {
       .filter((modulation) => !nodeGraphModulationIsActive(modulation, activeNodeIds))
       .map((modulation) => ({
         destination: `${modulation.destinationNode}.${modulation.destinationParam}`,
+        reason: nodeGraphWireTouchesBypassed(modulation, plan) ? "bypassed" : "inactive",
         source: `${modulation.sourceNode}.${modulation.sourcePort}`,
       })),
     signals: (plan.connections || [])
       .filter((connection) => !nodeGraphSignalConnectionIsActive(connection, activeNodeIds))
       .map((connection) => ({
         destination: `${connection.destinationNode}.${connection.destinationPort}`,
+        reason: nodeGraphWireTouchesBypassed(connection, plan) ? "bypassed" : "inactive",
         source: `${connection.sourceNode}.${connection.sourcePort}`,
       })),
   };
@@ -8702,6 +8778,10 @@ function nodeGraphStateReadText(count) {
 function nodeGraphActiveNodeText(plan) {
   const patchNodeCount = plan.nodes?.length || 0;
   const activeNodeCount = plan.reachableNodes?.length || 0;
+  const bypassedCount = plan.bypassedNodes?.length || 0;
+  if (bypassedCount) {
+    return `${activeNodeCount}/${patchNodeCount} active / ${bypassedCount} bypassed`;
+  }
   return patchNodeCount > activeNodeCount
     ? `${activeNodeCount}/${patchNodeCount} active`
     : "";
@@ -8837,6 +8917,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
     {
       activeNodeCount: plan.reachableNodes?.length || 0,
       activeWireCount: nodeGraphActiveWireCount(plan),
+      bypassedNodes: plan.bypassedNodes || [],
       currentPatchFingerprint: nodeGraphPatchFingerprint(),
       executionModel: "single-pass stored-output",
       feedbackModulations: plan.feedbackModulations.map((modulation) =>
@@ -8874,6 +8955,7 @@ function serializeNodeGraphExecutionPlanApiDebug(plan) {
   return {
     activeNodeCount: plan.reachableNodes?.length || 0,
     activeWireCount: nodeGraphActiveWireCount(plan),
+    bypassedNodes: [...(plan.bypassedNodes || [])],
     currentPatchFingerprint: nodeGraphPatchFingerprint(),
     feedbackModulations: plan.feedbackModulations.map((modulation) =>
       `${modulation.sourceNode}.${modulation.sourcePort} -> ${modulation.destinationNode}.${modulation.destinationParam}`,
@@ -9288,7 +9370,8 @@ function drawNodeGraphWires() {
     );
     const isFeedback = feedbackSets.signal.has(nodeGraphSignalWireIdentity(connection));
     const isInactive = !nodeGraphSignalConnectionIsActive(connection, activeNodeIds);
-    const mode = isInactive ? "inactive" : isFeedback ? "state-read" : "same-pass";
+    const isBypassed = nodeGraphWireTouchesBypassed(connection, plan);
+    const mode = isBypassed ? "bypassed" : isInactive ? "inactive" : isFeedback ? "state-read" : "same-pass";
     drawNodeGraphWirePath(svg, {
       alias: `${nodeGraphLabel(connection.sourceNode, connection.sourcePort)} -> ${nodeGraphLabel(
         connection.destinationNode,
@@ -9326,7 +9409,8 @@ function drawNodeGraphWires() {
     );
     const isFeedback = feedbackSets.modulation.has(nodeGraphModulationWireIdentity(modulation));
     const isInactive = !nodeGraphModulationIsActive(modulation, activeNodeIds);
-    const mode = isInactive ? "inactive" : isFeedback ? "state-read" : "same-pass";
+    const isBypassed = nodeGraphWireTouchesBypassed(modulation, plan);
+    const mode = isBypassed ? "bypassed" : isInactive ? "inactive" : isFeedback ? "state-read" : "same-pass";
     drawNodeGraphWirePath(svg, {
       alias: `${nodeGraphLabel(modulation.sourceNode, modulation.sourcePort)} -> ${nodeGraphNodeDisplayName(
         modulation.destinationNode,
@@ -9411,10 +9495,11 @@ function renderNodeGraphConnectionList() {
     const label = document.createElement("span");
     const isFeedback = feedbackSets.signal.has(nodeGraphSignalWireIdentity(connection));
     const isInactive = !nodeGraphSignalConnectionIsActive(connection, activeNodeIds);
+    const isBypassed = nodeGraphWireTouchesBypassed(connection, plan);
     label.textContent = `${nodeGraphLabel(connection.sourceNode, connection.sourcePort)} -> ${nodeGraphLabel(
       connection.destinationNode,
       connection.destinationPort,
-    )}${isFeedback ? " (state read)" : ""}${isInactive ? " (inactive)" : ""}`;
+    )}${isFeedback ? " (state read)" : ""}${isBypassed ? " (bypassed)" : isInactive ? " (inactive)" : ""}`;
     item.classList.toggle("state-read", isFeedback);
     item.classList.toggle("inactive-wire", isInactive);
     const button = document.createElement("button");
@@ -9452,9 +9537,10 @@ function renderNodeGraphConnectionList() {
     const label = document.createElement("span");
     const isFeedback = feedbackSets.modulation.has(nodeGraphModulationWireIdentity(modulation));
     const isInactive = !nodeGraphModulationIsActive(modulation, activeNodeIds);
+    const isBypassed = nodeGraphWireTouchesBypassed(modulation, plan);
     label.textContent = `${nodeGraphLabel(modulation.sourceNode, modulation.sourcePort)} -> ${nodeGraphNodeDisplayName(
       modulation.destinationNode,
-    )}.${modulation.destinationParam} mod${isFeedback ? " (state read)" : ""}${isInactive ? " (inactive)" : ""}`;
+    )}.${modulation.destinationParam} mod${isFeedback ? " (state read)" : ""}${isBypassed ? " (bypassed)" : isInactive ? " (inactive)" : ""}`;
     item.classList.toggle("state-read", isFeedback);
     item.classList.toggle("inactive-wire", isInactive);
     const button = document.createElement("button");
@@ -9515,6 +9601,33 @@ function disconnectNodeGraphConnection(index, kind = "signal") {
     setNodeGraphSelection({ ...selection, index: selection.index - 1 });
   }
   commitNodeGraphPatch(patch, { status: "wire disconnected" });
+}
+
+function toggleNodeGraphModuleBypass(event) {
+  if (!nodeGraphScriptReadyForGraphAction("bypass")) {
+    return;
+  }
+  const button = event.currentTarget;
+  const node = button.closest(".dsp-node");
+  const nodeId = node?.dataset.node;
+  if (!nodeId || nodeId === "output" || !nodeGraphMvp.activeNodes.has(nodeId)) {
+    return;
+  }
+
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const bypassed = new Set(patch.bypassedNodes || []);
+  if (bypassed.has(nodeId)) {
+    bypassed.delete(nodeId);
+  } else {
+    bypassed.add(nodeId);
+  }
+  patch.bypassedNodes = [...bypassed];
+  setNodeGraphSelection({ type: "node", id: nodeId });
+  commitNodeGraphPatch(patch, {
+    status: bypassed.has(nodeId) ? "module bypassed" : "module active",
+  });
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 function connectNodeGraphPorts(sourceNode, sourcePort, destinationNode, destinationPort) {
@@ -10221,6 +10334,7 @@ function deleteSelectedNodeGraphItem() {
   if (selectedNodeIds.size) {
     const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
     patch.nodes = patch.nodes.filter((node) => !selectedNodeIds.has(node.id));
+    patch.bypassedNodes = patch.bypassedNodes.filter((nodeId) => !selectedNodeIds.has(nodeId));
     patch.connections = patch.connections.filter(
       (connection) =>
         !selectedNodeIds.has(connection.sourceNode) &&
@@ -10291,6 +10405,9 @@ function nodeInteractionMouseHint(element) {
   }
   if (element.classList.contains("node-action-button")) {
     return "Mouse: click to open module actions.";
+  }
+  if (element.classList.contains("node-bypass-button")) {
+    return "Mouse: click to bypass this module. Bypassed modules are removed from the compiled engine.";
   }
   if (element.classList.contains("node-slider-readout")) {
     return "Mouse: drag adjusts, double-click types, right-click edits metadata.";

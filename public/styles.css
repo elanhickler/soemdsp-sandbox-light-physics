@@ -436,6 +436,20 @@ audio {
   box-shadow: 0 0 0 1px rgba(226, 168, 109, 0.45), 0 14px 30px rgba(0, 0, 0, 0.32);
 }
 
+.dsp-node.bypassed {
+  outline-color: rgba(160, 167, 176, 0.48);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(243, 241, 236, 0.035) 0,
+      rgba(243, 241, 236, 0.035) 6px,
+      transparent 6px,
+      transparent 12px
+    ),
+    rgba(27, 30, 34, 0.72);
+  opacity: 0.72;
+}
+
 .dsp-node.removed {
   display: none;
 }
@@ -472,7 +486,8 @@ audio {
 }
 
 .node-drag-handle,
-.node-action-button {
+.node-action-button,
+.node-bypass-button {
   width: 20px;
   min-width: 20px;
   height: 20px;
@@ -486,6 +501,21 @@ audio {
   line-height: 1;
 }
 
+.node-bypass-button {
+  width: auto;
+  min-width: 48px;
+  padding: 0 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.64rem;
+}
+
+.node-bypass-button[aria-pressed="true"] {
+  border-color: rgba(226, 168, 109, 0.54);
+  background: rgba(226, 168, 109, 0.13);
+  color: var(--accent-2);
+}
+
 .node-action-button {
   margin-left: auto;
   cursor: pointer;
@@ -493,6 +523,7 @@ audio {
 
 .node-drag-handle:active,
 .node-drag-handle.dragging,
+.node-bypass-button:active,
 .node-action-button:active {
   color: var(--accent-2);
 }
