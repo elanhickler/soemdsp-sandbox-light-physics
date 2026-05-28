@@ -8354,6 +8354,9 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     const type = graph.nodeMap.get(nodeId)?.type;
     return type === "osc" || type === "noise";
   });
+  const inactiveNodes = graph.nodes
+    .filter((node) => !reachableNodes.has(node.id))
+    .map((node) => node.id);
 
   const uniqueIssues = [...new Set(issues)];
 
@@ -8362,6 +8365,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     dependencies: graph.dependencies,
     feedbackConnections: scheduling.feedbackConnections,
     feedbackModulations: scheduling.feedbackModulations,
+    inactiveNodes,
     inputConnections: graph.inputConnections,
     issues: uniqueIssues,
     modulationConnections: graph.modulationConnections,
@@ -8371,6 +8375,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     orderDependencies: scheduling.orderDependencies,
     order,
     outputNode,
+    reachableNodes: [...reachableNodes],
     sourceNodes,
     valid: uniqueIssues.length === 0,
   };
@@ -8517,6 +8522,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
 
   return JSON.stringify(
     {
+      activeNodeCount: plan.reachableNodes?.length || 0,
       executionModel: "single-pass stored-output",
       feedbackModulations: plan.feedbackModulations.map((modulation) =>
         `${modulation.sourceNode}.${modulation.sourcePort} -> ${modulation.destinationNode}.${modulation.destinationParam}`,
@@ -8524,10 +8530,12 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       feedbackSignals: plan.feedbackConnections.map((connection) =>
         `${connection.sourceNode}.${connection.sourcePort} -> ${connection.destinationNode}.${connection.destinationPort}`,
       ),
+      inactiveNodes: plan.inactiveNodes || [],
       issues: plan.issues,
       modulationInputs,
       order: plan.valid ? plan.order : [],
       outputNode: plan.outputNode,
+      patchNodeCount: plan.nodes?.length || 0,
       parameters: nodeGraphExecutionParameterSnapshot(plan),
       partialOrder: plan.valid ? [] : plan.order,
       schedulerPolicy: "same-pass acyclic edges; cycle-closing edges read stored outputs",
