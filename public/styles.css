@@ -495,10 +495,11 @@ audio {
 
 .node-header-actions {
   display: grid;
-  align-items: stretch;
-  grid-auto-columns: minmax(0, 1fr);
+  align-items: center;
+  grid-auto-columns: var(--node-header-button-size, 38px);
   grid-auto-flow: column;
   gap: 0;
+  justify-content: start;
 }
 
 .node-header-actions > * + * {
@@ -530,10 +531,10 @@ audio {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
+  width: var(--node-header-button-size, 38px);
+  min-width: var(--node-header-button-size, 38px);
+  height: var(--node-header-button-size, 38px);
+  min-height: var(--node-header-button-size, 38px);
   padding: 0;
   border: 1px solid rgba(113, 212, 155, 0.35);
   border-radius: 4px;
@@ -560,10 +561,10 @@ audio {
 .node-drag-handle,
 .node-action-button,
 .node-bypass-button {
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
+  width: var(--node-header-button-size, 38px);
+  min-width: var(--node-header-button-size, 38px);
+  height: var(--node-header-button-size, 38px);
+  min-height: var(--node-header-button-size, 38px);
   padding: 0;
   border-color: rgba(243, 241, 236, 0.2);
   border-radius: 4px;
