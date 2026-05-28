@@ -8494,6 +8494,13 @@ function nodeGraphExecutionParameterSnapshot(plan) {
 }
 
 function serializeNodeGraphExecutionPlanDebug(plan) {
+  const samePassDependencies = {};
+  for (const [nodeId, dependencies] of plan.orderDependencies.entries()) {
+    if (dependencies.size) {
+      samePassDependencies[nodeId] = [...dependencies];
+    }
+  }
+
   const signalInputs = {};
   for (const [key, connections] of plan.inputConnections.entries()) {
     signalInputs[key] = connections.map((connection) =>
@@ -8523,8 +8530,11 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       outputNode: plan.outputNode,
       parameters: nodeGraphExecutionParameterSnapshot(plan),
       partialOrder: plan.valid ? [] : plan.order,
+      schedulerPolicy: "same-pass acyclic edges; cycle-closing edges read stored outputs",
+      samePassDependencies,
       signalInputs,
       sourceNodes: plan.sourceNodes,
+      stateReadCount: nodeGraphStateReadCount(plan),
       storedOutputInitialValue: 0,
       valid: plan.valid,
       wireReads: nodeGraphExecutionWireReads(plan),
