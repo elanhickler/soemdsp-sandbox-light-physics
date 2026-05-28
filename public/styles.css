@@ -961,6 +961,26 @@ audio {
   background: var(--bad-bg);
 }
 
+.node-execution-plan-heading {
+  margin-top: 14px;
+}
+
+.node-execution-plan-debug {
+  min-height: 150px;
+  max-height: 260px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #101214;
+  color: rgba(243, 241, 236, 0.86);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .disconnect-wire-button {
   min-height: 30px;
   padding: 0 10px;

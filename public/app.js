@@ -7838,6 +7838,47 @@ function nodeGraphValidate() {
   };
 }
 
+function serializeNodeGraphExecutionPlanDebug(plan) {
+  const signalInputs = {};
+  for (const [key, connections] of plan.inputConnections.entries()) {
+    signalInputs[key] = connections.map((connection) =>
+      `${connection.sourceNode}.${connection.sourcePort}`,
+    );
+  }
+
+  const modulationInputs = {};
+  for (const [key, modulations] of plan.modulationConnections.entries()) {
+    modulationInputs[key] = modulations.map((modulation) =>
+      `${modulation.sourceNode}.${modulation.sourcePort}`,
+    );
+  }
+
+  return JSON.stringify(
+    {
+      issues: plan.issues,
+      modulationInputs,
+      order: plan.order,
+      outputNode: plan.outputNode,
+      signalInputs,
+      sourceNodes: plan.sourceNodes,
+      valid: plan.valid,
+    },
+    null,
+    2,
+  );
+}
+
+function renderNodeGraphExecutionPlanDebug(plan = compileNodeGraphExecutionPlan()) {
+  const status = document.getElementById("nodeExecutionPlanStatus");
+  const debug = document.getElementById("nodeExecutionPlanDebug");
+  if (!status || !debug) {
+    return;
+  }
+  status.textContent = plan.valid ? "compiled" : "blocked";
+  status.className = `pill ${plan.valid ? "good" : "warn"}`;
+  debug.textContent = serializeNodeGraphExecutionPlanDebug(plan);
+}
+
 function nodeGraphPortSelector(node, port, io) {
   return `.node-port.${io}[data-node="${CSS.escape(node)}"][data-port="${CSS.escape(port)}"]`;
 }
@@ -8163,7 +8204,13 @@ function drawNodeGraphWires() {
 }
 
 function renderNodeGraphConnectionList() {
-  const validation = nodeGraphValidate();
+  const plan = compileNodeGraphExecutionPlan();
+  const validation = {
+    issues: plan.issues,
+    scheduleText: nodeGraphScheduleText(plan.order, plan.issues),
+    sourceNodes: plan.sourceNodes,
+    valid: plan.valid,
+  };
   const list = document.getElementById("nodeConnectionList");
   const status = document.getElementById("nodeGraphStatus");
   const source = document.getElementById("nodeGraphSource");
@@ -8254,6 +8301,7 @@ function renderNodeGraphConnectionList() {
   validationPill.className = `pill ${validation.valid ? "good" : "warn"}`;
 
   document.getElementById("nodeRenderButton").disabled = !validation.valid;
+  renderNodeGraphExecutionPlanDebug(plan);
   drawNodeGraphWires();
 }
 
