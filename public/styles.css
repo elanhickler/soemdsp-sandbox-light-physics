@@ -485,6 +485,35 @@ audio {
   font-weight: 650;
 }
 
+.node-execution-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid rgba(113, 212, 155, 0.35);
+  border-radius: 999px;
+  background: rgba(113, 212, 155, 0.08);
+  color: var(--good);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.node-execution-order-badge[data-execution-state="bypassed"] {
+  border-color: rgba(226, 168, 109, 0.42);
+  background: rgba(226, 168, 109, 0.1);
+  color: var(--accent-2);
+}
+
+.node-execution-order-badge[data-execution-state="inactive"] {
+  border-color: rgba(243, 241, 236, 0.14);
+  background: rgba(243, 241, 236, 0.045);
+  color: var(--muted);
+}
+
 .node-drag-handle,
 .node-action-button,
 .node-bypass-button {

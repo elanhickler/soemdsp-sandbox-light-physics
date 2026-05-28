@@ -8262,6 +8262,13 @@ function createNodeGraphModuleElement(type, node) {
   const titleText = document.createElement("span");
   titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
   header.append(titleText);
+  const orderBadge = document.createElement("span");
+  orderBadge.className = "node-execution-order-badge";
+  orderBadge.dataset.executionState = "inactive";
+  orderBadge.textContent = "--";
+  orderBadge.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} execution order inactive`);
+  orderBadge.setAttribute("title", "Not in compiled execution order");
+  header.append(orderBadge);
   if (!definition.output) {
     const bypassButton = document.createElement("button");
     bypassButton.className = "node-bypass-button";
@@ -9041,7 +9048,37 @@ function renderNodeGraphExecutionPlanDebug(plan = compileNodeGraphExecutionPlan(
     : plan.issues.join(", ");
   status.className = `pill ${plan.valid ? "good" : "warn"}`;
   renderNodeGraphExecutionPlanSummary(plan);
+  renderNodeGraphExecutionOrderBadges(plan);
   debug.textContent = serializeNodeGraphExecutionPlanDebug(plan);
+}
+
+function renderNodeGraphExecutionOrderBadges(plan) {
+  const orderIndex = new Map((plan.order || []).map((nodeId, index) => [nodeId, index + 1]));
+  const bypassedNodes = nodeGraphPlanBypassedNodeIds(plan);
+  for (const node of document.querySelectorAll(".dsp-node")) {
+    const badge = node.querySelector(".node-execution-order-badge");
+    if (!badge) {
+      continue;
+    }
+    const nodeId = node.dataset.node;
+    const order = orderIndex.get(nodeId);
+    if (order) {
+      badge.textContent = String(order);
+      badge.dataset.executionState = "active";
+      badge.setAttribute("aria-label", `${nodeGraphNodeDisplayName(nodeId)} compiled order ${order}`);
+      badge.setAttribute("title", `Compiled order ${order}`);
+    } else if (bypassedNodes.has(nodeId)) {
+      badge.textContent = "off";
+      badge.dataset.executionState = "bypassed";
+      badge.setAttribute("aria-label", `${nodeGraphNodeDisplayName(nodeId)} bypassed`);
+      badge.setAttribute("title", "Bypassed: removed from compiled engine");
+    } else {
+      badge.textContent = "--";
+      badge.dataset.executionState = "inactive";
+      badge.setAttribute("aria-label", `${nodeGraphNodeDisplayName(nodeId)} inactive`);
+      badge.setAttribute("title", "Inactive: not reachable from Output");
+    }
+  }
 }
 
 function renderNodeGraphExecutionPlanSummary(plan) {
