@@ -9485,6 +9485,29 @@ function setNodeGraphLiveEngineStatus(text = "engine idle", state = "") {
   status.className = `pill ${state}`.trim();
 }
 
+function setNodeGraphLiveEngineTitle(text = "") {
+  const status = document.getElementById("nodeLiveEngineStatus");
+  if (!status) {
+    return;
+  }
+  if (text) {
+    status.title = text;
+  } else {
+    status.removeAttribute("title");
+  }
+}
+
+function setNodeGraphLiveProcessorError(message = "AudioWorklet processor error") {
+  nodeGraphMvp.live.runtime = null;
+  setNodeGraphLiveStatus("error", "warn");
+  setNodeGraphLiveEngineStatus("engine error", "warn");
+  setNodeGraphLiveEngineTitle(message);
+  setNodeGraphLiveMeter();
+  setNodeGraphLiveRouteStatus(`processor error: ${message}`, "warn");
+  document.getElementById("nodeLiveStatus").title = message;
+  renderNodeGraphLiveControls(Boolean(nodeGraphMvp.live.node));
+}
+
 function setNodeGraphLiveMeter(peak = 0, rms = 0) {
   const meter = document.getElementById("nodeLiveMeter");
   if (!meter) {
@@ -9990,6 +10013,7 @@ async function stopNodeGraphLiveAudio() {
   }
   setNodeGraphLiveStatus("stopped");
   setNodeGraphLiveEngineStatus();
+  setNodeGraphLiveEngineTitle();
   setNodeGraphLiveMeter();
   setNodeGraphLiveRouteStatus("route stopped");
   document.getElementById("nodeLiveStatus").removeAttribute("title");
@@ -10011,6 +10035,9 @@ async function createNodeGraphLiveWorkletNode(context) {
     },
   );
   workletNode.port.onmessage = handleNodeGraphLiveWorkletMessage;
+  workletNode.onprocessorerror = () => {
+    setNodeGraphLiveProcessorError("AudioWorklet processor crashed");
+  };
   return workletNode;
 }
 
@@ -10051,7 +10078,7 @@ async function startNodeGraphLiveAudio() {
     } catch (error) {
       liveNode = createNodeGraphLiveScriptProcessorNode(context, plan);
       setNodeGraphLiveEngineStatus("engine fallback", "warn");
-      document.getElementById("nodeLiveEngineStatus").title = error.message;
+      setNodeGraphLiveEngineTitle(error.message);
     }
     nodeGraphMvp.live.context = context;
     nodeGraphMvp.live.meterGain = null;
@@ -10063,7 +10090,7 @@ async function startNodeGraphLiveAudio() {
     sendNodeGraphLivePlan();
     if (usesWorklet) {
       setNodeGraphLiveEngineStatus("engine worklet", "good");
-      document.getElementById("nodeLiveEngineStatus").removeAttribute("title");
+      setNodeGraphLiveEngineTitle();
     }
     await context.resume();
     document.getElementById("nodeLiveStatus").removeAttribute("title");
