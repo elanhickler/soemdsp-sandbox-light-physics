@@ -7633,100 +7633,205 @@ function nodeGraphFindInputConnections(node, port) {
   );
 }
 
-function nodeGraphValidate() {
+function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
   const issues = [];
-  const route = [];
-  const sourceNodes = new Set();
+  const nodeList = Array.isArray(patch.nodes) ? patch.nodes.map((node) => ({ ...node })) : [];
+  const nodeMap = new Map(nodeList.map((node) => [node.id, node]));
+  const dependencies = new Map(nodeList.map((node) => [node.id, new Set()]));
+  const inputConnections = new Map();
+  const modulationConnections = new Map();
+
+  function addDependency(destinationNode, sourceNode) {
+    if (!dependencies.has(destinationNode)) {
+      dependencies.set(destinationNode, new Set());
+    }
+    dependencies.get(destinationNode).add(sourceNode);
+  }
+
+  for (const node of nodeList) {
+    if (!nodeGraphModuleDefinitions[node.type]) {
+      issues.push(`unsupported source ${node.id}`);
+    }
+  }
+
+  for (const connection of patch.connections || []) {
+    const source = nodeMap.get(connection.sourceNode);
+    const destination = nodeMap.get(connection.destinationNode);
+    if (!source || !destination) {
+      issues.push("connection references missing node");
+      continue;
+    }
+    const sourceOutputs = nodeGraphModuleDefinitions[source.type]?.outputs || [];
+    const destinationInputs = nodeGraphModuleDefinitions[destination.type]?.inputs || [];
+    if (!sourceOutputs.includes(connection.sourcePort)) {
+      issues.push(`connection source port invalid: ${connection.sourceNode}.${connection.sourcePort}`);
+      continue;
+    }
+    if (!destinationInputs.includes(connection.destinationPort)) {
+      issues.push(`connection destination port invalid: ${connection.destinationNode}.${connection.destinationPort}`);
+      continue;
+    }
+    const key = nodeGraphInputKey(connection.destinationNode, connection.destinationPort);
+    const connections = inputConnections.get(key) || [];
+    connections.push({ ...connection });
+    inputConnections.set(key, connections);
+    addDependency(connection.destinationNode, connection.sourceNode);
+  }
+
+  for (const modulation of patch.modulations || []) {
+    const source = nodeMap.get(modulation.sourceNode);
+    const destination = nodeMap.get(modulation.destinationNode);
+    if (!source || !destination) {
+      issues.push("modulation references missing node");
+      continue;
+    }
+    const sourceOutputs = nodeGraphModuleDefinitions[source.type]?.outputs || [];
+    const destinationParameters = nodeGraphModuleDefinitions[destination.type]?.parameters || [];
+    if (!sourceOutputs.includes(modulation.sourcePort)) {
+      issues.push(`modulation source port invalid: ${modulation.sourceNode}.${modulation.sourcePort}`);
+      continue;
+    }
+    if (!destinationParameters.some((parameter) => parameter.key === modulation.destinationParam)) {
+      issues.push(`modulation destination parameter invalid: ${modulation.destinationNode}.${modulation.destinationParam}`);
+      continue;
+    }
+    const key = nodeGraphParameterKey(modulation.destinationNode, modulation.destinationParam);
+    const modulations = modulationConnections.get(key) || [];
+    modulations.push({ ...modulation });
+    modulationConnections.set(key, modulations);
+    addDependency(modulation.destinationNode, modulation.sourceNode);
+  }
+
+  return {
+    dependencies,
+    inputConnections,
+    issues,
+    modulationConnections,
+    nodeMap,
+    nodes: nodeList,
+  };
+}
+
+function nodeGraphTopologicalOrder(nodes, dependencies, reachableNodes) {
+  const issues = [];
+  const order = [];
   const visiting = new Set();
   const visited = new Set();
 
-  function inputConnections(node, port) {
-    return nodeGraphFindInputConnections(node, port);
-  }
-
-  function hasAnyOutputInputConnection() {
-    return nodeGraphOutputInputPorts.some((port) => inputConnections("output", port).length > 0);
-  }
-
-  function resolveInput(node, port) {
-    const connections = inputConnections(node, port);
-    if (connections.length === 0) {
-      issues.push(
-        nodeGraphNodeType(node) === "output"
-          ? "missing Output input"
-          : `missing ${nodeGraphNodeDisplayName(node)} input`,
-      );
-      return false;
+  function visit(nodeId) {
+    if (!reachableNodes.has(nodeId)) {
+      return;
     }
-    let resolved = true;
-    for (const connection of connections) {
-      resolved = resolveNode(connection.sourceNode) && resolved;
+    if (visiting.has(nodeId)) {
+      issues.push(`cycle detected at ${nodeGraphNodeDisplayName(nodeId)}`);
+      return;
     }
-    return resolved;
+    if (visited.has(nodeId)) {
+      return;
+    }
+
+    visiting.add(nodeId);
+    for (const dependency of dependencies.get(nodeId) || []) {
+      visit(dependency);
+    }
+    visiting.delete(nodeId);
+    visited.add(nodeId);
+    if (!order.includes(nodeId)) {
+      order.push(nodeId);
+    }
   }
 
-  function resolveNode(node) {
-    const type = nodeGraphNodeType(node);
-    if (type === "osc" || type === "noise") {
-      sourceNodes.add(node);
-      if (!route.includes(node)) {
-        route.push(node);
+  for (const node of nodes) {
+    visit(node.id);
+  }
+
+  return { issues, order };
+}
+
+function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
+  const graph = nodeGraphBuildDependencyMap(patch);
+  const issues = [...graph.issues];
+  const outputNode = "output";
+  const reachableNodes = new Set();
+
+  function markReachable(nodeId) {
+    if (reachableNodes.has(nodeId) || !graph.nodeMap.has(nodeId)) {
+      return;
+    }
+    reachableNodes.add(nodeId);
+    for (const dependency of graph.dependencies.get(nodeId) || []) {
+      markReachable(dependency);
+    }
+  }
+
+  if (!graph.nodeMap.has(outputNode)) {
+    issues.push("output node missing");
+  } else {
+    markReachable(outputNode);
+  }
+
+  const hasOutputSpeakerInput = nodeGraphOutputInputPorts.some(
+    (port) => (graph.inputConnections.get(nodeGraphInputKey(outputNode, port)) || []).length > 0,
+  );
+  if (!hasOutputSpeakerInput) {
+    issues.push("missing Output speaker input");
+  }
+
+  for (const nodeId of reachableNodes) {
+    const type = graph.nodeMap.get(nodeId)?.type;
+    if (type === "gain" || type === "bias") {
+      const inputCount = (graph.inputConnections.get(nodeGraphInputKey(nodeId, "In")) || []).length;
+      if (!inputCount) {
+        issues.push(`missing ${nodeGraphNodeDisplayName(nodeId)} input`);
       }
-      return true;
+    } else if (type !== "osc" && type !== "noise" && type !== "output") {
+      issues.push(`unsupported source ${nodeId}`);
     }
-    if (type !== "gain" && type !== "bias" && type !== "output") {
-      issues.push(`unsupported source ${node}`);
-      return false;
-    }
-    if (visiting.has(node)) {
-      issues.push(`cycle detected at ${nodeGraphNodeDisplayName(node)}`);
-      return false;
-    }
-    if (visited.has(node)) {
-      return true;
-    }
-
-    visiting.add(node);
-    let resolved = true;
-    if (type === "output") {
-      if (!hasAnyOutputInputConnection()) {
-        issues.push("missing Output speaker input");
-        resolved = false;
-      } else {
-        for (const port of nodeGraphOutputInputPorts) {
-          const connections = inputConnections(node, port);
-          for (const connection of connections) {
-            resolved = resolveNode(connection.sourceNode) && resolved;
-          }
-        }
-      }
-    } else {
-      resolved = resolveInput(node, "In");
-    }
-    visiting.delete(node);
-    visited.add(node);
-    if (!resolved) {
-      return false;
-    }
-    if (!route.includes(node)) {
-      route.push(node);
-    }
-    return true;
   }
 
-  resolveNode("output");
+  const topology = nodeGraphTopologicalOrder(graph.nodes, graph.dependencies, reachableNodes);
+  issues.push(...topology.issues);
+  const order = topology.order.filter((nodeId) => reachableNodes.has(nodeId));
+  const sourceNodes = order.filter((nodeId) => {
+    const type = graph.nodeMap.get(nodeId)?.type;
+    return type === "osc" || type === "noise";
+  });
 
   const uniqueIssues = [...new Set(issues)];
-  if (!sourceNodes.size && !uniqueIssues.length) {
+  if (!sourceNodes.length && !uniqueIssues.length) {
     uniqueIssues.push("missing renderable source");
   }
 
   return {
+    dependencies: graph.dependencies,
+    inputConnections: graph.inputConnections,
     issues: uniqueIssues,
-    sourceNodes: [...sourceNodes],
-    route,
-    sourceNode: [...sourceNodes][0] || "",
+    modulationConnections: graph.modulationConnections,
+    nodeMap: graph.nodeMap,
+    nodes: graph.nodes,
+    order,
+    outputNode,
+    sourceNodes,
     valid: uniqueIssues.length === 0,
+  };
+}
+
+function nodeGraphScheduleText(order) {
+  return order.length
+    ? `schedule: ${order.map((node) => nodeGraphNodeDisplayName(node)).join(" -> ")}`
+    : "schedule missing";
+}
+
+function nodeGraphValidate() {
+  const plan = compileNodeGraphExecutionPlan();
+  return {
+    issues: plan.issues,
+    order: plan.order,
+    route: plan.order,
+    scheduleText: nodeGraphScheduleText(plan.order),
+    sourceNode: plan.sourceNodes[0] || "",
+    sourceNodes: plan.sourceNodes,
+    valid: plan.valid,
   };
 }
 
@@ -8139,9 +8244,7 @@ function renderNodeGraphConnectionList() {
 
   status.textContent = validation.valid ? "Graph Valid" : "Graph Incomplete";
   status.className = `pill ${validation.valid ? "good" : "warn"}`;
-  source.textContent = validation.sourceNodes.length
-    ? `sources ${validation.sourceNodes.map((node) => nodeGraphNodeDisplayName(node).toLowerCase()).join(" + ")}`
-    : "sources missing";
+  source.textContent = validation.scheduleText;
   validationPill.textContent = validation.valid
     ? "valid"
     : validation.issues.join(", ");
@@ -8986,9 +9089,9 @@ function toggleNodeGraphLiveOutput() {
 }
 
 function nodeGraphBuildLivePlan() {
-  const validation = nodeGraphValidate();
-  if (!validation.valid) {
-    throw new Error(validation.issues.join(", "));
+  const compiled = compileNodeGraphExecutionPlan();
+  if (!compiled.valid) {
+    throw new Error(compiled.issues.join(", "));
   }
 
   return {
@@ -9012,7 +9115,9 @@ function nodeGraphBuildLivePlan() {
         type: node.type,
       };
     }),
-    outputNode: "output",
+    order: [...compiled.order],
+    outputNode: compiled.outputNode,
+    sourceNodes: [...compiled.sourceNodes],
   };
 }
 
@@ -9058,6 +9163,7 @@ function createNodeGraphLiveRuntime(plan) {
     modulationConnections,
     nodes,
     noiseSeeds,
+    order: [...(plan.order || [])],
     outputNode: plan.outputNode || "output",
     phases,
     smoothers,
@@ -9080,6 +9186,7 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     modulations.push(modulation);
     runtime.modulationConnections.set(key, modulations);
   }
+  runtime.order = [...(plan.order || [])];
   runtime.outputNode = plan.outputNode || "output";
   const nodeIds = new Set(runtime.nodes.keys());
   for (const node of plan.nodes || []) {
@@ -9152,8 +9259,6 @@ function readNodeGraphLiveEffectiveParam(
   frame,
   frames,
   frameValues,
-  visiting,
-  sampleRate,
 ) {
   const base = readNodeGraphLiveSmoothedParam(runtime, node, key, fallback, frame, frames);
   const metadata = node?.paramMeta?.[key] || {};
@@ -9163,16 +9268,7 @@ function readNodeGraphLiveEffectiveParam(
   const modulations = runtime.modulationConnections?.get(nodeGraphParameterKey(node?.id, key)) || [];
   const modulationValue = modulations.reduce(
     (sum, modulation) =>
-      sum +
-      evaluateNodeGraphLiveNode(
-        runtime,
-        modulation.sourceNode,
-        frameValues,
-        visiting,
-        sampleRate,
-        frame,
-        frames,
-      ) * depth,
+      sum + (frameValues.get(modulation.sourceNode) || 0) * depth,
     0,
   );
   return nodeGraphApplyParameterBounds(base + modulationValue, metadata);
@@ -9182,136 +9278,98 @@ function nodeGraphPhaseRadians(value) {
   return wrapNodeSliderValue(Number(value) || 0, 0, 1) * Math.PI * 2;
 }
 
-function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampleRate, frame, frames) {
-  if (frameValues.has(nodeId)) {
-    return frameValues.get(nodeId);
-  }
-  if (visiting.has(nodeId)) {
-    return 0;
-  }
-  visiting.add(nodeId);
-
-  const node = runtime.nodes.get(nodeId);
-  let value = 0;
-  const mixInput = (port = "In") => (runtime.inputConnections.get(`${nodeId}.${port}`) || []).reduce(
-    (sum, connection) =>
-      sum + evaluateNodeGraphLiveNode(
-        runtime,
-        connection.sourceNode,
-        frameValues,
-        visiting,
-        sampleRate,
-        frame,
-        frames,
-      ),
+function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
+  const frameValues = new Map();
+  const mixInput = (nodeId, port = "In") => (runtime.inputConnections.get(`${nodeId}.${port}`) || []).reduce(
+    (sum, connection) => sum + (frameValues.get(connection.sourceNode) || 0),
     0,
   );
 
-  if (node?.type === "osc") {
-    const phase = runtime.phases.get(nodeId) || 0;
-    const phaseOffset = nodeGraphPhaseRadians(
-      readNodeGraphLiveEffectiveParam(
+  for (const nodeId of runtime.order || []) {
+    const node = runtime.nodes.get(nodeId);
+    let value = 0;
+
+    if (node?.type === "osc") {
+      const phase = runtime.phases.get(nodeId) || 0;
+      const phaseOffset = nodeGraphPhaseRadians(
+        readNodeGraphLiveEffectiveParam(
+          runtime,
+          node,
+          "phase",
+          0,
+          frame,
+          frames,
+          frameValues,
+        ),
+      );
+      const frequency = readNodeGraphLiveEffectiveParam(
         runtime,
         node,
-        "phase",
+        "frequency",
+        220,
+        frame,
+        frames,
+        frameValues,
+      );
+      value = Math.sin(phase + phaseOffset) * readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "level",
+        0.35,
+        frame,
+        frames,
+        frameValues,
+      );
+      runtime.phases.set(
+        nodeId,
+        (phase + (Math.PI * 2 * frequency) / sampleRate) % (Math.PI * 2),
+      );
+    } else if (node?.type === "noise") {
+      const seed = (Math.imul(1664525, runtime.noiseSeeds.get(nodeId) || 0x12345678) + 1013904223) >>> 0;
+      runtime.noiseSeeds.set(nodeId, seed);
+      value = ((seed / 0xffffffff) * 2 - 1) * readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "level",
+        0.12,
+        frame,
+        frames,
+        frameValues,
+      );
+    } else if (node?.type === "gain") {
+      value = mixInput(nodeId) * readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "amount",
+        1,
+        frame,
+        frames,
+        frameValues,
+      );
+    } else if (node?.type === "bias") {
+      value = mixInput(nodeId) + readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "offset",
         0,
         frame,
         frames,
         frameValues,
-        visiting,
-        sampleRate,
-      ),
-    );
-    const frequency = readNodeGraphLiveEffectiveParam(
-      runtime,
-      node,
-      "frequency",
-      220,
-      frame,
-      frames,
-      frameValues,
-      visiting,
-      sampleRate,
-    );
-    value = Math.sin(phase + phaseOffset) * readNodeGraphLiveEffectiveParam(
-      runtime,
-      node,
-      "level",
-      0.35,
-      frame,
-      frames,
-      frameValues,
-      visiting,
-      sampleRate,
-    );
-    runtime.phases.set(
-      nodeId,
-      (phase + (Math.PI * 2 * frequency) / sampleRate) % (Math.PI * 2),
-    );
-  } else if (node?.type === "noise") {
-    const seed = (Math.imul(1664525, runtime.noiseSeeds.get(nodeId) || 0x12345678) + 1013904223) >>> 0;
-    runtime.noiseSeeds.set(nodeId, seed);
-    value = ((seed / 0xffffffff) * 2 - 1) * readNodeGraphLiveEffectiveParam(
-      runtime,
-      node,
-      "level",
-      0.12,
-      frame,
-      frames,
-      frameValues,
-      visiting,
-      sampleRate,
-    );
-  } else if (node?.type === "gain") {
-    value = mixInput() * readNodeGraphLiveEffectiveParam(
-      runtime,
-      node,
-      "amount",
-      1,
-      frame,
-      frames,
-      frameValues,
-      visiting,
-      sampleRate,
-    );
-  } else if (node?.type === "bias") {
-    value = mixInput() + readNodeGraphLiveEffectiveParam(
-      runtime,
-      node,
-      "offset",
-      0,
-      frame,
-      frames,
-      frameValues,
-      visiting,
-      sampleRate,
-    );
-  } else if (node?.type === "output") {
-    const left = mixInput("Left");
-    const right = mixInput("Right");
-    value = (left + right) * 0.5;
+      );
+    } else if (node?.type === "output") {
+      const left = mixInput(nodeId, "Left");
+      const right = mixInput(nodeId, "Right");
+      value = (left + right) * 0.5;
+    }
+
+    frameValues.set(nodeId, value);
   }
 
-  visiting.delete(nodeId);
-  frameValues.set(nodeId, value);
-  return value;
-}
-
-function evaluateNodeGraphLiveOutputPort(runtime, port, frameValues, sampleRate, frame, frames) {
-  const connections = runtime.inputConnections.get(`output.${port}`) || [];
-  return connections.reduce(
-    (sum, connection) =>
-      sum + evaluateNodeGraphLiveNode(
-        runtime,
-        connection.sourceNode,
-        frameValues,
-        new Set(),
-        sampleRate,
-        frame,
-        frames,
-      ),
-    0,
-  );
+  return {
+    frameValues,
+    left: mixInput(runtime.outputNode || "output", "Left"),
+    right: mixInput(runtime.outputNode || "output", "Right"),
+  };
 }
 
 function renderNodeGraphLiveScriptBlock(event) {
@@ -9328,19 +9386,19 @@ function renderNodeGraphLiveScriptBlock(event) {
     ? output.sampleRate
     : nodeGraphMvp.live.context?.sampleRate || nodeGraphMvp.sampleRate;
   for (let frame = 0; frame < frames; frame += 1) {
-    const frameValues = new Map();
+    const frameOutput = evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames);
     const left = Math.max(
       -0.95,
       Math.min(
         0.95,
-        evaluateNodeGraphLiveOutputPort(runtime, "Left", frameValues, sampleRate, frame, frames),
+        frameOutput.left,
       ),
     );
     const right = Math.max(
       -0.95,
       Math.min(
         0.95,
-        evaluateNodeGraphLiveOutputPort(runtime, "Right", frameValues, sampleRate, frame, frames),
+        frameOutput.right,
       ),
     );
     const value = Math.max(Math.abs(left), Math.abs(right));
@@ -9382,6 +9440,7 @@ function sendNodeGraphLivePlan() {
       type: "setPlan",
     });
     setNodeGraphLiveStatus("running", "good");
+    setNodeGraphLiveRouteStatus(nodeGraphScheduleText(plan.order), "good");
   } catch (error) {
     nodeGraphMvp.live.runtime = null;
     nodeGraphMvp.live.node?.port?.postMessage({ type: "stop" });
@@ -9477,7 +9536,7 @@ async function startNodeGraphLiveAudio() {
     nodeGraphMvp.live.scriptNode = scriptNode;
     scriptNode.connect(outputGain);
     outputGain.connect(context.destination);
-    setNodeGraphLiveRouteStatus("route output", "good");
+    setNodeGraphLiveRouteStatus(nodeGraphScheduleText(plan.order), "good");
     await context.resume();
     setNodeGraphLiveStatus("running", "good");
     document.getElementById("nodeLiveStatus").removeAttribute("title");
@@ -9517,34 +9576,25 @@ function renderNodeGraphAudio() {
   for (let blockStart = 0; blockStart < frames; blockStart += nodeGraphAudioBlockSize) {
     const blockFrames = Math.min(nodeGraphAudioBlockSize, frames - blockStart);
     for (let blockFrame = 0; blockFrame < blockFrames; blockFrame += 1) {
-      const frameValues = new Map();
       const frame = blockStart + blockFrame;
+      const frameOutput = evaluateNodeGraphPlanFrame(
+        runtime,
+        nodeGraphMvp.sampleRate,
+        blockFrame,
+        blockFrames,
+      );
       const left = Math.max(
         -0.95,
         Math.min(
           0.95,
-          evaluateNodeGraphLiveOutputPort(
-            runtime,
-            "Left",
-            frameValues,
-            nodeGraphMvp.sampleRate,
-            blockFrame,
-            blockFrames,
-          ),
+          frameOutput.left,
         ),
       );
       const right = Math.max(
         -0.95,
         Math.min(
           0.95,
-          evaluateNodeGraphLiveOutputPort(
-            runtime,
-            "Right",
-            frameValues,
-            nodeGraphMvp.sampleRate,
-            blockFrame,
-            blockFrames,
-          ),
+          frameOutput.right,
         ),
       );
       const output = (left + right) * 0.5;
@@ -9570,8 +9620,7 @@ function renderNodeGraphAudio() {
   renderStatus.textContent = "render ready";
   renderStatus.className = "pill good";
   document.getElementById("nodeAudioStats").textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
-  const route = validation.route.map((node) => nodeGraphNodeDisplayName(node)).join(" -> ");
-  document.getElementById("nodeOutputSummary").textContent = route;
+  document.getElementById("nodeOutputSummary").textContent = validation.scheduleText;
   drawNodeRenderedAudio();
 }
 
