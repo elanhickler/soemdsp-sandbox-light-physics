@@ -99,9 +99,12 @@ Render Sample and Live Audio expose patch evidence for debugging:
   fingerprint in the plan status pill
 - the execution debug panel reports a runtime boundary block that separates
   authoring/display fields from compiled runtime fields
+- the execution debug panel also reports a `soemdspMapping` block that names
+  the Circuit, compiler, Binding, and caller-owned DSP object responsibilities
+  for the current browser patch proof
 - `window.soemdspSandboxDebug` exposes `compileExecutionPlan()`,
-  `currentPatchFingerprint()`, `lastRender()`, and `live()` for direct
-  inspection
+  `currentPatchFingerprint()`, `lastRender()`, `live()`, and
+  `soemdspMapping()` for direct inspection
 
 That compiler is demo-scoped UI machinery, not a `soemdsp` runtime scheduler,
 not a Circuit-owned executor, and not a production project format. Feedback

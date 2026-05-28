@@ -9100,6 +9100,72 @@ function nodeGraphRuntimeBoundaryDebug(plan) {
   };
 }
 
+function nodeGraphSoemdspObjectConcept(type) {
+  switch (type) {
+    case "osc":
+      return "caller-owned oscillator DSP object";
+    case "noise":
+      return "caller-owned noise DSP object";
+    case "gain":
+      return "caller-owned gain DSP object";
+    case "bias":
+      return "caller-owned bias DSP object";
+    case "output":
+      return "caller-owned output/audio sink";
+    default:
+      return "unsupported caller-owned DSP object";
+  }
+}
+
+function nodeGraphSoemdspRuntimeMapping(plan) {
+  const activeNodeIds = nodeGraphActiveNodeIds(plan);
+  const feedbackSets = nodeGraphFeedbackIdentitySets(plan);
+  const nodesById = new Map((plan.nodes || []).map((node) => [node.id, node]));
+  const signalBindings = nodeGraphActiveSignalConnections(plan).map((connection) => ({
+    destinationInput: `${connection.destinationNode}.${connection.destinationPort}`,
+    readMode: feedbackSets.signal.has(nodeGraphSignalWireIdentity(connection))
+      ? "stored output state read"
+      : "same-pass buffer read",
+    sourceOutput: `${connection.sourceNode}.${connection.sourcePort}`,
+  }));
+  const modulationBindings = nodeGraphActiveModulations(plan).map((modulation) => ({
+    destinationParameter: `${modulation.destinationNode}.${modulation.destinationParam}`,
+    readMode: feedbackSets.modulation.has(nodeGraphModulationWireIdentity(modulation))
+      ? "stored output state read"
+      : "same-pass buffer read",
+    sourceOutput: `${modulation.sourceNode}.${modulation.sourcePort}`,
+  }));
+
+  return {
+    bindingRole: "Binding syncs parameter/control memory; DSP objects do not know Circuit",
+    circuitRole: "Circuit/patch describes nodes, parameters, and raw connections; it does not own concrete DSP objects",
+    compilerRole: "Compiler filters authoring state and emits order, active wires, parameter bindings, and state-read edges",
+    dspObjectRole: "Caller owns concrete DSP objects and invokes them in compiled order",
+    mappedNodes: (plan.order || []).map((nodeId) => {
+      const node = nodesById.get(nodeId);
+      return {
+        id: nodeId,
+        objectConcept: nodeGraphSoemdspObjectConcept(node?.type),
+        type: node?.type || "unknown",
+      };
+    }),
+    nonRuntimePatchFields: ["info", "grid", "visual", "bypassedNodes", "node gx/gy", "paramMeta display hints"],
+    parameterBindings: nodeGraphExecutionParameterSnapshot(plan),
+    runtimeNodeIds: [...activeNodeIds],
+    signalBindings,
+    modulationBindings,
+    stateReadEdges: {
+      modulations: plan.feedbackModulations.map((modulation) =>
+        `${modulation.sourceNode}.${modulation.sourcePort} -> ${modulation.destinationNode}.${modulation.destinationParam}`,
+      ),
+      signals: plan.feedbackConnections.map((connection) =>
+        `${connection.sourceNode}.${connection.sourcePort} -> ${connection.destinationNode}.${connection.destinationPort}`,
+      ),
+    },
+    status: plan.valid ? "mapping proof ready" : "mapping blocked by invalid patch",
+  };
+}
+
 function serializeNodeGraphExecutionPlanDebug(plan) {
   const samePassDependencies = {};
   for (const [nodeId, dependencies] of plan.orderDependencies.entries()) {
@@ -9161,6 +9227,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       schedulerPolicy: "same-pass acyclic edges; patch-node-order cycle-closing edges read stored outputs",
       samePassDependencies,
       signalInputs,
+      soemdspMapping: nodeGraphSoemdspRuntimeMapping(plan),
       sourceNodes: plan.sourceNodes,
       stateReadCount: nodeGraphStateReadCount(plan),
       storedOutputInitialValue: 0,
@@ -9199,6 +9266,7 @@ function serializeNodeGraphExecutionPlanApiDebug(plan) {
       {},
     ),
     schedulerPolicy: "same-pass acyclic edges; patch-node-order cycle-closing edges read stored outputs",
+    soemdspMapping: nodeGraphSoemdspRuntimeMapping(plan),
     stateReadCount: nodeGraphStateReadCount(plan),
     valid: plan.valid,
     wireReads: nodeGraphExecutionWireReads(plan),
@@ -9218,6 +9286,9 @@ function installNodeGraphDebugApi() {
     },
     live() {
       return nodeGraphLiveDebug();
+    },
+    soemdspMapping(patch = nodeGraphMvp.patch) {
+      return nodeGraphSoemdspRuntimeMapping(compileValidatedNodeGraphExecutionPlan(patch));
     },
   });
 }
