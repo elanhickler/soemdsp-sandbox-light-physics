@@ -961,6 +961,11 @@ audio {
   background: var(--bad-bg);
 }
 
+.node-connection-list li.state-read {
+  border-color: rgba(177, 132, 255, 0.52);
+  background: rgba(177, 132, 255, 0.1);
+}
+
 .node-execution-plan-heading {
   margin-top: 14px;
 }

@@ -8342,6 +8342,31 @@ function nodeGraphFeedbackText(feedbackConnections = [], feedbackModulations = [
   return [...signal, ...modulation].join(", ");
 }
 
+function nodeGraphSignalWireIdentity(connection) {
+  return [
+    connection.sourceNode,
+    connection.sourcePort,
+    connection.destinationNode,
+    connection.destinationPort,
+  ].join(".");
+}
+
+function nodeGraphModulationWireIdentity(modulation) {
+  return [
+    modulation.sourceNode,
+    modulation.sourcePort,
+    modulation.destinationNode,
+    modulation.destinationParam,
+  ].join(".");
+}
+
+function nodeGraphFeedbackIdentitySets(plan) {
+  return {
+    modulation: new Set(plan.feedbackModulations.map(nodeGraphModulationWireIdentity)),
+    signal: new Set(plan.feedbackConnections.map(nodeGraphSignalWireIdentity)),
+  };
+}
+
 function nodeGraphScheduleText(order, issues = [], feedbackConnections = [], feedbackModulations = []) {
   if (issues.length) {
     return `schedule blocked: ${issues.join(", ")}`;
@@ -8854,6 +8879,7 @@ function renderNodeGraphConnectionList() {
   const status = document.getElementById("nodeGraphStatus");
   const source = document.getElementById("nodeGraphSource");
   const validationPill = document.getElementById("nodeGraphValidation");
+  const feedbackSets = nodeGraphFeedbackIdentitySets(plan);
 
   list.replaceChildren();
   let renderedWireCount = 0;
@@ -8874,10 +8900,12 @@ function renderNodeGraphConnectionList() {
     );
     item.addEventListener("click", () => setNodeGraphSelection({ type: "wire", kind: "signal", index }));
     const label = document.createElement("span");
+    const isFeedback = feedbackSets.signal.has(nodeGraphSignalWireIdentity(connection));
     label.textContent = `${nodeGraphLabel(connection.sourceNode, connection.sourcePort)} -> ${nodeGraphLabel(
       connection.destinationNode,
       connection.destinationPort,
-    )}`;
+    )}${isFeedback ? " (state read)" : ""}`;
+    item.classList.toggle("state-read", isFeedback);
     const button = document.createElement("button");
     button.className = "disconnect-wire-button";
     button.type = "button";
@@ -8911,9 +8939,11 @@ function renderNodeGraphConnectionList() {
     );
     item.addEventListener("click", () => setNodeGraphSelection({ type: "wire", kind: "modulation", index }));
     const label = document.createElement("span");
+    const isFeedback = feedbackSets.modulation.has(nodeGraphModulationWireIdentity(modulation));
     label.textContent = `${nodeGraphLabel(modulation.sourceNode, modulation.sourcePort)} -> ${nodeGraphNodeDisplayName(
       modulation.destinationNode,
-    )}.${modulation.destinationParam} mod`;
+    )}.${modulation.destinationParam} mod${isFeedback ? " (state read)" : ""}`;
+    item.classList.toggle("state-read", isFeedback);
     const button = document.createElement("button");
     button.className = "disconnect-wire-button";
     button.type = "button";
@@ -9803,7 +9833,9 @@ function setNodeGraphLivePlanTitle(text = "") {
 
 function nodeGraphLivePlanStatusText(plan, serial = nodeGraphMvp.live.planSerial) {
   const serialText = serial ? ` #${serial}` : "";
-  return `plan${serialText} ${plan.nodes.length} nodes / ${plan.connections.length} wires / ${plan.modulations.length} mods`;
+  const feedbackCount = (plan.feedbackConnections?.length || 0) + (plan.feedbackModulations?.length || 0);
+  const feedbackText = feedbackCount ? ` / ${feedbackCount} state reads` : "";
+  return `plan${serialText} ${plan.nodes.length} nodes / ${plan.connections.length} wires / ${plan.modulations.length} mods${feedbackText}`;
 }
 
 function nodeGraphLiveBlockedStatusText(kind, error) {
@@ -9858,7 +9890,10 @@ function nodeGraphLiveParametersAppliedStatusText(message) {
 function nodeGraphLivePlanAppliedStatusText(message) {
   const serial = Number(message.planSerial) || 0;
   const serialText = serial ? ` #${serial}` : "";
-  return `plan${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.connectionCount) || 0} wires / ${Number(message.modulationCount) || 0} mods`;
+  const feedbackCount = (Number(message.feedbackConnectionCount) || 0) +
+    (Number(message.feedbackModulationCount) || 0);
+  const feedbackText = feedbackCount ? ` / ${feedbackCount} state reads` : "";
+  return `plan${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.connectionCount) || 0} wires / ${Number(message.modulationCount) || 0} mods${feedbackText}`;
 }
 
 function setNodeGraphLiveMeter(peak = 0, rms = 0) {
