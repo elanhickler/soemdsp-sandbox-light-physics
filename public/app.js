@@ -6725,15 +6725,7 @@ function commitNodeGraphPatch(patch, options = {}) {
   nodeGraphMvp.patch = cloneNodeGraphPatch(validateNodeGraphPatch(patch));
   syncNodeGraphRuntimeFromPatch();
   applyNodeGraphPatchToDom();
-  if (nodeGraphSelectedNodeIds().size) {
-    const selectedNodeIds = nodeGraphSelectedNodeIds();
-    const activeSelectedNodes = [...selectedNodeIds].filter((id) =>
-      nodeGraphMvp.activeNodes.has(id),
-    );
-    if (activeSelectedNodes.length !== selectedNodeIds.size) {
-      setNodeGraphNodeSelection(activeSelectedNodes);
-    }
-  }
+  pruneNodeGraphSelectionAfterPatch();
   renderNodePalette();
   renderNodeGraphConnectionList();
   syncNodeGraphSettingsView();
@@ -8405,6 +8397,54 @@ function sameNodeGraphSelection(a, b) {
   return a?.id === b?.id && a?.index === b?.index;
 }
 
+function nodeGraphWireSelectionExists(selection = nodeGraphMvp.selected) {
+  if (selection?.type !== "wire") {
+    return false;
+  }
+  const index = Number(selection.index);
+  const wires = (selection.kind || "signal") === "modulation"
+    ? nodeGraphMvp.modulations
+    : nodeGraphMvp.connections;
+  return Number.isInteger(index) && index >= 0 && index < wires.length;
+}
+
+function nodeGraphSelectionCanDelete(selection = nodeGraphMvp.selected) {
+  if (!selection) {
+    return false;
+  }
+  if (selection.type === "wire") {
+    return nodeGraphWireSelectionExists(selection);
+  }
+  return [...nodeGraphSelectedNodeIds(selection)].some((id) =>
+    id !== "output" && nodeGraphMvp.activeNodes.has(id),
+  );
+}
+
+function pruneNodeGraphSelectionAfterPatch() {
+  const selection = nodeGraphMvp.selected;
+  if (!selection) {
+    return;
+  }
+  if (selection.type === "wire") {
+    if (!nodeGraphWireSelectionExists(selection)) {
+      setNodeGraphSelection(null);
+    }
+    return;
+  }
+
+  const selectedNodeIds = nodeGraphSelectedNodeIds(selection);
+  if (!selectedNodeIds.size) {
+    setNodeGraphSelection(null);
+    return;
+  }
+  const activeSelectedNodes = [...selectedNodeIds].filter((id) =>
+    nodeGraphMvp.activeNodes.has(id),
+  );
+  if (activeSelectedNodes.length !== selectedNodeIds.size) {
+    setNodeGraphNodeSelection(activeSelectedNodes);
+  }
+}
+
 function renderNodeGraphSelection() {
   const selectedNodeIds = nodeGraphSelectedNodeIds();
   for (const node of document.querySelectorAll(".dsp-node")) {
@@ -8434,7 +8474,7 @@ function renderNodeGraphSelection() {
   }
 
   const button = document.getElementById("nodeDeleteButton");
-  button.disabled = !nodeGraphMvp.selected;
+  button.disabled = !nodeGraphSelectionCanDelete();
 }
 
 function nodeGraphPath(from, to) {
@@ -9015,8 +9055,7 @@ function configureNodeSceneContextMenu(mode) {
   addGroup.hidden = moduleMode;
   deleteButton.hidden = !moduleMode;
   if (moduleMode) {
-    const deletableIds = [...nodeGraphSelectedNodeIds()].filter((id) => id !== "output");
-    deleteButton.disabled = !deletableIds.length;
+    deleteButton.disabled = !nodeGraphSelectionCanDelete();
   } else {
     deleteButton.disabled = true;
   }
