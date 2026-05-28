@@ -3950,6 +3950,7 @@ def require_node_graph_mvp_contract() -> None:
         ".node-graph-workspace",
         "--node-graph-zoom: 1",
         "--node-header-height: 76px",
+        "aspect-ratio: 1 / 1",
         ".node-graph-zoom-surface",
         ".node-interaction-help",
         ".node-interaction-help:empty",

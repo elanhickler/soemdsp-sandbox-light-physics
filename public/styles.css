@@ -211,6 +211,7 @@ audio {
   --node-header-height: 76px;
   --node-module-grid-inset: 6px;
   position: relative;
+  aspect-ratio: 1 / 1;
   min-height: 560px;
   margin-top: 16px;
   overflow: hidden;
