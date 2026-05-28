@@ -7542,6 +7542,8 @@ function syncNodeSliderReadout(slider) {
   const position = nodeSliderTravelFromValue(slider, Number(slider.value)) * 100;
   const unit = (slider.dataset.unit || "").trim();
   const choiceLabel = nodeSliderChoiceLabel(slider);
+  const choices = parseNodeMetadataChoices(slider.dataset.choices || "");
+  const usesChoices = nodeSliderShouldDisplayChoices(slider) && choices.length > 0;
   if (labelText) {
     labelText.textContent = readout.dataset.paramLabel || nodeSliderLabelText(slider);
   }
@@ -7554,11 +7556,17 @@ function syncNodeSliderReadout(slider) {
   unitText.setAttribute("aria-hidden", unit ? "false" : "true");
   readout.dataset.value = slider.value;
   readout.dataset.unit = unit;
+  readout.dataset.choiceCount = usesChoices ? String(choices.length) : "0";
   readout.removeAttribute("title");
-  readout.style.setProperty(
-    "--value-position",
-    `${Math.max(0, Math.min(100, position))}%`,
-  );
+  if (usesChoices) {
+    const choiceIndex = Math.max(0, Math.min(choices.length - 1, Math.round(Number(slider.value))));
+    readout.style.setProperty("--value-start", `${(choiceIndex / choices.length) * 100}%`);
+    readout.style.setProperty("--value-end", `${((choiceIndex + 1) / choices.length) * 100}%`);
+  } else {
+    const boundedPosition = Math.max(0, Math.min(100, position));
+    readout.style.setProperty("--value-start", `calc(${boundedPosition}% - 4px)`);
+    readout.style.setProperty("--value-end", `calc(${boundedPosition}% + 4px)`);
+  }
   syncNodeSliderMetadataTooltip(slider);
 }
 

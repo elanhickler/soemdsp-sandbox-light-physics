@@ -643,9 +643,9 @@ audio {
   background:
     linear-gradient(
       90deg,
-      transparent 0 calc(var(--value-position, 0%) - 4px),
-      rgba(127, 199, 217, 0.42) calc(var(--value-position, 0%) - 4px) calc(var(--value-position, 0%) + 4px),
-      transparent calc(var(--value-position, 0%) + 4px) 100%
+      transparent 0 var(--value-start, calc(0% - 4px)),
+      rgba(127, 199, 217, 0.42) var(--value-start, calc(0% - 4px)) var(--value-end, calc(0% + 4px)),
+      transparent var(--value-end, calc(0% + 4px)) 100%
     ),
     rgba(11, 14, 18, 0.96);
   color: var(--text);
