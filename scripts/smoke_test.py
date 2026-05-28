@@ -4028,6 +4028,7 @@ def require_node_graph_mvp_contract() -> None:
         ".metadata-popover-grid button.armed",
         ".node-scene-context-menu",
         ".node-scene-context-menu[hidden]",
+        ".scene-context-heading",
         ".scene-context-title",
         ".scene-context-add-group",
         ".scene-context-add-group[hidden]",

@@ -189,7 +189,17 @@
         hidden
         role="menu"
         aria-label="Add module">
-        <div class="scene-context-title">Add Module</div>
+        <div class="scene-context-heading">
+          <div class="scene-context-title">Add Module</div>
+          <button
+            id="nodeSceneCloseMenu"
+            class="panel-close-button"
+            type="button"
+            role="menuitem"
+            aria-label="Close module actions">
+            <span aria-hidden="true">[ X ]</span>
+          </button>
+        </div>
         <div class="scene-context-add-group">
           <button id="nodeSceneAddOsc" type="button" role="menuitem" data-context-module="osc">Osc</button>
           <button id="nodeSceneAddNoise" type="button" role="menuitem" data-context-module="noise">Noise</button>
@@ -203,14 +213,6 @@
         <button id="nodeSceneDeleteModule" class="scene-context-danger" type="button" role="menuitem" hidden>
           <span>Delete</span>
           <kbd>Delete</kbd>
-        </button>
-        <button
-          id="nodeSceneCloseMenu"
-          class="panel-close-button"
-          type="button"
-          role="menuitem"
-          aria-label="Close module actions">
-          <span aria-hidden="true">[ X ]</span>
         </button>
       </div>
 

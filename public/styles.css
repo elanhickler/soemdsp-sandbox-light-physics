@@ -880,11 +880,22 @@ audio {
   display: none;
 }
 
+.scene-context-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
 .scene-context-title {
+  min-width: 0;
   padding: 4px 6px;
   color: var(--muted);
   font-size: 0.7rem;
   text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .scene-context-add-group {
@@ -905,7 +916,10 @@ audio {
 }
 
 .node-scene-context-menu .panel-close-button {
+  min-width: 44px;
+  min-height: 28px;
   justify-content: center;
+  padding: 0 7px;
   font-family: Consolas, "Courier New", monospace;
   letter-spacing: 0;
   text-align: center;
