@@ -3307,6 +3307,7 @@ def require_node_graph_mvp_contract() -> None:
         "createScriptProcessor(nodeGraphAudioBlockSize, 0, 2)",
         "function startNodeGraphLiveAudio()",
         "function stopNodeGraphLiveAudio()",
+        "if (nodeGraphMvp.live.node || nodeGraphMvp.live.context)",
         "function scheduleNodeGraphLivePlanSync()",
         "function sendNodeGraphLivePlan()",
         "function handleNodeGraphLiveWorkletMessage(event)",

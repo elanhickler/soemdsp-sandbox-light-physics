@@ -10347,6 +10347,7 @@ async function startNodeGraphLiveAudio() {
   try {
     setNodeGraphLiveStatus("starting", "warn");
     renderNodeGraphLiveControls(false);
+    stopNodeGraphRenderedPlayback();
     if (nodeGraphMvp.live.node || nodeGraphMvp.live.context) {
       await stopNodeGraphLiveAudio();
       setNodeGraphLiveStatus("starting", "warn");
@@ -10558,6 +10559,9 @@ async function playNodeGraphAudio() {
     return;
   }
 
+  if (nodeGraphMvp.live.node || nodeGraphMvp.live.context) {
+    await stopNodeGraphLiveAudio();
+  }
   nodeGraphMvp.audioContext ||= new AudioContext({ sampleRate: nodeGraphMvp.sampleRate });
   if (nodeGraphMvp.audioContext.state === "suspended") {
     await nodeGraphMvp.audioContext.resume();
