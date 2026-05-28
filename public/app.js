@@ -10494,7 +10494,7 @@ function configureNodeSceneContextMenu(mode) {
   deleteButton.hidden = !moduleMode;
   if (moduleMode) {
     copyButton.disabled = !canCopy;
-    copyButton.title = canCopy ? "Copy module" : "Copy unavailable: Output module is required";
+    copyButton.title = canCopy ? "Copy module (Ctrl+C)" : "Copy unavailable: Output module is required";
     deleteButton.disabled = !nodeGraphSelectionCanDelete();
     deleteButton.title = nodeGraphDeleteTitle();
   } else {
@@ -10610,7 +10610,7 @@ function dragNodeGraphNode(event) {
     positionNodeGraphNode(dragged.element, {
       x: dragged.startX + deltaX,
       y: dragged.startY + deltaY,
-    }, { snap: false });
+    });
   }
   drawNodeGraphWires();
 }
@@ -10750,13 +10750,7 @@ function addNodeGraphModuleFromContext(event) {
   closeNodeSceneContextMenu();
 }
 
-function copyNodeGraphModuleFromContext() {
-  const sourceNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
-  if (!sourceNode || sourceNode.type === "output") {
-    closeNodeSceneContextMenu();
-    return;
-  }
-
+function copyNodeGraphModule(sourceNode) {
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const counts = nextNodeGraphTypeCounts(patch.nodes);
   counts[sourceNode.type] = (counts[sourceNode.type] || 0) + 1;
@@ -10773,7 +10767,28 @@ function copyNodeGraphModuleFromContext() {
   });
   commitNodeGraphPatch(patch, { status: "module copied" });
   setNodeGraphSelection({ type: "node", id });
+  return id;
+}
+
+function copyNodeGraphModuleFromContext() {
+  const sourceNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
+  if (sourceNode && sourceNode.type !== "output") {
+    copyNodeGraphModule(sourceNode);
+  }
   closeNodeSceneContextMenu();
+}
+
+function copySelectedNodeGraphModule() {
+  const selectedNodeIds = [...nodeGraphSelectedNodeIds()];
+  if (selectedNodeIds.length !== 1) {
+    return false;
+  }
+  const sourceNode = nodeGraphPatchNode(selectedNodeIds[0]);
+  if (!sourceNode || sourceNode.type === "output") {
+    return false;
+  }
+  copyNodeGraphModule(sourceNode);
+  return true;
 }
 
 function deleteNodeGraphModuleFromContext() {
@@ -10940,6 +10955,12 @@ function handleNodeGraphKeydown(event) {
   ) {
     event.preventDefault();
     redoNodeGraphPatch();
+    return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") {
+    if (copySelectedNodeGraphModule()) {
+      event.preventDefault();
+    }
     return;
   }
   if (event.key !== "Delete" && event.key !== "Backspace") {
