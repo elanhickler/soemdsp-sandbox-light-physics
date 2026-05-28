@@ -7342,6 +7342,9 @@ function syncNodeGraphPatchParameterFromSlider(slider, options = {}) {
     ...(patchNode.params || {}),
     [key]: nodeGraphReadNodeNumber(node, key),
   };
+  if (options.deferUi) {
+    return;
+  }
   syncNodeGraphScriptView(options.status || "parameter synced", true);
   renderNodeGraphExecutionPlanDebug();
   if (options.record) {
@@ -7382,7 +7385,7 @@ function setNodeSliderValue(slider, value) {
     normalizeNodeSliderValue(slider, value),
   );
   syncNodeSliderReadout(slider);
-  syncNodeGraphPatchParameterFromSlider(slider);
+  syncNodeGraphPatchParameterFromSlider(slider, { deferUi: true });
   markNodeGraphRenderPending();
   scheduleNodeGraphLivePlanSync();
 }
