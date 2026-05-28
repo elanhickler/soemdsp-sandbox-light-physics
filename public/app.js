@@ -6342,7 +6342,9 @@ const nodeGraphMvp = {
     meterGain: null,
     node: null,
     outputGain: null,
+    planSerial: 0,
     runtime: null,
+    sessionId: 0,
     scriptNode: null,
     syncFrame: 0,
     syncTimer: 0,
@@ -9948,8 +9950,18 @@ function renderNodeGraphLiveScriptBlock(event) {
 function handleNodeGraphLiveWorkletMessage(event) {
   const message = event.data || {};
   if (message.type === "meter") {
+    if (message.sessionId !== nodeGraphMvp.live.sessionId || !nodeGraphMvp.live.node) {
+      return;
+    }
     setNodeGraphLiveMeter(Number(message.peak) || 0, Number(message.rms) || 0);
   } else if (message.type === "planApplied") {
+    if (
+      message.sessionId !== nodeGraphMvp.live.sessionId ||
+      message.planSerial !== nodeGraphMvp.live.planSerial ||
+      !nodeGraphMvp.live.node
+    ) {
+      return;
+    }
     setNodeGraphLivePlanStatus(nodeGraphLivePlanAppliedStatusText(message), "good");
   }
 }
@@ -9962,9 +9974,12 @@ function sendNodeGraphLivePlan() {
   try {
     const plan = nodeGraphBuildLivePlan();
     if (nodeGraphMvp.live.usesWorklet) {
+      nodeGraphMvp.live.planSerial += 1;
       setNodeGraphLivePlanStatus("plan sent", "warn");
       nodeGraphMvp.live.node?.port?.postMessage({
         plan,
+        planSerial: nodeGraphMvp.live.planSerial,
+        sessionId: nodeGraphMvp.live.sessionId,
         type: "setPlan",
       });
     } else if (nodeGraphMvp.live.runtime) {
@@ -10021,8 +10036,10 @@ async function stopNodeGraphLiveAudio() {
   nodeGraphMvp.live.context = null;
   nodeGraphMvp.live.meterGain = null;
   nodeGraphMvp.live.outputGain = null;
+  nodeGraphMvp.live.planSerial = 0;
   nodeGraphMvp.live.runtime = null;
   nodeGraphMvp.live.scriptNode = null;
+  nodeGraphMvp.live.sessionId += 1;
   nodeGraphMvp.live.usesWorklet = false;
 
   try {
@@ -10090,6 +10107,8 @@ async function startNodeGraphLiveAudio() {
       throw new Error("Web Audio API unavailable");
     }
     const context = new AudioContextConstructor();
+    nodeGraphMvp.live.sessionId += 1;
+    nodeGraphMvp.live.planSerial = 0;
     if (context.state === "suspended") {
       await context.resume();
     }

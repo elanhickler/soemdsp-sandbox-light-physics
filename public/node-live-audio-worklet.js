@@ -12,6 +12,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.order = [];
     this.outputNode = "output";
     this.phases = new Map();
+    this.planSerial = 0;
+    this.sessionId = 0;
     this.smoothers = new Map();
     this.port.onmessage = (event) => this.handleMessage(event.data || {});
   }
@@ -22,7 +24,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       return;
     }
     if (message.type === "setPlan") {
-      this.setPlan(message.plan);
+      this.setPlan(message.plan, message);
     }
   }
 
@@ -34,7 +36,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.smoothers = new Map();
   }
 
-  setPlan(plan) {
+  setPlan(plan, message = {}) {
+    this.planSerial = message.planSerial || 0;
+    this.sessionId = message.sessionId || 0;
     const nodes = Array.isArray(plan?.nodes) ? plan.nodes : [];
     const ids = new Set(nodes.map((node) => node.id));
     this.nodes = new Map(nodes.map((node) => [node.id, {
@@ -88,6 +92,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       modulationCount: Array.isArray(plan?.modulations) ? plan.modulations.length : 0,
       nodeCount: this.nodes.size,
       order: [...this.order],
+      planSerial: this.planSerial,
+      sessionId: this.sessionId,
       type: "planApplied",
     });
   }
@@ -349,6 +355,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     if (this.meterCounter >= sampleRate / 10) {
       this.port.postMessage({
         peak: this.meterPeak,
+        sessionId: this.sessionId,
         rms: Math.sqrt(this.meterSquareSum / Math.max(1, this.meterSamples)),
         type: "meter",
       });
