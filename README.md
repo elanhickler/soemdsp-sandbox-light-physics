@@ -4,10 +4,10 @@ Local browser sandbox for `soemdsp` proof artifacts and demo-scoped interactive 
 
 The sandbox now has two lanes:
 
-- a browser-only Node Wiring MVP where output ports can be freely wired into input ports, with reachable acyclic graphs ending at Output rendered to an audible Web Audio buffer and inspected through local waveform and signal-plot canvases
+- a browser-only Node Wiring MVP where output ports can be freely wired into signal or modulation inputs, with reachable acyclic graphs ending at Output compiled into an inspectable browser-local execution plan, rendered to an audible Web Audio buffer, and inspected through local waveform and signal-plot canvases
 - a read-only artifact inspector for generated `soemdsp` handoff manifests, WAVs, phase reports, producer proofs, boundary flags, parameter resync data, waveform playback, level envelopes, and X/Y signal plots
 
-The server remains read-only. The node graph is intentionally demo-scoped browser state; it does not save patches, mutate `Circuit`, add a scheduler, or become a plugin layer.
+The server remains read-only. The node graph is intentionally demo-scoped browser state. Its execution-plan compiler is a sandbox proof for acyclic browser patches; it does not save patches, mutate `Circuit`, introduce a production `soemdsp` scheduler, or become a plugin layer.
 
 ## Run
 
@@ -66,10 +66,15 @@ server error responses.
 The local server is read-only. The browser may generate temporary audio from the
 demo node graph, but it does not write patch/project state.
 
+The browser node graph does compile acyclic signal/modulation wiring into a local
+execution plan for Render Sample and Live Audio. That compiler is demo-scoped UI
+machinery, not a `soemdsp` runtime scheduler, not a Circuit-owned executor, and
+not a saved project format. Feedback routing remains blocked by cycle detection.
+
 The sandbox does not:
 
 - instantiate DSP objects
-- schedule processing
+- schedule production `soemdsp` processing
 - mutate Circuit
 - serialize project files
 - own audio engine behavior
