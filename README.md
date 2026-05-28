@@ -78,8 +78,9 @@ stored-output:
   audio runtime plan until they become reachable from Output
 - patch scripts preserve each node's current parameter values and parameter
   metadata through `nodes[].params` and `nodes[].paramMeta`
-- patch scripts preserve the visual output renderer through `visual.mode` and
-  `visual.style`; this is authoring/display state, not DSP-node behavior
+- patch scripts preserve the visual output renderer through `visual.mode`,
+  `visual.style`, and `visual.scale`; this is authoring/display state, not
+  DSP-node behavior
 
 Render Sample and Live Audio expose patch evidence for debugging:
 

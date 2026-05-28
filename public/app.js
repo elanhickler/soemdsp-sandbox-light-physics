@@ -6163,6 +6163,7 @@ const nodeGraphDefaultPatch = Object.freeze({
   },
   visual: {
     mode: "auto",
+    scale: 1,
     style: "glow",
   },
   grid: { ...nodeGraphGrid },
@@ -6314,9 +6315,11 @@ function normalizeNodeGraphPatchInfo(info = {}) {
 
 function normalizeNodeGraphPatchVisual(visual = {}) {
   const mode = String(visual.mode || "auto").trim();
+  const scale = Number(visual.scale);
   const style = String(visual.style || "glow").trim();
   return {
     mode: ["auto", "stereo-xy", "mono-lag-xy"].includes(mode) ? mode : "auto",
+    scale: Number.isFinite(scale) ? Math.max(0.1, Math.min(4, scale)) : 1,
     style: ["glow", "trace", "points"].includes(style) ? style : "glow",
   };
 }
@@ -6746,6 +6749,7 @@ function syncNodeGraphSettingsView() {
   setNodeGraphSettingsField("patchDescriptionValue", info.description);
   const visual = normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual);
   setNodeGraphSettingsField("patchVisualModeValue", visual.mode);
+  setNodeGraphSettingsField("patchVisualScaleValue", visual.scale);
   setNodeGraphSettingsField("patchVisualStyleValue", visual.style);
 }
 
@@ -6761,6 +6765,7 @@ function readNodeGraphSettingsView() {
 function readNodeGraphVisualSettingsView() {
   return normalizeNodeGraphPatchVisual({
     mode: document.getElementById("patchVisualModeValue")?.value,
+    scale: document.getElementById("patchVisualScaleValue")?.value,
     style: document.getElementById("patchVisualStyleValue")?.value,
   });
 }
@@ -11979,6 +11984,7 @@ function drawNodeRenderedVisualOutput() {
   const useStereo = visualSettings.mode === "stereo-xy" ||
     (visualSettings.mode === "auto" && Boolean(rightSamples?.length));
   const visualMode = useStereo ? "stereo xy" : "mono lag xy";
+  const visualScale = 0.42 * visualSettings.scale;
   const lag = useStereo ? 0 : Math.max(1, Math.floor(nodeGraphMvp.sampleRate * 0.001));
   const firstFrame = useStereo ? 0 : lag;
   const step = Math.max(1, Math.floor(sourceSamples.length / 2600));
@@ -11987,8 +11993,8 @@ function drawNodeRenderedVisualOutput() {
     const xSample = useStereo ? sourceSamples[frame] || 0 : sourceSamples[frame - lag] || 0;
     const ySample = useStereo ? rightSamples[frame] || 0 : sourceSamples[frame] || 0;
     return {
-      x: width / 2 + xSample * (width * 0.42),
-      y: height / 2 - ySample * (height * 0.42),
+      x: width / 2 + xSample * (width * visualScale),
+      y: height / 2 - ySample * (height * visualScale),
     };
   }
 
@@ -12023,6 +12029,7 @@ function drawNodeRenderedVisualOutput() {
   canvas.dataset.visualSource = "node graph rendered audio";
   canvas.dataset.visualMode = visualMode;
   canvas.dataset.visualModeSetting = visualSettings.mode;
+  canvas.dataset.visualScale = String(visualSettings.scale);
   canvas.dataset.visualStyle = visualSettings.style;
   canvas.dataset.visualFrames = String(sourceSamples.length);
   canvas.dataset.visualPeak = formatCompactNumber(rendered.peak || 0);
@@ -12035,6 +12042,7 @@ function drawNodeRenderedVisualOutput() {
     Mode: visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode,
     Peak: canvas.dataset.visualPeak,
     RMS: canvas.dataset.visualRms,
+    Scale: visualSettings.scale,
     Source: canvas.dataset.visualSource,
     Style: visualSettings.style,
   });
