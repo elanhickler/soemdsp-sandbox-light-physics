@@ -12127,9 +12127,11 @@ function setNodeVisualOutputExportReady(ready, title = "") {
   button.title = title || (ready ? "Save visual output as PNG" : "Render Sample before saving visual output");
 }
 
-function drawNodeRenderedVisualOutput() {
-  const canvas = document.getElementById("nodeVisualOutputCanvas");
-  const status = document.getElementById("nodeVisualOutputStatus");
+function drawNodeRenderedVisualOutput(options = {}) {
+  const canvas = options.canvas || document.getElementById("nodeVisualOutputCanvas");
+  const includePlaybackCursor = options.includePlaybackCursor !== false;
+  const updateUi = options.updateUi !== false;
+  const status = updateUi ? document.getElementById("nodeVisualOutputStatus") : null;
   const context = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
@@ -12173,25 +12175,28 @@ function drawNodeRenderedVisualOutput() {
   const rightSamples = rendered?.rightSamples;
   const samples = rendered?.samples;
   if (!leftSamples?.length && !samples?.length) {
-    canvas.dataset.visualSource = "unavailable";
-    canvas.dataset.visualMode = "waiting";
-    canvas.dataset.visualFrames = "0";
-    canvas.dataset.visualPlaybackFrame = "";
-    canvas.dataset.visualPlaybackProgress = "0";
-    canvas.dataset.visualPlaybackState = "idle";
-    canvas.dataset.visualExportReady = "false";
-    canvas.title = "Node graph visual output waiting for Render Sample";
-    setNodeVisualOutputExportReady(false);
-    renderNodeVisualOutputMeta({
-      Frames: 0,
-      Mode: "waiting",
-      Peak: "0",
-      RMS: "0",
-      Source: "unavailable",
-    });
-    if (status) {
-      status.textContent = "waiting";
-      status.className = "pill";
+    if (updateUi) {
+      canvas.dataset.visualSource = "unavailable";
+      canvas.dataset.visualMode = "waiting";
+      canvas.dataset.visualFrames = "0";
+      canvas.dataset.visualPlaybackFrame = "";
+      canvas.dataset.visualPlaybackProgress = "0";
+      canvas.dataset.visualPlaybackState = "idle";
+      canvas.dataset.visualExportIncludesPlaybackCursor = "false";
+      canvas.dataset.visualExportReady = "false";
+      canvas.title = "Node graph visual output waiting for Render Sample";
+      setNodeVisualOutputExportReady(false);
+      renderNodeVisualOutputMeta({
+        Frames: 0,
+        Mode: "waiting",
+        Peak: "0",
+        RMS: "0",
+        Source: "unavailable",
+      });
+      if (status) {
+        status.textContent = "waiting";
+        status.className = "pill";
+      }
     }
     return;
   }
@@ -12256,7 +12261,9 @@ function drawNodeRenderedVisualOutput() {
     drawVisualTrace({ lineWidth: 1.3, strokeStyle: visualTheme.trace });
   }
 
-  const playbackFrame = nodeGraphRenderedPlaybackFrame(sourceSamples.length);
+  const playbackFrame = includePlaybackCursor
+    ? nodeGraphRenderedPlaybackFrame(sourceSamples.length)
+    : null;
   if (playbackFrame !== null) {
     const point = visualPoint(playbackFrame);
     context.save();
@@ -12272,40 +12279,43 @@ function drawNodeRenderedVisualOutput() {
     context.restore();
   }
 
-  canvas.dataset.visualSource = "node graph rendered audio";
-  canvas.dataset.visualMode = visualMode;
-  canvas.dataset.visualModeSetting = visualSettings.mode;
-  canvas.dataset.visualPlaybackFrame = playbackFrame === null ? "" : String(playbackFrame);
-  canvas.dataset.visualPlaybackProgress = String(nodeGraphMvp.renderedPlayback?.progress || 0);
-  canvas.dataset.visualPlaybackState = playbackFrame === null ? "idle" : "playing";
-  canvas.dataset.visualExportReady = "true";
-  canvas.dataset.visualScale = String(visualSettings.scale);
-  canvas.dataset.visualStyle = visualSettings.style;
-  canvas.dataset.visualTheme = visualSettings.theme;
-  canvas.dataset.visualTrail = String(visualSettings.trail);
-  canvas.dataset.visualFrames = String(sourceSamples.length);
-  canvas.dataset.visualPeak = formatCompactNumber(rendered.peak || 0);
-  canvas.dataset.visualRms = formatCompactNumber(rendered.rms || 0);
-  canvas.title =
-    `Node graph visual output / ${canvas.dataset.visualMode} / ` +
-    `${sourceSamples.length} frames / peak ${canvas.dataset.visualPeak} / rms ${canvas.dataset.visualRms}`;
-  renderNodeVisualOutputMeta({
-    Frames: sourceSamples.length,
-    Mode: visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode,
-    Peak: canvas.dataset.visualPeak,
-    Playback: playbackFrame === null ? "idle" : `frame ${playbackFrame}`,
-    RMS: canvas.dataset.visualRms,
-    Scale: visualSettings.scale,
-    Source: canvas.dataset.visualSource,
-    Style: visualSettings.style,
-    Theme: visualSettings.theme,
-    Trail: visualSettings.trail,
-  });
-  if (status) {
-    status.textContent = visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode;
-    status.className = "pill good";
+  if (updateUi) {
+    canvas.dataset.visualSource = "node graph rendered audio";
+    canvas.dataset.visualMode = visualMode;
+    canvas.dataset.visualModeSetting = visualSettings.mode;
+    canvas.dataset.visualPlaybackFrame = playbackFrame === null ? "" : String(playbackFrame);
+    canvas.dataset.visualPlaybackProgress = String(nodeGraphMvp.renderedPlayback?.progress || 0);
+    canvas.dataset.visualPlaybackState = playbackFrame === null ? "idle" : "playing";
+    canvas.dataset.visualExportIncludesPlaybackCursor = String(playbackFrame !== null);
+    canvas.dataset.visualExportReady = "true";
+    canvas.dataset.visualScale = String(visualSettings.scale);
+    canvas.dataset.visualStyle = visualSettings.style;
+    canvas.dataset.visualTheme = visualSettings.theme;
+    canvas.dataset.visualTrail = String(visualSettings.trail);
+    canvas.dataset.visualFrames = String(sourceSamples.length);
+    canvas.dataset.visualPeak = formatCompactNumber(rendered.peak || 0);
+    canvas.dataset.visualRms = formatCompactNumber(rendered.rms || 0);
+    canvas.title =
+      `Node graph visual output / ${canvas.dataset.visualMode} / ` +
+      `${sourceSamples.length} frames / peak ${canvas.dataset.visualPeak} / rms ${canvas.dataset.visualRms}`;
+    renderNodeVisualOutputMeta({
+      Frames: sourceSamples.length,
+      Mode: visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode,
+      Peak: canvas.dataset.visualPeak,
+      Playback: playbackFrame === null ? "idle" : `frame ${playbackFrame}`,
+      RMS: canvas.dataset.visualRms,
+      Scale: visualSettings.scale,
+      Source: canvas.dataset.visualSource,
+      Style: visualSettings.style,
+      Theme: visualSettings.theme,
+      Trail: visualSettings.trail,
+    });
+    if (status) {
+      status.textContent = visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode;
+      status.className = "pill good";
+    }
+    setNodeVisualOutputExportReady(true);
   }
-  setNodeVisualOutputExportReady(true);
 }
 
 function saveNodeGraphVisualOutputPng() {
@@ -12315,7 +12325,15 @@ function saveNodeGraphVisualOutputPng() {
     setNodeVisualOutputExportReady(false);
     return;
   }
-  canvas.toBlob((blob) => {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  drawNodeRenderedVisualOutput({
+    canvas: exportCanvas,
+    includePlaybackCursor: false,
+    updateUi: false,
+  });
+  exportCanvas.toBlob((blob) => {
     if (!blob) {
       if (status) {
         status.textContent = "save failed";
@@ -12332,7 +12350,7 @@ function saveNodeGraphVisualOutputPng() {
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
     if (status) {
-      status.textContent = "png saved";
+      status.textContent = "clean png saved";
       status.className = "pill good";
     }
   }, "image/png");

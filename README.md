@@ -84,8 +84,9 @@ stored-output:
 - Play Render drives a visual-output playback cursor from the rendered Web
   Audio buffer transport, so the static visual artifact can also be inspected as
   a time-linked audiovisual proof
-- rendered visual output can be saved from the browser as a PNG; this is a
-  client-side export of the current canvas, not server persistence
+- rendered visual output can be saved from the browser as a clean PNG without
+  the playback cursor overlay; this is a client-side export of the current
+  visual artifact, not server persistence
 
 Render Sample and Live Audio expose patch evidence for debugging:
 
