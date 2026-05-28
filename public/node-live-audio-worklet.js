@@ -118,6 +118,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       patchFingerprint,
       planSerial: this.planSerial,
       sessionId: this.sessionId,
+      stateReadCount: (
+        (Array.isArray(plan?.feedbackConnections) ? plan.feedbackConnections.length : 0) +
+        (Array.isArray(plan?.feedbackModulations) ? plan.feedbackModulations.length : 0)
+      ),
       type: "planApplied",
     });
   }

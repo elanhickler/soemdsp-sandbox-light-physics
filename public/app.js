@@ -6350,6 +6350,7 @@ const nodeGraphMvp = {
     meterGain: null,
     node: null,
     outputGain: null,
+    planEvidence: null,
     activeNodeIds: new Set(),
     planSerial: 0,
     runtime: null,
@@ -10357,24 +10358,26 @@ function setNodeGraphLivePlanTitle(text = "") {
 }
 
 function setNodeGraphLiveEvidence(kind = "idle", details = {}) {
+  const planEvidence = nodeGraphMvp.live.planEvidence || {};
   const patchFingerprint = String(details.patchFingerprint || "");
   const currentPatchFingerprint = nodeGraphPatchFingerprint();
   nodeGraphMvp.live.lastEvidence = {
     active: Boolean(nodeGraphMvp.live.node || nodeGraphMvp.live.context),
-    connectionCount: Number(details.connectionCount) || 0,
+    connectionCount: Number(details.connectionCount ?? planEvidence.connectionCount) || 0,
     currentPatchFingerprint,
     engine: nodeGraphMvp.live.usesWorklet ? "worklet" : nodeGraphMvp.live.runtime ? "fallback" : "idle",
-    feedbackConnectionCount: Number(details.feedbackConnectionCount) || 0,
-    feedbackModulationCount: Number(details.feedbackModulationCount) || 0,
+    feedbackConnectionCount: Number(details.feedbackConnectionCount ?? planEvidence.feedbackConnectionCount) || 0,
+    feedbackModulationCount: Number(details.feedbackModulationCount ?? planEvidence.feedbackModulationCount) || 0,
     kind,
     matchesCurrentPatch: patchFingerprint ? patchFingerprint === currentPatchFingerprint : false,
     message: String(details.message || ""),
-    modulationCount: Number(details.modulationCount) || 0,
-    nodeCount: Number(details.nodeCount) || 0,
+    modulationCount: Number(details.modulationCount ?? planEvidence.modulationCount) || 0,
+    nodeCount: Number(details.nodeCount ?? planEvidence.nodeCount) || 0,
     parameterCount: Number(details.parameterCount) || 0,
     patchFingerprint,
     planSerial: Number(details.planSerial) || nodeGraphMvp.live.planSerial || 0,
     sessionId: nodeGraphMvp.live.sessionId,
+    stateReadCount: Number(details.stateReadCount ?? planEvidence.stateReadCount) || 0,
   };
 }
 
@@ -10429,6 +10432,19 @@ function nodeGraphLivePlanScheduleTitle(order = []) {
 function nodeGraphLivePlanSentStatusText(serial = nodeGraphMvp.live.planSerial) {
   const serialText = serial ? ` #${serial}` : "";
   return `plan${serialText} sent`;
+}
+
+function nodeGraphLivePlanEvidenceDetails(plan, details = {}) {
+  return {
+    connectionCount: plan.connections.length,
+    feedbackConnectionCount: plan.feedbackConnections.length,
+    feedbackModulationCount: plan.feedbackModulations.length,
+    modulationCount: plan.modulations.length,
+    nodeCount: plan.nodes.length,
+    patchFingerprint: plan.patchFingerprint,
+    stateReadCount: nodeGraphStateReadCount(plan),
+    ...details,
+  };
 }
 
 function nodeGraphLiveParameterCount(nodes = []) {
@@ -11005,16 +11021,11 @@ function sendNodeGraphLivePlan() {
     const plan = nodeGraphBuildLivePlan();
     nodeGraphMvp.live.activeNodeIds = new Set(plan.order);
     nodeGraphMvp.live.planSerial += 1;
+    nodeGraphMvp.live.planEvidence = nodeGraphLivePlanEvidenceDetails(plan, {
+      planSerial: nodeGraphMvp.live.planSerial,
+    });
     if (nodeGraphMvp.live.usesWorklet) {
-      setNodeGraphLiveEvidence("plan-sent", {
-        connectionCount: plan.connections.length,
-        feedbackConnectionCount: plan.feedbackConnections.length,
-        feedbackModulationCount: plan.feedbackModulations.length,
-        modulationCount: plan.modulations.length,
-        nodeCount: plan.nodes.length,
-        patchFingerprint: plan.patchFingerprint,
-        planSerial: nodeGraphMvp.live.planSerial,
-      });
+      setNodeGraphLiveEvidence("plan-sent", nodeGraphMvp.live.planEvidence);
       setNodeGraphLivePlanStatus(nodeGraphLivePlanSentStatusText(), "warn");
       setNodeGraphLivePlanTitle(nodeGraphLivePlanScheduleTitle(plan.order));
       nodeGraphMvp.live.node?.port?.postMessage({
@@ -11026,28 +11037,12 @@ function sendNodeGraphLivePlan() {
       });
     } else if (nodeGraphMvp.live.runtime) {
       updateNodeGraphLiveRuntimePlan(nodeGraphMvp.live.runtime, plan);
-      setNodeGraphLiveEvidence("plan-applied", {
-        connectionCount: plan.connections.length,
-        feedbackConnectionCount: plan.feedbackConnections.length,
-        feedbackModulationCount: plan.feedbackModulations.length,
-        modulationCount: plan.modulations.length,
-        nodeCount: plan.nodes.length,
-        patchFingerprint: plan.patchFingerprint,
-        planSerial: nodeGraphMvp.live.planSerial,
-      });
+      setNodeGraphLiveEvidence("plan-applied", nodeGraphMvp.live.planEvidence);
       setNodeGraphLivePlanStatus(nodeGraphLivePlanStatusText(plan), "good");
       setNodeGraphLivePlanTitle(nodeGraphLivePlanScheduleTitle(plan.order));
     } else {
       nodeGraphMvp.live.runtime = createNodeGraphLiveRuntime(plan);
-      setNodeGraphLiveEvidence("plan-applied", {
-        connectionCount: plan.connections.length,
-        feedbackConnectionCount: plan.feedbackConnections.length,
-        feedbackModulationCount: plan.feedbackModulations.length,
-        modulationCount: plan.modulations.length,
-        nodeCount: plan.nodes.length,
-        patchFingerprint: plan.patchFingerprint,
-        planSerial: nodeGraphMvp.live.planSerial,
-      });
+      setNodeGraphLiveEvidence("plan-applied", nodeGraphMvp.live.planEvidence);
       setNodeGraphLivePlanStatus(nodeGraphLivePlanStatusText(plan), "good");
       setNodeGraphLivePlanTitle(nodeGraphLivePlanScheduleTitle(plan.order));
     }
@@ -11175,6 +11170,7 @@ async function stopNodeGraphLiveAudio() {
   nodeGraphMvp.live.outputGain = null;
   nodeGraphMvp.live.activeNodeIds = new Set();
   nodeGraphMvp.live.lastEvidence = null;
+  nodeGraphMvp.live.planEvidence = null;
   nodeGraphMvp.live.planSerial = 0;
   nodeGraphMvp.live.runtime = null;
   nodeGraphMvp.live.scriptNode = null;
