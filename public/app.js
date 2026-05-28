@@ -6374,6 +6374,8 @@ const nodeGraphMvp = {
   rendered: null,
   sceneContextPoint: null,
   sceneContextTargetNode: null,
+  scriptCommitDelayMs: 250,
+  scriptCommitTimer: 0,
   selected: null,
   sampleRate: 44100,
   seconds: 2,
@@ -6810,6 +6812,32 @@ function commitNodeGraphScript(text) {
   } catch (error) {
     setNodeGraphScriptStatus(error.message, false);
   }
+}
+
+function clearNodeGraphScriptCommitTimer() {
+  if (!nodeGraphMvp.scriptCommitTimer) {
+    return;
+  }
+  window.clearTimeout(nodeGraphMvp.scriptCommitTimer);
+  nodeGraphMvp.scriptCommitTimer = 0;
+}
+
+function scheduleNodeGraphScriptCommit(text) {
+  clearNodeGraphScriptCommitTimer();
+  setNodeGraphScriptStatus("script editing", true);
+  nodeGraphMvp.scriptCommitTimer = window.setTimeout(() => {
+    nodeGraphMvp.scriptCommitTimer = 0;
+    commitNodeGraphScript(text);
+  }, nodeGraphMvp.scriptCommitDelayMs);
+}
+
+function flushNodeGraphScriptCommit() {
+  if (!nodeGraphMvp.scriptCommitTimer) {
+    return;
+  }
+  const script = document.getElementById("nodePatchScript");
+  clearNodeGraphScriptCommitTimer();
+  commitNodeGraphScript(script?.value || "");
 }
 
 function undoNodeGraphPatch() {
@@ -9730,6 +9758,9 @@ function deleteNodeGraphModuleFromContext() {
 }
 
 function setNodeGraphViewMode(mode) {
+  if (mode !== "script") {
+    flushNodeGraphScriptCommit();
+  }
   const settingsMode = mode === "settings";
   const scriptMode = mode === "script";
   const modularMode = !settingsMode && !scriptMode;
@@ -9752,7 +9783,7 @@ function setNodeGraphViewMode(mode) {
 }
 
 function handleNodePatchScriptInput(event) {
-  commitNodeGraphScript(event.currentTarget.value);
+  scheduleNodeGraphScriptCommit(event.currentTarget.value);
 }
 
 function nodeGraphPatchFileName() {
