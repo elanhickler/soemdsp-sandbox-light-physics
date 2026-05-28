@@ -3480,7 +3480,8 @@ def require_node_graph_mvp_contract() -> None:
         "Mouse: click to copy the caller-owned C++ runtime sketch.",
         "Compiled order: ${element.textContent}",
         "Compiled order ${order}: ${nodeName}",
-        "Mouse: click to select this module in the workspace.",
+        "Selection only happens from move handles or marquee.",
+        "Mouse: click to select. Drag to move selected module(s).",
         "item.dataset.executionOrder = String(index + 1)",
         "This module runs at this step in the current execution plan.",
         "This module is ignored by the compiled engine.",
@@ -3554,7 +3555,6 @@ def require_node_graph_mvp_contract() -> None:
         "function renderNodeGraphExecutionPlanSummary(plan)",
         "badge.dataset.executionState = \"active\"",
         "badge.dataset.executionState = \"bypassed\"",
-        "setNodeGraphSelection({ type: \"node\", id: nodeId })",
         "setNodeGraphSelection({ type: \"wire\", kind: row.kind, index: row.index })",
         "nodeGraphWireModeHelp(row.mode)",
         "item.dataset.connectionKind = row.kind",
@@ -3773,6 +3773,7 @@ def require_node_graph_mvp_contract() -> None:
         "function configureNodeSceneContextMenu(mode)",
         "function openNodeModuleActionMenu(event)",
         "copyButton.title = canCopy ? \"Copy module (Ctrl+C)\"",
+        "deleteButton.title = canDelete ? \"Delete module (Delete)\"",
         "function copyNodeGraphModule(sourceNode)",
         "function copyNodeGraphModuleFromContext()",
         "function copySelectedNodeGraphModule()",
@@ -3780,6 +3781,7 @@ def require_node_graph_mvp_contract() -> None:
         "module copied",
         "Copy unavailable: Output module is required",
         "function deleteNodeGraphModuleFromContext()",
+        "const targetNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode)",
         "function nodeGraphPath(from, to)",
         "function createNodeGraphWireGradient(svg, id, from, to, stopClass = \"node-wire-gradient-stop\")",
         "linearGradient",
@@ -3819,7 +3821,7 @@ def require_node_graph_mvp_contract() -> None:
         "Mouse: drop a signal output here.",
         "Mouse: drop an output here to modulate this parameter.",
         "Mouse: drag adjusts, double-click types, right-click edits metadata.",
-        "Mouse: drag to move selected module(s).",
+        "Mouse: click to select. Drag to move selected module(s).",
         "Mouse: click to open module actions.",
         "Mouse: click to switch view.",
         "function setNodeInteractionHelp(text = \"\")",
@@ -3908,6 +3910,12 @@ def require_node_graph_mvp_contract() -> None:
         'node.addEventListener("pointerdown", beginNodeGraphNodeDrag)' not in app_source,
         "module body should not start node drag",
     )
+
+    for snippet in [
+        'item.addEventListener("click", () => setNodeGraphSelection({ type: "node", id: nodeId }))',
+        'setNodeGraphSelection({ type: "node", id })',
+    ]:
+        require(snippet not in app_source, f"module selection should be limited to move handles or marquee, not {snippet}")
 
     for snippet in [
         'if (event.key === "Escape" && nodeGraphMvp.metadataEditorTarget)',

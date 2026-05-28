@@ -9567,17 +9567,10 @@ function renderNodeGraphExecutionPlanSummary(plan) {
       const item = document.createElement("li");
       item.dataset.node = nodeId;
       item.dataset.executionOrder = String(index + 1);
-      item.tabIndex = 0;
-      item.setAttribute("role", "button");
+      item.tabIndex = -1;
+      item.setAttribute("role", "listitem");
       item.setAttribute("aria-label", `Compiled order ${index + 1}: ${nodeGraphNodeDisplayName(nodeId)}`);
       item.textContent = `${index + 1}. ${nodeGraphNodeDisplayName(nodeId)}`;
-      item.addEventListener("click", () => setNodeGraphSelection({ type: "node", id: nodeId }));
-      item.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          setNodeGraphSelection({ type: "node", id: nodeId });
-        }
-      });
       orderList.append(item);
     }
   } else {
@@ -10233,7 +10226,6 @@ function toggleNodeGraphModuleBypass(event) {
     bypassed.add(nodeId);
   }
   patch.bypassedNodes = [...bypassed];
-  setNodeGraphSelection({ type: "node", id: nodeId });
   commitNodeGraphPatch(patch, {
     status: bypassed.has(nodeId) ? "module bypassed" : "module active",
   });
@@ -10603,6 +10595,7 @@ function configureNodeSceneContextMenu(mode) {
   const moduleMode = mode === "module";
   const targetNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
   const canCopy = moduleMode && targetNode?.type !== "output";
+  const canDelete = moduleMode && targetNode && targetNode.type !== "output";
   title.textContent = moduleMode ? "Module" : "Add Module";
   menu.setAttribute("aria-label", moduleMode ? "Module actions" : "Add module");
   addGroup.hidden = moduleMode;
@@ -10612,8 +10605,8 @@ function configureNodeSceneContextMenu(mode) {
   if (moduleMode) {
     copyButton.disabled = !canCopy;
     copyButton.title = canCopy ? "Copy module (Ctrl+C)" : "Copy unavailable: Output module is required";
-    deleteButton.disabled = !nodeGraphSelectionCanDelete();
-    deleteButton.title = nodeGraphDeleteTitle();
+    deleteButton.disabled = !canDelete;
+    deleteButton.title = canDelete ? "Delete module (Delete)" : "Delete unavailable: Output module is required";
   } else {
     copyButton.disabled = true;
     copyButton.title = "Copy unavailable: select a module";
@@ -10629,10 +10622,6 @@ function openNodeModuleActionMenu(event) {
     return;
   }
 
-  const selectedNodeIds = nodeGraphSelectedNodeIds();
-  if (!selectedNodeIds.has(node.dataset.node)) {
-    setNodeGraphSelection({ type: "node", id: node.dataset.node });
-  }
   nodeGraphMvp.sceneContextPoint = null;
   nodeGraphMvp.sceneContextTargetNode = node.dataset.node;
   configureNodeSceneContextMenu("module");
@@ -10856,7 +10845,6 @@ function showNodeGraphModule(node, point = null) {
     gy: gridPoint.gy,
   }));
   commitNodeGraphPatch(patch, { status: "module added" });
-  setNodeGraphSelection({ type: "node", id });
 }
 
 function showPaletteNode(node) {
@@ -10884,7 +10872,6 @@ function copyNodeGraphModule(sourceNode) {
     params: { ...(sourceNode.params || {}) },
   });
   commitNodeGraphPatch(patch, { status: "module copied" });
-  setNodeGraphSelection({ type: "node", id });
   return id;
 }
 
@@ -10910,7 +10897,27 @@ function copySelectedNodeGraphModule() {
 }
 
 function deleteNodeGraphModuleFromContext() {
-  deleteSelectedNodeGraphItem();
+  const targetNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
+  if (targetNode && targetNode.type !== "output") {
+    const targetNodeIds = new Set([targetNode.id]);
+    const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+    patch.nodes = patch.nodes.filter((node) => !targetNodeIds.has(node.id));
+    patch.bypassedNodes = patch.bypassedNodes.filter((nodeId) => !targetNodeIds.has(nodeId));
+    patch.connections = patch.connections.filter(
+      (connection) =>
+        !targetNodeIds.has(connection.sourceNode) &&
+        !targetNodeIds.has(connection.destinationNode),
+    );
+    patch.modulations = patch.modulations.filter(
+      (modulation) =>
+        !targetNodeIds.has(modulation.sourceNode) &&
+        !targetNodeIds.has(modulation.destinationNode),
+    );
+    if (nodeGraphSelectedNodeIds().has(targetNode.id)) {
+      setNodeGraphSelection(null);
+    }
+    commitNodeGraphPatch(patch, { status: "module deleted" });
+  }
   closeNodeSceneContextMenu();
 }
 
@@ -11104,7 +11111,7 @@ function nodeInteractionHelpText(target) {
 function nodeInteractionMouseHint(element) {
   const alias = element.dataset.alias || "";
   if (element.classList.contains("node-drag-handle")) {
-    return "Mouse: drag to move selected module(s).";
+    return "Mouse: click to select. Drag to move selected module(s).";
   }
   if (element.classList.contains("node-action-button")) {
     return "Mouse: click to open module actions.";
@@ -11125,7 +11132,7 @@ function nodeInteractionMouseHint(element) {
   if (element.matches(".node-execution-order li[data-node]")) {
     const order = element.dataset.executionOrder || "?";
     const nodeName = nodeGraphNodeDisplayName(element.dataset.node);
-    return `Compiled order ${order}: ${nodeName}\nMouse: click to select this module in the workspace.`;
+    return `Compiled order ${order}: ${nodeName}\nSelection only happens from move handles or marquee.`;
   }
   if (element.classList.contains("node-slider-readout")) {
     return "Mouse: drag adjusts, double-click types, right-click edits metadata.";
