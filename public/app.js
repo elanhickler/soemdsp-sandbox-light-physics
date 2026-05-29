@@ -10351,6 +10351,28 @@ function setNodeGraphNodeSelection(ids) {
   setNodeGraphSelection({ type: "nodes", ids: uniqueIds });
 }
 
+function toggleNodeGraphNodeSelection(id, additive = false) {
+  if (!nodeGraphMvp.activeNodes.has(id)) {
+    return;
+  }
+  if (!additive) {
+    if (nodeGraphSelectedNodeIds().has(id)) {
+      setNodeGraphSelection(null);
+    } else {
+      setNodeGraphNodeSelection([id]);
+    }
+    return;
+  }
+
+  const selectedNodeIds = nodeGraphSelectedNodeIds();
+  if (selectedNodeIds.has(id)) {
+    selectedNodeIds.delete(id);
+  } else {
+    selectedNodeIds.add(id);
+  }
+  setNodeGraphNodeSelection([...selectedNodeIds]);
+}
+
 function sameNodeGraphSelection(a, b) {
   if (a?.type !== b?.type) {
     return false;
@@ -10473,6 +10495,14 @@ function renderNodeGraphSelection() {
   const button = document.getElementById("nodeDeleteButton");
   button.disabled = !nodeGraphSelectionCanDelete();
   button.title = nodeGraphDeleteTitle();
+
+  const selectionCount = document.getElementById("nodeSelectionCount");
+  if (selectionCount) {
+    selectionCount.hidden = selectedNodeIds.size <= 0;
+    selectionCount.textContent = selectedNodeIds.size === 1
+      ? "1 module selected"
+      : `${selectedNodeIds.size} modules selected`;
+  }
 }
 
 function nodeGraphPath(from, to) {
@@ -11538,6 +11568,7 @@ function beginNodeGraphNodeDrag(event) {
   const selectedNodeIds = nodeGraphSelectedNodeIds();
   const wasSelectedAtStart = selectedNodeIds.has(node.dataset.node);
   const point = nodeGraphClientPoint(event);
+  const additiveSelection = event.ctrlKey || event.metaKey || event.shiftKey;
   const draggedNodeIds = wasSelectedAtStart
     ? selectedNodeIds
     : new Set([node.dataset.node]);
@@ -11561,6 +11592,7 @@ function beginNodeGraphNodeDrag(event) {
     moved: false,
     node,
     startPoint: point,
+    additiveSelection,
     wasSelectedAtStart,
   };
   for (const dragged of draggedNodes) {
@@ -11598,7 +11630,7 @@ function endNodeGraphNodeDrag(event) {
     return;
   }
 
-  const { draggedNodes, handle, moved, node, wasSelectedAtStart } = nodeGraphMvp.nodeDragging;
+  const { additiveSelection, draggedNodes, handle, moved, node } = nodeGraphMvp.nodeDragging;
   for (const dragged of draggedNodes) {
     dragged.element.classList.remove("dragging");
   }
@@ -11608,11 +11640,7 @@ function endNodeGraphNodeDrag(event) {
   }
   nodeGraphMvp.nodeDragging = null;
   if (!moved) {
-    if (wasSelectedAtStart) {
-      setNodeGraphSelection(null);
-    } else {
-      setNodeGraphSelection({ type: "node", id: node.dataset.node });
-    }
+    toggleNodeGraphNodeSelection(node.dataset.node, additiveSelection);
     return;
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
@@ -12022,7 +12050,7 @@ function nodeInteractionMouseHint(element) {
     return "Mouse: middle-drag to move the modular view.";
   }
   if (element.classList.contains("node-drag-handle")) {
-    return "Mouse: click to select. Drag to move selected module(s).";
+    return "Mouse: click to select. Ctrl/Shift+click adds or removes from selection. Drag to move selected module(s).";
   }
   if (element.classList.contains("node-action-button")) {
     return "Mouse: click to open module actions.";
