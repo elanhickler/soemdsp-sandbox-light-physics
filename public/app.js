@@ -6413,7 +6413,7 @@ function nodeGraphOversamplingMultiplier(baseRate, targetRate) {
   if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(target) || target <= 0) {
     return 1;
   }
-  return Math.max(1, Math.round(target / base));
+  return Math.max(1, Math.min(4, Math.round(target / base)));
 }
 
 function nodeGraphEffectiveSampleRate(baseRate, multiplier) {

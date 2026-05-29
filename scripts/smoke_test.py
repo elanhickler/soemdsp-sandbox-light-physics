@@ -3144,6 +3144,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphBaseSampleRate()",
         "function nodeGraphTargetSampleRate(patch = nodeGraphMvp.patch)",
         "function nodeGraphOversamplingMultiplier(baseRate, targetRate)",
+        "Math.min(4, Math.round(target / base))",
         "function nodeGraphEffectiveSampleRate(baseRate, multiplier)",
         "function nodeGraphAudioDerivation(patch = nodeGraphMvp.patch)",
         "function normalizeNodeGraphPatchVisual(visual = {})",
