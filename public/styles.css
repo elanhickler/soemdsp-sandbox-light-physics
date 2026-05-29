@@ -704,10 +704,12 @@ audio {
 
 .node-action-button:hover,
 .node-bypass-button:hover {
+  border-color: transparent;
   box-shadow: none;
 }
 
 .node-bypass-button[aria-pressed="true"]:hover {
+  border-color: transparent;
   background: rgba(122, 28, 28, 0.72);
 }
 

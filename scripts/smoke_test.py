@@ -4072,6 +4072,7 @@ def require_node_graph_mvp_contract() -> None:
         ".node-action-button:hover",
         ".node-bypass-button",
         ".node-bypass-button:hover",
+        "border-color: transparent",
         ".node-bypass-button[aria-pressed=\"true\"]",
         ".node-bypass-button[aria-pressed=\"true\"]:hover",
         "rgba(122, 28, 28, 0.72)",
