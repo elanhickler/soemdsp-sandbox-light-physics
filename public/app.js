@@ -8448,7 +8448,7 @@ function attachNodeGraphNodeEvents(node) {
   node.addEventListener("pointerup", endNodeGraphNodeDrag);
   node.addEventListener("pointercancel", endNodeGraphNodeDrag);
   node.addEventListener("lostpointercapture", endNodeGraphNodeDrag);
-  for (const port of node.querySelectorAll(".node-port.output")) {
+  for (const port of node.querySelectorAll(".node-port")) {
     port.addEventListener("pointerdown", beginNodeGraphWireDrag);
   }
   for (const slider of node.querySelectorAll('input[type="range"]')) {
@@ -10453,18 +10453,84 @@ function connectNodeGraphModulation(sourceNode, sourcePort, destinationNode, des
   return true;
 }
 
+function nodeGraphWireEndpointFromElement(element) {
+  if (!element) {
+    return null;
+  }
+  if (element.classList?.contains("modulation-input")) {
+    return {
+      io: "modulation",
+      node: element.dataset.node,
+      param: element.dataset.param,
+      port: element.dataset.port || element.dataset.param,
+    };
+  }
+  if (element.classList?.contains("node-port")) {
+    return {
+      io: element.dataset.io,
+      node: element.dataset.node,
+      port: element.dataset.port,
+    };
+  }
+  return null;
+}
+
+function nodeGraphConnectWireEndpoints(a, b) {
+  if (!a || !b || a.node === b.node && a.port === b.port && a.io === b.io) {
+    return false;
+  }
+  if (a.io === "output" && b.io === "input") {
+    return connectNodeGraphPorts(a.node, a.port, b.node, b.port);
+  }
+  if (a.io === "input" && b.io === "output") {
+    return connectNodeGraphPorts(b.node, b.port, a.node, a.port);
+  }
+  if (a.io === "output" && b.io === "modulation") {
+    return connectNodeGraphModulation(a.node, a.port, b.node, b.param);
+  }
+  if (a.io === "modulation" && b.io === "output") {
+    return connectNodeGraphModulation(b.node, b.port, a.node, a.param);
+  }
+  return false;
+}
+
+function burstNodeGraphZap(point) {
+  const surface = nodeGraphZoomSurface();
+  if (!surface || !point) {
+    return;
+  }
+  const texts = ["ZAP", "!!", "*", "~", "Z"];
+  for (let index = 0; index < 8; index += 1) {
+    const particle = document.createElement("span");
+    particle.className = "node-zap-particle";
+    particle.textContent = texts[index % texts.length];
+    particle.style.left = `${point.x}px`;
+    particle.style.top = `${point.y}px`;
+    particle.style.setProperty("--zap-x", `${(index % 4 - 1.5) * 18}px`);
+    particle.style.setProperty("--zap-y", `${-18 - Math.floor(index / 4) * 14}px`);
+    particle.style.animationDelay = `${index * 14}ms`;
+    particle.addEventListener("animationend", () => particle.remove(), { once: true });
+    surface.append(particle);
+  }
+}
+
 function beginNodeGraphWireDrag(event) {
   const port = event.currentTarget;
-  const from = nodeGraphPortCenter(port.dataset.node, port.dataset.port, "output");
+  const endpoint = nodeGraphWireEndpointFromElement(port);
+  if (!endpoint || endpoint.io === "modulation") {
+    return;
+  }
+  const from = nodeGraphPortCenter(port.dataset.node, port.dataset.port, endpoint.io);
   const to = nodeGraphClientPoint(event);
   nodeGraphMvp.dragging = {
+    endpoint,
     from,
-    sourceNode: port.dataset.node,
-    sourcePort: port.dataset.port,
     to,
   };
   port.classList.add("dragging");
   port.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
   drawNodeGraphWires();
 }
 
@@ -10485,30 +10551,17 @@ function endNodeGraphWireDrag(event) {
   const dragging = nodeGraphMvp.dragging;
   const target = document
     .elementFromPoint(event.clientX, event.clientY)
-    ?.closest?.(".node-port.input, .node-param-port.modulation-input");
+    ?.closest?.(".node-port, .node-param-port.modulation-input");
+  const targetEndpoint = nodeGraphWireEndpointFromElement(target);
   document
-    .querySelector(nodeGraphPortSelector(dragging.sourceNode, dragging.sourcePort, "output"))
+    .querySelector(nodeGraphPortSelector(dragging.endpoint.node, dragging.endpoint.port, dragging.endpoint.io))
     ?.classList.remove("dragging");
   nodeGraphMvp.dragging = null;
 
-  let connected = false;
-  if (target?.classList?.contains("modulation-input") && target?.dataset.node && target?.dataset.param) {
-    connected = connectNodeGraphModulation(
-      dragging.sourceNode,
-      dragging.sourcePort,
-      target.dataset.node,
-      target.dataset.param,
-    );
-  } else if (target?.dataset.node && target?.dataset.port) {
-    connected = connectNodeGraphPorts(
-      dragging.sourceNode,
-      dragging.sourcePort,
-      target.dataset.node,
-      target.dataset.port,
-    );
-  }
+  const connected = nodeGraphConnectWireEndpoints(dragging.endpoint, targetEndpoint);
 
   if (!connected) {
+    burstNodeGraphZap(nodeGraphClientPoint(event));
     drawNodeGraphWires();
   }
 }
@@ -11410,14 +11463,14 @@ function nodeInteractionMouseHint(element) {
   }
   if (element.classList.contains("node-port")) {
     const action = element.classList.contains("parameter-output")
-      ? "Mouse: drag slider output. This sends the slider position normalized from 0 to 1."
+      ? "Mouse: drag normalized 0..1 slider output to a signal input or modulation input."
       : element.classList.contains("output")
-      ? "Mouse: drag from output to signal input or modulation input."
-      : "Mouse: drop a signal output here.";
+      ? "Mouse: drag to a signal input or modulation input."
+      : "Mouse: drag to or from this signal input.";
     return alias ? `Alias: ${alias}\n${action}` : action;
   }
   if (element.classList.contains("node-param-port")) {
-    const action = "Mouse: drop an output here to modulate this parameter.";
+    const action = "Mouse: drop an output here to modulate this parameter. Input wires zap.";
     return alias ? `Alias: ${alias}\n${action}` : action;
   }
   if (element.classList.contains("node-wire-hit-path") || element.classList.contains("node-wire-path")) {
