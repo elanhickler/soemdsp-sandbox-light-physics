@@ -3033,6 +3033,8 @@ def require_node_graph_mvp_contract() -> None:
         "[ X ]",
         "nodeDeleteButton",
         "toggleDebugButton",
+        '<body class="debug-collapsed">',
+        'aria-pressed="false">Show Evidence</button>',
         "nodeParameterMetadataPopover",
         "metadataMinValue",
         "metadataMidValue",
