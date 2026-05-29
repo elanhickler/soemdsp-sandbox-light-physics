@@ -10586,12 +10586,20 @@ function burstNodeGraphZap(point) {
   if (!surface || !point) {
     return;
   }
+  const colors = [
+    ["#7fc7d9", "rgba(127, 199, 217, 0.7)"],
+    ["#e2a86d", "rgba(226, 168, 109, 0.72)"],
+    ["#ff6b6b", "rgba(255, 107, 107, 0.72)"],
+  ];
   for (let index = 0; index < 8; index += 1) {
+    const [color, glow] = colors[index % colors.length];
     const particle = document.createElement("span");
     particle.className = "node-zap-particle";
     particle.textContent = "⌁";
     particle.style.left = `${point.x}px`;
     particle.style.top = `${point.y}px`;
+    particle.style.setProperty("--zap-color", color);
+    particle.style.setProperty("--zap-glow", glow);
     particle.style.setProperty("--zap-x", `${(index % 4 - 1.5) * 30}px`);
     particle.style.setProperty("--zap-y", `${-30 - Math.floor(index / 4) * 24}px`);
     particle.style.setProperty("--zap-rotate", `${index * 43 - 96}deg`);

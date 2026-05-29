@@ -3871,6 +3871,8 @@ def require_node_graph_mvp_contract() -> None:
         "function burstNodeGraphZap(point)",
         "connectNodeGraphPorts(b.node, b.port, a.node, a.port)",
         "particle.textContent = \"⌁\"",
+        "--zap-color",
+        "--zap-glow",
         "--zap-rotate",
         "--zap-scale",
         '!document.getElementById("nodeSceneContextMenu").hidden',

@@ -1180,12 +1180,12 @@ audio {
   z-index: 8;
   pointer-events: none;
   transform: translate(-50%, -50%);
-  color: #ffec99;
+  color: var(--zap-color, #ffec99);
   font-family: Consolas, "Courier New", monospace;
   font-size: calc(1rem * var(--zap-scale, 1));
   font-weight: 700;
   line-height: 1;
-  text-shadow: 0 0 10px rgba(247, 183, 88, 0.6);
+  text-shadow: 0 0 10px var(--zap-glow, rgba(247, 183, 88, 0.6));
   animation: node-zap-burst 560ms ease-out forwards;
 }
 
