@@ -6215,6 +6215,9 @@ const nodeGraphDefaultConnections = Object.freeze([
 ]);
 
 const nodeGraphDefaultPatch = Object.freeze({
+  audio: {
+    targetSampleRate: 88200,
+  },
   bypassedNodes: [],
   info: {
     author: "",
@@ -6386,6 +6389,54 @@ function normalizeNodeGraphPatchInfo(info = {}) {
   };
 }
 
+function normalizeNodeGraphPatchAudio(audio = {}) {
+  const targetSampleRate = Math.round(Number(audio?.targetSampleRate));
+  return {
+    targetSampleRate: Number.isFinite(targetSampleRate)
+      ? Math.max(8000, Math.min(768000, targetSampleRate))
+      : 88200,
+  };
+}
+
+function nodeGraphBaseSampleRate() {
+  const sampleRate = Math.round(Number(nodeGraphMvp?.sampleRate));
+  return Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : 44100;
+}
+
+function nodeGraphTargetSampleRate(patch = nodeGraphMvp.patch) {
+  return normalizeNodeGraphPatchAudio(patch?.audio).targetSampleRate;
+}
+
+function nodeGraphOversamplingMultiplier(baseRate, targetRate) {
+  const base = Math.round(Number(baseRate));
+  const target = Math.round(Number(targetRate));
+  if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(target) || target <= 0) {
+    return 1;
+  }
+  return Math.max(1, Math.round(target / base));
+}
+
+function nodeGraphEffectiveSampleRate(baseRate, multiplier) {
+  const base = Math.round(Number(baseRate));
+  const factor = Math.round(Number(multiplier));
+  if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(factor) || factor <= 0) {
+    return base;
+  }
+  return base * factor;
+}
+
+function nodeGraphAudioDerivation(patch = nodeGraphMvp.patch) {
+  const currentSampleRate = nodeGraphBaseSampleRate();
+  const targetSampleRate = nodeGraphTargetSampleRate(patch);
+  const oversampling = nodeGraphOversamplingMultiplier(currentSampleRate, targetSampleRate);
+  return {
+    currentSampleRate,
+    oversampling,
+    resultingSampleRate: nodeGraphEffectiveSampleRate(currentSampleRate, oversampling),
+    targetSampleRate,
+  };
+}
+
 function normalizeNodeGraphPatchVisual(visual = {}) {
   const mode = String(visual.mode || "auto").trim();
   const scale = Number(visual.scale);
@@ -6473,6 +6524,7 @@ function cloneNodeGraphParamMeta(paramMeta = {}) {
 
 function cloneNodeGraphPatch(patch) {
   return {
+    audio: normalizeNodeGraphPatchAudio(patch.audio),
     bypassedNodes: Array.isArray(patch.bypassedNodes) ? [...patch.bypassedNodes] : [],
     connections: (patch.connections || []).map((connection) => ({ ...connection })),
     format: { ...(patch.format || nodeGraphPatchFormat) },
@@ -6671,6 +6723,7 @@ function syncNodeGraphRuntimeFromPatch() {
 function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
   return JSON.stringify(
     {
+      audio: normalizeNodeGraphPatchAudio(patch.audio),
       bypassedNodes: patch.bypassedNodes || [],
       connections: patch.connections,
       format: { ...nodeGraphPatchFormat },
@@ -6879,6 +6932,7 @@ function validateNodeGraphPatch(patch) {
   }
 
   return {
+    audio: normalizeNodeGraphPatchAudio(patch.audio),
     bypassedNodes,
     connections,
     format: { ...nodeGraphPatchFormat },
@@ -6946,6 +7000,11 @@ function syncNodeGraphSettingsView() {
   setNodeGraphSettingsField("patchAuthorValue", info.author);
   setNodeGraphSettingsField("patchTagsValue", info.tags);
   setNodeGraphSettingsField("patchDescriptionValue", info.description);
+  const audio = nodeGraphAudioDerivation(nodeGraphMvp.patch);
+  setNodeGraphSettingsField("patchCurrentSampleRateValue", `${audio.currentSampleRate} Hz`);
+  setNodeGraphSettingsField("patchTargetSampleRateValue", audio.targetSampleRate);
+  setNodeGraphSettingsField("patchResultingSampleRateValue", `${audio.resultingSampleRate} Hz`);
+  setNodeGraphSettingsField("patchResultingOversamplingValue", `x${audio.oversampling}`);
   const visual = normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual);
   setNodeGraphSettingsField("patchVisualModeValue", visual.mode);
   setNodeGraphSettingsField("patchVisualScaleValue", visual.scale);
@@ -6973,8 +7032,15 @@ function readNodeGraphVisualSettingsView() {
   });
 }
 
+function readNodeGraphAudioSettingsView() {
+  return normalizeNodeGraphPatchAudio({
+    targetSampleRate: document.getElementById("patchTargetSampleRateValue")?.value,
+  });
+}
+
 function handleNodeGraphSettingsInput() {
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  patch.audio = readNodeGraphAudioSettingsView();
   patch.info = readNodeGraphSettingsView();
   patch.visual = readNodeGraphVisualSettingsView();
   commitNodeGraphPatch(patch, {
@@ -13592,6 +13658,10 @@ function initNodeGraphMvp() {
     field.addEventListener("change", commitNodeGraphSettingsHistory);
   }
   for (const field of document.querySelectorAll("[data-patch-visual-field]")) {
+    field.addEventListener("input", handleNodeGraphSettingsInput);
+    field.addEventListener("change", commitNodeGraphSettingsHistory);
+  }
+  for (const field of document.querySelectorAll("[data-patch-audio-field]")) {
     field.addEventListener("input", handleNodeGraphSettingsInput);
     field.addEventListener("change", commitNodeGraphSettingsHistory);
   }

@@ -157,6 +157,24 @@
           <label class="node-settings-description">Patch Description
             <textarea id="patchDescriptionValue" spellcheck="true" data-patch-info-field></textarea>
           </label>
+          <label>Current Sample Rate
+            <input id="patchCurrentSampleRateValue" type="text" readonly>
+          </label>
+          <label>Target Sample Rate
+            <input
+              id="patchTargetSampleRateValue"
+              type="number"
+              min="8000"
+              max="768000"
+              step="1"
+              data-patch-audio-field>
+          </label>
+          <label>Resulting Sample Rate
+            <input id="patchResultingSampleRateValue" type="text" readonly>
+          </label>
+          <label>Resulting Oversampling
+            <input id="patchResultingOversamplingValue" type="text" readonly>
+          </label>
           <label>Visual Output Mode
             <select id="patchVisualModeValue" data-patch-visual-field>
               <option value="auto">Auto</option>
