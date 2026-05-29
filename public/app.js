@@ -6045,8 +6045,12 @@ const nodeGraphGrid = Object.freeze({
 
 const nodeGraphModuleLayout = Object.freeze({
   bodyRowGapPx: 3,
+  fitCushionPx: 2,
   headerHeightPx: 76,
-  ioSectionHeightPx: 42,
+  ioPaddingYPx: 8,
+  ioRowGapPx: 3,
+  ioRowHeightPx: 16,
+  ioSectionMinHeightPx: 34,
   moduleGridInsetPx: 6,
   sliderRowHeightPx: 30,
 });
@@ -8866,19 +8870,37 @@ function nodeGraphModuleSliderBodyHeightPx(type) {
   );
 }
 
+function nodeGraphModuleIoRowCount(type) {
+  const definition = nodeGraphModuleDefinitions[type];
+  return Math.max(
+    definition?.inputs?.length || 0,
+    definition?.outputs?.length || 0,
+    1,
+  );
+}
+
+function nodeGraphModuleIoSectionHeightPx(type) {
+  const rows = nodeGraphModuleIoRowCount(type);
+  const rowHeight = rows * nodeGraphModuleLayout.ioRowHeightPx;
+  const gapHeight = Math.max(0, rows - 1) * nodeGraphModuleLayout.ioRowGapPx;
+  return Math.max(
+    nodeGraphModuleLayout.ioSectionMinHeightPx,
+    rowHeight + gapHeight + nodeGraphModuleLayout.ioPaddingYPx,
+  );
+}
+
 function nodeGraphModuleRequiredHeightPx(type) {
   return (
     nodeGraphModuleLayout.headerHeightPx +
-    nodeGraphModuleLayout.ioSectionHeightPx +
-    nodeGraphModuleSliderBodyHeightPx(type)
+    nodeGraphModuleIoSectionHeightPx(type) +
+    nodeGraphModuleSliderBodyHeightPx(type) +
+    nodeGraphModuleLayout.fitCushionPx
   );
 }
 
 function nodeGraphModuleGridHeightForPixels(heightPx) {
   const gridSize = nodeGraphGridSize();
-  return Math.ceil(
-    (heightPx + nodeGraphModuleLayout.moduleGridInsetPx * 2) / gridSize,
-  );
+  return (heightPx + nodeGraphModuleLayout.moduleGridInsetPx * 2) / gridSize;
 }
 
 function nodeGraphModuleGridHeightUnits(type) {
@@ -8886,7 +8908,7 @@ function nodeGraphModuleGridHeightUnits(type) {
   const requiredGridUnits = nodeGraphModuleGridHeightForPixels(
     nodeGraphModuleRequiredHeightPx(type),
   );
-  return Math.max(roughGridUnits, requiredGridUnits + 1);
+  return Math.max(roughGridUnits, requiredGridUnits);
 }
 
 function createNodeGraphModuleElement(type, node) {
