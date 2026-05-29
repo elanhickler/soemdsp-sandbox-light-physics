@@ -6043,6 +6043,14 @@ const nodeGraphGrid = Object.freeze({
   sizePx: 28,
 });
 
+const nodeGraphModuleLayout = Object.freeze({
+  bodyRowGapPx: 3,
+  headerHeightPx: 76,
+  ioSectionHeightPx: 42,
+  moduleGridInsetPx: 6,
+  sliderRowHeightPx: 30,
+});
+
 const nodeGraphPatchFormat = Object.freeze({
   kind: "soemdsp-sandbox-node-patch",
   version: 1,
@@ -8850,8 +8858,35 @@ function nodeGraphModuleGridWidthUnits(type) {
   return nodeGraphModuleDefinitions[type]?.output ? 6 : 7;
 }
 
+function nodeGraphModuleSliderBodyHeightPx(type) {
+  const rows = Math.max(1, nodeGraphModuleBodyRowCount(type));
+  return (
+    rows * nodeGraphModuleLayout.sliderRowHeightPx +
+    Math.max(0, rows - 1) * nodeGraphModuleLayout.bodyRowGapPx
+  );
+}
+
+function nodeGraphModuleRequiredHeightPx(type) {
+  return (
+    nodeGraphModuleLayout.headerHeightPx +
+    nodeGraphModuleLayout.ioSectionHeightPx +
+    nodeGraphModuleSliderBodyHeightPx(type)
+  );
+}
+
+function nodeGraphModuleGridHeightForPixels(heightPx) {
+  const gridSize = nodeGraphGridSize();
+  return Math.ceil(
+    (heightPx + nodeGraphModuleLayout.moduleGridInsetPx * 2) / gridSize,
+  );
+}
+
 function nodeGraphModuleGridHeightUnits(type) {
-  return 4 + Math.max(1, nodeGraphModuleBodyRowCount(type)) * 1.25;
+  const roughGridUnits = 4 + Math.max(1, nodeGraphModuleBodyRowCount(type)) * 1.25;
+  const requiredGridUnits = nodeGraphModuleGridHeightForPixels(
+    nodeGraphModuleRequiredHeightPx(type),
+  );
+  return Math.max(roughGridUnits, requiredGridUnits + 1);
 }
 
 function createNodeGraphModuleElement(type, node) {
