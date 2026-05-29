@@ -222,8 +222,37 @@ audio {
   user-select: none;
 }
 
+.node-graph-workspace.resizing {
+  outline: 1px solid rgba(226, 168, 109, 0.62);
+}
+
 .node-graph-workspace[hidden] {
   display: none;
+}
+
+.node-graph-resize-handle {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-color: rgba(226, 168, 109, 0.46);
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, transparent 0 48%, rgba(226, 168, 109, 0.78) 48% 54%, transparent 54%),
+    linear-gradient(135deg, transparent 0 62%, rgba(226, 168, 109, 0.48) 62% 68%, transparent 68%),
+    rgba(17, 20, 24, 0.88);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.node-graph-resize-handle:hover,
+.node-graph-resize-handle:active {
+  border-color: rgba(226, 168, 109, 0.78);
 }
 
 .node-script-view {

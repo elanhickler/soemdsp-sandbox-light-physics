@@ -6177,6 +6177,7 @@ const nodeGraphDefaultPatch = Object.freeze({
     moduleActions: { left: null, top: null },
   },
   grid: { ...nodeGraphGrid },
+  view: { widthGu: 0, heightGu: 0 },
   nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node })),
   connections: nodeGraphDefaultConnections.map((connection) => ({ ...connection })),
   modulations: [],
@@ -6355,6 +6356,24 @@ function normalizeNodeGraphPatchWindows(windows = {}) {
   };
 }
 
+const nodeGraphWorkspaceViewLimits = Object.freeze({
+  minHeightGu: 18,
+  minWidthGu: 24,
+});
+
+function normalizeNodeGraphPatchView(view = {}) {
+  const widthGu = Math.round(Number(view?.widthGu));
+  const heightGu = Math.round(Number(view?.heightGu));
+  return {
+    heightGu: Number.isFinite(heightGu)
+      ? Math.max(0, heightGu)
+      : 0,
+    widthGu: Number.isFinite(widthGu)
+      ? Math.max(0, widthGu)
+      : 0,
+  };
+}
+
 function nodeGraphVisualThemeColors(theme = "cyan-violet") {
   switch (theme) {
     case "ember-gold":
@@ -6403,6 +6422,7 @@ function cloneNodeGraphPatch(patch) {
       paramMeta: cloneNodeGraphParamMeta(node.paramMeta),
       params: { ...(node.params || {}) },
     })),
+    view: normalizeNodeGraphPatchView(patch.view),
     visual: normalizeNodeGraphPatchVisual(patch.visual),
     windows: normalizeNodeGraphPatchWindows(patch.windows),
   };
@@ -6470,6 +6490,7 @@ const nodeGraphMvp = {
   sampleRate: 44100,
   seconds: 2,
   sliderDragging: null,
+  workspaceResizing: null,
   zoom: 1,
 };
 
@@ -6482,6 +6503,35 @@ const nodeGraphZoomLimits = Object.freeze({
 function nodeGraphGridSize() {
   const size = Number(nodeGraphMvp.patch?.grid?.sizePx);
   return Number.isFinite(size) && size > 0 ? size : nodeGraphGrid.sizePx;
+}
+
+function nodeGraphWorkspaceViewUnitPx() {
+  return nodeGraphGridSize() * nodeGraphZoom();
+}
+
+function applyNodeGraphWorkspaceView() {
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  if (!workspace) {
+    return;
+  }
+
+  workspace.style.setProperty("--node-grid-size", `${nodeGraphGridSize()}px`);
+  const view = normalizeNodeGraphPatchView(nodeGraphMvp.patch.view);
+  const unitPx = nodeGraphWorkspaceViewUnitPx();
+  if (view.widthGu > 0) {
+    workspace.style.width = `${view.widthGu * unitPx}px`;
+  } else {
+    workspace.style.removeProperty("width");
+  }
+  if (view.heightGu > 0) {
+    workspace.style.height = `${view.heightGu * unitPx}px`;
+    workspace.style.removeProperty("aspect-ratio");
+  } else {
+    workspace.style.removeProperty("height");
+    workspace.style.removeProperty("aspect-ratio");
+  }
+  workspace.dataset.widthGu = String(view.widthGu);
+  workspace.dataset.heightGu = String(view.heightGu);
 }
 
 function nodeGraphGridSnapOffset() {
@@ -6564,6 +6614,7 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
       info: normalizeNodeGraphPatchInfo(patch.info),
       modulations: patch.modulations || [],
       nodes: patch.nodes,
+      view: normalizeNodeGraphPatchView(patch.view),
       visual: normalizeNodeGraphPatchVisual(patch.visual),
       windows: normalizeNodeGraphPatchWindows(patch.windows),
     },
@@ -6755,6 +6806,14 @@ function validateNodeGraphPatch(patch) {
     return { destinationNode, destinationParam, sourceNode, sourcePort };
   }) : [];
 
+  const view = normalizeNodeGraphPatchView(patch.view);
+  if (view.widthGu && view.widthGu < nodeGraphWorkspaceViewLimits.minWidthGu) {
+    throw new Error(`view.widthGu must be 0 or at least ${nodeGraphWorkspaceViewLimits.minWidthGu}`);
+  }
+  if (view.heightGu && view.heightGu < nodeGraphWorkspaceViewLimits.minHeightGu) {
+    throw new Error(`view.heightGu must be 0 or at least ${nodeGraphWorkspaceViewLimits.minHeightGu}`);
+  }
+
   return {
     bypassedNodes,
     connections,
@@ -6763,6 +6822,7 @@ function validateNodeGraphPatch(patch) {
     info: normalizeNodeGraphPatchInfo(patch.info),
     modulations,
     nodes,
+    view,
     visual: normalizeNodeGraphPatchVisual(patch.visual),
     windows: normalizeNodeGraphPatchWindows(patch.windows),
   };
@@ -6902,8 +6962,7 @@ function applyNodeGraphPatchToDom() {
     return;
   }
 
-  const workspace = document.getElementById("nodeGraphWorkspace");
-  workspace?.style.setProperty("--node-grid-size", `${nodeGraphGridSize()}px`);
+  applyNodeGraphWorkspaceView();
 
   for (const element of [...container.querySelectorAll(".dsp-node")]) {
     if (!nodeGraphPatchNode(element.dataset.node)) {
@@ -9706,6 +9765,7 @@ function applyNodeGraphZoom() {
   }
   workspace.style.setProperty("--node-graph-zoom", String(nodeGraphZoom()));
   workspace.dataset.zoom = nodeGraphZoom().toFixed(2);
+  applyNodeGraphWorkspaceView();
   const zoomOutButton = document.getElementById("nodeZoomOutButton");
   const zoomInButton = document.getElementById("nodeZoomInButton");
   if (zoomOutButton) {
@@ -10453,6 +10513,105 @@ function nodeGraphNodeBounds(node) {
 
 function nodeGraphRectsIntersect(a, b) {
   return a.left <= b.right && a.right >= b.left && a.top <= b.bottom && a.bottom >= b.top;
+}
+
+function nodeGraphWorkspaceCurrentGridSize() {
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  const rect = workspace.getBoundingClientRect();
+  const unitPx = nodeGraphWorkspaceViewUnitPx();
+  return {
+    heightGu: Math.max(
+      nodeGraphWorkspaceViewLimits.minHeightGu,
+      Math.round(rect.height / unitPx),
+    ),
+    widthGu: Math.max(
+      nodeGraphWorkspaceViewLimits.minWidthGu,
+      Math.round(rect.width / unitPx),
+    ),
+  };
+}
+
+function setNodeGraphWorkspacePreviewSize(widthGu, heightGu) {
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  const unitPx = nodeGraphWorkspaceViewUnitPx();
+  workspace.style.width = `${widthGu * unitPx}px`;
+  workspace.style.height = `${heightGu * unitPx}px`;
+  workspace.style.removeProperty("aspect-ratio");
+  workspace.dataset.widthGu = String(widthGu);
+  workspace.dataset.heightGu = String(heightGu);
+  drawNodeGraphWires();
+}
+
+function beginNodeGraphWorkspaceResize(event) {
+  if (event.button !== 0) {
+    return;
+  }
+  if (!nodeGraphScriptReadyForGraphAction("resize workspace")) {
+    return;
+  }
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  const startSize = nodeGraphWorkspaceCurrentGridSize();
+  nodeGraphMvp.workspaceResizing = {
+    heightGu: startSize.heightGu,
+    pointerId: event.pointerId,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    startHeightGu: startSize.heightGu,
+    startWidthGu: startSize.widthGu,
+    widthGu: startSize.widthGu,
+  };
+  workspace.classList.add("resizing");
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphWorkspaceResize(event) {
+  const drag = nodeGraphMvp.workspaceResizing;
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+  const unitPx = nodeGraphWorkspaceViewUnitPx();
+  const widthGu = Math.max(
+    nodeGraphWorkspaceViewLimits.minWidthGu,
+    drag.startWidthGu + Math.round((event.clientX - drag.startClientX) / unitPx),
+  );
+  const heightGu = Math.max(
+    nodeGraphWorkspaceViewLimits.minHeightGu,
+    drag.startHeightGu + Math.round((event.clientY - drag.startClientY) / unitPx),
+  );
+  if (widthGu === drag.widthGu && heightGu === drag.heightGu) {
+    return;
+  }
+  drag.widthGu = widthGu;
+  drag.heightGu = heightGu;
+  setNodeGraphWorkspacePreviewSize(widthGu, heightGu);
+}
+
+function endNodeGraphWorkspaceResize(event) {
+  const drag = nodeGraphMvp.workspaceResizing;
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+  const handle = document.getElementById("nodeGraphResizeHandle");
+  if (handle?.hasPointerCapture?.(event.pointerId)) {
+    handle.releasePointerCapture(event.pointerId);
+  }
+  document.getElementById("nodeGraphWorkspace")?.classList.remove("resizing");
+  nodeGraphMvp.workspaceResizing = null;
+  if (drag.widthGu === drag.startWidthGu && drag.heightGu === drag.startHeightGu) {
+    applyNodeGraphWorkspaceView();
+    return;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  patch.view = {
+    heightGu: drag.heightGu,
+    widthGu: drag.widthGu,
+  };
+  commitNodeGraphPatch(patch, {
+    markPending: false,
+    status: "workspace resized",
+  });
 }
 
 function renderNodeGraphMarqueeSelection() {
@@ -11216,6 +11375,9 @@ function nodeInteractionMouseHint(element) {
   }
   if (element.id === "nodeZoomOutButton" || element.id === "nodeZoomInButton") {
     return "Mouse: click to zoom modular view.";
+  }
+  if (element.id === "nodeGraphResizeHandle") {
+    return "Mouse: drag to resize workspace by grid units.";
   }
   if (
     element.id === "nodeSettingsViewButton" ||
@@ -12814,10 +12976,16 @@ function initNodeGraphMvp() {
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointercancel", endNodeGraphMarqueeSelection);
+  document
+    .getElementById("nodeGraphResizeHandle")
+    .addEventListener("pointerdown", beginNodeGraphWorkspaceResize);
 
   document.addEventListener("pointermove", dragNodeGraphWire);
   document.addEventListener("pointerup", endNodeGraphWireDrag);
   document.addEventListener("pointercancel", endNodeGraphWireDrag);
+  document.addEventListener("pointermove", dragNodeGraphWorkspaceResize);
+  document.addEventListener("pointerup", endNodeGraphWorkspaceResize);
+  document.addEventListener("pointercancel", endNodeGraphWorkspaceResize);
   document.addEventListener("pointermove", dragNodeMetadataPopover);
   document.addEventListener("pointerup", endNodeMetadataPopoverDrag);
   document.addEventListener("pointercancel", endNodeMetadataPopoverDrag);
