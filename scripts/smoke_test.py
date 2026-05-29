@@ -4227,7 +4227,7 @@ def require_node_graph_mvp_contract() -> None:
         "var(--choice-divider-width",
         "grid-template-columns: minmax(0, 1fr) auto",
         "grid-template-rows: minmax(0, 1fr) minmax(0, 1fr)",
-        "row-gap: 1px",
+        "row-gap: 0",
         "cursor: all-scroll;",
         ".node-slider-readout.value-dragging",
         ".node-slider-readout-label",
