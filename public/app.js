@@ -6044,15 +6044,15 @@ const nodeGraphGrid = Object.freeze({
 });
 
 const nodeGraphModuleLayout = Object.freeze({
-  bodyRowGapPx: 3,
-  fitCushionPx: 2,
-  headerHeightPx: 76,
-  ioPaddingYPx: 8,
-  ioRowGapPx: 3,
-  ioRowHeightPx: 16,
-  ioSectionMinHeightPx: 34,
-  moduleGridInsetPx: 6,
-  sliderRowHeightPx: 30,
+  bodyRowGapGu: 3 / 28,
+  fitCushionGu: 2 / 28,
+  headerHeightGu: 76 / 28,
+  ioPaddingYGu: 8 / 28,
+  ioRowGapGu: 3 / 28,
+  ioRowHeightGu: 16 / 28,
+  ioSectionMinHeightGu: 34 / 28,
+  moduleGridInsetGu: 6 / 28,
+  sliderRowHeightGu: 30 / 28,
 });
 
 const nodeGraphPatchFormat = Object.freeze({
@@ -8862,11 +8862,11 @@ function nodeGraphModuleGridWidthUnits(type) {
   return nodeGraphModuleDefinitions[type]?.output ? 6 : 7;
 }
 
-function nodeGraphModuleSliderBodyHeightPx(type) {
+function nodeGraphModuleSliderBodyHeightGu(type) {
   const rows = Math.max(1, nodeGraphModuleBodyRowCount(type));
   return (
-    rows * nodeGraphModuleLayout.sliderRowHeightPx +
-    Math.max(0, rows - 1) * nodeGraphModuleLayout.bodyRowGapPx
+    rows * nodeGraphModuleLayout.sliderRowHeightGu +
+    Math.max(0, rows - 1) * nodeGraphModuleLayout.bodyRowGapGu
   );
 }
 
@@ -8879,35 +8879,29 @@ function nodeGraphModuleIoRowCount(type) {
   );
 }
 
-function nodeGraphModuleIoSectionHeightPx(type) {
+function nodeGraphModuleIoSectionHeightGu(type) {
   const rows = nodeGraphModuleIoRowCount(type);
-  const rowHeight = rows * nodeGraphModuleLayout.ioRowHeightPx;
-  const gapHeight = Math.max(0, rows - 1) * nodeGraphModuleLayout.ioRowGapPx;
+  const rowHeight = rows * nodeGraphModuleLayout.ioRowHeightGu;
+  const gapHeight = Math.max(0, rows - 1) * nodeGraphModuleLayout.ioRowGapGu;
   return Math.max(
-    nodeGraphModuleLayout.ioSectionMinHeightPx,
-    rowHeight + gapHeight + nodeGraphModuleLayout.ioPaddingYPx,
+    nodeGraphModuleLayout.ioSectionMinHeightGu,
+    rowHeight + gapHeight + nodeGraphModuleLayout.ioPaddingYGu,
   );
 }
 
-function nodeGraphModuleRequiredHeightPx(type) {
+function nodeGraphModuleRequiredHeightUnits(type) {
   return (
-    nodeGraphModuleLayout.headerHeightPx +
-    nodeGraphModuleIoSectionHeightPx(type) +
-    nodeGraphModuleSliderBodyHeightPx(type) +
-    nodeGraphModuleLayout.fitCushionPx
+    nodeGraphModuleLayout.headerHeightGu +
+    nodeGraphModuleIoSectionHeightGu(type) +
+    nodeGraphModuleSliderBodyHeightGu(type) +
+    nodeGraphModuleLayout.fitCushionGu +
+    nodeGraphModuleLayout.moduleGridInsetGu * 2
   );
-}
-
-function nodeGraphModuleGridHeightForPixels(heightPx) {
-  const gridSize = nodeGraphGridSize();
-  return (heightPx + nodeGraphModuleLayout.moduleGridInsetPx * 2) / gridSize;
 }
 
 function nodeGraphModuleGridHeightUnits(type) {
   const roughGridUnits = 4 + Math.max(1, nodeGraphModuleBodyRowCount(type)) * 1.25;
-  const requiredGridUnits = nodeGraphModuleGridHeightForPixels(
-    nodeGraphModuleRequiredHeightPx(type),
-  );
+  const requiredGridUnits = nodeGraphModuleRequiredHeightUnits(type);
   return Math.max(roughGridUnits, requiredGridUnits);
 }
 

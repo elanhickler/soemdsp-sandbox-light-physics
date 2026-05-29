@@ -240,8 +240,29 @@ audio {
 .node-graph-workspace {
   --node-graph-zoom: 1;
   --node-grid-size: 28px;
-  --node-header-height: 76px;
-  --node-module-grid-inset: 6px;
+  --node-body-row-gap: calc(var(--node-grid-size) * 0.1071429);
+  --node-body-row-height: calc(var(--node-grid-size) * 1.0714286);
+  --node-header-button-overflow: calc(var(--node-grid-size) * 0.5);
+  --node-header-gap: calc(var(--node-grid-size) * 0.0714286);
+  --node-header-height: calc(var(--node-grid-size) * 2.7142857);
+  --node-header-padding-block-end: calc(var(--node-grid-size) * 0.1071429);
+  --node-header-padding-block-start: calc(var(--node-grid-size) * 0.1428571);
+  --node-header-padding-inline: calc(var(--node-grid-size) * 0.5);
+  --node-header-title-row-height: calc(var(--node-grid-size) * 0.7857143);
+  --node-io-column-padding: calc(var(--node-grid-size) * 0.2142857);
+  --node-io-gap: calc(var(--node-grid-size) * 0.1071429);
+  --node-io-label-gap: calc(var(--node-grid-size) * 0.1785714);
+  --node-io-section-min-height: calc(var(--node-grid-size) * 1.2142857);
+  --node-io-section-padding-block: calc(var(--node-grid-size) * 0.1428571);
+  --node-module-grid-inset: calc(var(--node-grid-size) * 0.2142857);
+  --node-param-port-height: 70%;
+  --node-param-port-width: 57%;
+  --node-port-column-gap: calc(var(--node-grid-size) * 0.2857143);
+  --node-port-column-width: calc(var(--node-grid-size) * 0.5);
+  --node-slider-padding-block: calc(var(--node-grid-size) * 0.0357143);
+  --node-slider-padding-inline: calc(var(--node-grid-size) * 0.25);
+  --node-slider-row-padding-block: calc(var(--node-grid-size) * 0.0357143);
+  --node-slider-unit-width: 2.5em;
   position: relative;
   aspect-ratio: 1 / 1;
   min-height: 560px;
@@ -532,9 +553,12 @@ audio {
   min-width: 0;
   height: var(--node-header-height);
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 22px;
-  gap: 2px;
-  padding: 4px 14px 3px;
+  grid-template-rows: minmax(0, 1fr) var(--node-header-title-row-height);
+  gap: var(--node-header-gap);
+  padding:
+    var(--node-header-padding-block-start)
+    var(--node-header-padding-inline)
+    var(--node-header-padding-block-end);
   background: rgba(7, 10, 13, 0.28);
 }
 
@@ -543,8 +567,8 @@ audio {
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-auto-rows: 30px;
-  gap: 3px;
+  grid-auto-rows: var(--node-body-row-height);
+  gap: var(--node-body-row-gap);
   padding: 0;
 }
 
@@ -564,10 +588,13 @@ audio {
   gap: 0;
   justify-content: start;
   justify-self: stretch;
-  width: calc(100% + 28px);
+  width: calc(100% + (var(--node-header-button-overflow) * 2));
   height: 100%;
   max-width: none;
-  margin: -4px -14px 0;
+  margin:
+    calc(var(--node-header-padding-block-start) * -1)
+    calc(var(--node-header-button-overflow) * -1)
+    0;
   overflow: hidden;
   background: rgba(17, 20, 24, 0.88);
 }
@@ -575,7 +602,7 @@ audio {
 .node-header-title-row {
   display: flex;
   justify-content: flex-start;
-  padding: 0 4px;
+  padding: 0 calc(var(--node-grid-size) * 0.1428571);
 }
 
 .node-header-title {
@@ -598,32 +625,32 @@ audio {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: stretch;
   min-width: 0;
-  min-height: 34px;
-  padding: 4px 0;
+  min-height: var(--node-io-section-min-height);
+  padding: var(--node-io-section-padding-block) 0;
   background: rgba(11, 14, 18, 0.46);
 }
 
 .node-io-column {
   display: grid;
   align-content: center;
-  gap: 3px;
+  gap: var(--node-io-gap);
   min-width: 0;
 }
 
 .node-io-column.input {
   justify-items: start;
-  padding-right: 6px;
+  padding-right: var(--node-io-column-padding);
 }
 
 .node-io-column.output {
   justify-items: end;
-  padding-left: 6px;
+  padding-left: var(--node-io-column-padding);
 }
 
 .node-io-row {
   display: grid;
   align-items: center;
-  gap: 5px;
+  gap: var(--node-io-label-gap);
   min-width: 0;
   max-width: 100%;
   color: var(--muted);
@@ -746,12 +773,12 @@ audio {
 
 .node-parameter-row {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) 14px;
+  grid-template-columns: var(--node-port-column-width) minmax(0, 1fr) var(--node-port-column-width);
   grid-template-rows: minmax(0, 1fr);
   align-items: center;
-  column-gap: 8px;
+  column-gap: var(--node-port-column-gap);
   min-height: 0;
-  padding: 1px 0;
+  padding: var(--node-slider-row-padding-block) 0;
 }
 
 .node-parameter-control {
@@ -775,9 +802,9 @@ audio {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  min-height: 26px;
-  height: 30px;
-  padding: 1px 7px;
+  min-height: 0;
+  height: 100%;
+  padding: var(--node-slider-padding-block) var(--node-slider-padding-inline);
   border: 1px solid var(--line);
   border-radius: 4px;
   background:
@@ -845,7 +872,7 @@ audio {
 
 .node-slider-readout-unit {
   grid-column: 2;
-  min-width: 2.5em;
+  min-width: var(--node-slider-unit-width);
   color: var(--accent);
   font-size: 0.72rem;
   line-height: 1;
@@ -1164,9 +1191,9 @@ audio {
   align-self: center;
   justify-self: start;
   display: block;
-  width: 57%;
+  width: var(--node-param-port-width);
   min-width: 0;
-  height: 70%;
+  height: var(--node-param-port-height);
   min-height: 0;
   padding: 0;
   border-radius: 0 999px 999px 0;
