@@ -10592,10 +10592,10 @@ function burstNodeGraphZap(point) {
     particle.textContent = "⌁";
     particle.style.left = `${point.x}px`;
     particle.style.top = `${point.y}px`;
-    particle.style.setProperty("--zap-x", `${(index % 4 - 1.5) * 18}px`);
-    particle.style.setProperty("--zap-y", `${-18 - Math.floor(index / 4) * 14}px`);
+    particle.style.setProperty("--zap-x", `${(index % 4 - 1.5) * 30}px`);
+    particle.style.setProperty("--zap-y", `${-30 - Math.floor(index / 4) * 24}px`);
     particle.style.setProperty("--zap-rotate", `${index * 43 - 96}deg`);
-    particle.style.setProperty("--zap-scale", `${0.72 + (index % 5) * 0.17}`);
+    particle.style.setProperty("--zap-scale", `${1 + (index % 5) * 0.24}`);
     particle.style.animationDelay = `${index * 14}ms`;
     particle.addEventListener("animationend", () => particle.remove(), { once: true });
     surface.append(particle);
