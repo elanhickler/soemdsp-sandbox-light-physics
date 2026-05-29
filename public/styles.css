@@ -678,7 +678,7 @@ audio {
   max-width: 100%;
   color: var(--muted);
   font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   line-height: 1;
 }
 
