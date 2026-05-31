@@ -568,6 +568,7 @@ def require_shell_contract(html: str) -> None:
             "./public/node-graph-live-status-text.js",
             "./public/node-graph-live-status-controls.js",
             "./public/node-graph-live-meter-controls.js",
+            "./public/node-graph-live-input-status.js",
             "./public/node-graph-live-evidence.js",
             "./public/node-graph-default-buttons.js",
             "./public/node-graph-file-actions.js",
@@ -2016,6 +2017,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/node-graph-live-status-text.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-live-status-text.js"),
         ("/public/node-graph-live-status-controls.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-live-status-controls.js"),
         ("/public/node-graph-live-meter-controls.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-live-meter-controls.js"),
+        ("/public/node-graph-live-input-status.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-live-input-status.js"),
         ("/public/node-graph-live-evidence.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-live-evidence.js"),
         ("/public/node-graph-default-buttons.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-default-buttons.js"),
         ("/public/node-graph-file-actions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-file-actions.js"),
@@ -3146,6 +3148,7 @@ def require_node_graph_mvp_contract() -> None:
     live_status_text_source = (PUBLIC / "node-graph-live-status-text.js").read_text(encoding="utf-8")
     live_status_controls_source = (PUBLIC / "node-graph-live-status-controls.js").read_text(encoding="utf-8")
     live_meter_controls_source = (PUBLIC / "node-graph-live-meter-controls.js").read_text(encoding="utf-8")
+    live_input_status_source = (PUBLIC / "node-graph-live-input-status.js").read_text(encoding="utf-8")
     live_evidence_source = (PUBLIC / "node-graph-live-evidence.js").read_text(encoding="utf-8")
     wire_source = (PUBLIC / "node-graph-wires.js").read_text(encoding="utf-8")
     file_actions_source = (PUBLIC / "node-graph-file-actions.js").read_text(encoding="utf-8")
@@ -3190,7 +3193,7 @@ def require_node_graph_mvp_contract() -> None:
         f"{settings_text_fit_source}\n{default_preset_source}\n{script_status_source}\n{view_controls_source}\n"
         f"{history_source}\n{keyboard_shortcuts_source}\n"
         f"{live_status_text_source}\n{live_status_controls_source}\n{live_meter_controls_source}\n"
-        f"{live_evidence_source}\n{wire_source}\n"
+        f"{live_input_status_source}\n{live_evidence_source}\n{wire_source}\n"
         f"{file_actions_source}\n{default_buttons_source}\n"
         f"{module_definitions_source}\n{module_sizing_source}\n"
         f"{parameter_metadata_source}\n{metadata_defaults_source}\n"
