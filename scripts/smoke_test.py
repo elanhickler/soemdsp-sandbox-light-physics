@@ -551,6 +551,7 @@ def require_shell_contract(html: str) -> None:
             "./public/app.js",
             "./public/audio-utils.js",
             "./public/format-utils.js",
+            "./public/inspection-utils.js",
             "./public/node-graph-default-buttons.js",
             "./public/node-graph-file-actions.js",
             "./public/node-graph-ui-settings-definitions.js",
@@ -1953,6 +1954,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/app.js", ("application/javascript", "text/javascript"), PUBLIC / "app.js"),
         ("/public/audio-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "audio-utils.js"),
         ("/public/format-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "format-utils.js"),
+        ("/public/inspection-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "inspection-utils.js"),
         ("/public/node-graph-default-buttons.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-default-buttons.js"),
         ("/public/node-graph-file-actions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-file-actions.js"),
         ("/public/node-graph-ui-settings-definitions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-ui-settings-definitions.js"),
@@ -1994,10 +1996,14 @@ def require_waveform_seek_source_contract() -> None:
     app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
     audio_source = (PUBLIC / "audio-utils.js").read_text(encoding="utf-8")
     format_source = (PUBLIC / "format-utils.js").read_text(encoding="utf-8")
+    inspection_source = (PUBLIC / "inspection-utils.js").read_text(encoding="utf-8")
     file_actions_source = (PUBLIC / "node-graph-file-actions.js").read_text(encoding="utf-8")
     signal_plot_settings_source = (PUBLIC / "signal-plot-settings.js").read_text(encoding="utf-8")
     ui_label_source = (PUBLIC / "ui-label-utils.js").read_text(encoding="utf-8")
-    waveform_source = f"{app_source}\n{audio_source}\n{format_source}\n{file_actions_source}\n{signal_plot_settings_source}\n{ui_label_source}"
+    waveform_source = (
+        f"{app_source}\n{audio_source}\n{format_source}\n{inspection_source}\n"
+        f"{file_actions_source}\n{signal_plot_settings_source}\n{ui_label_source}"
+    )
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     require(
         "function seekPrimaryAudioToFrame(frame, source = inspectionSources.waveform)" in app_source,
@@ -2881,7 +2887,7 @@ def require_waveform_seek_source_contract() -> None:
         "button.dataset.phaseEndTime !== undefined",
         'label.includes(" phase from frame ")',
     ]:
-        require(snippet in app_source, f"waveform drag source missing {snippet}")
+        require(snippet in waveform_source, f"waveform drag source missing {snippet}")
     for snippet in [
         'classList.add("dragging")',
         'classList.remove("dragging")',
