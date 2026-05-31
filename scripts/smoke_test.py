@@ -566,6 +566,7 @@ def require_shell_contract(html: str) -> None:
             "./public/node-graph-default-buttons.js",
             "./public/node-graph-file-actions.js",
             "./public/node-graph-module-definitions.js",
+            "./public/node-graph-module-sizing.js",
             "./public/node-graph-parameter-metadata.js",
             "./public/node-graph-metadata-defaults.js",
             "./public/node-graph-patch-normalizers.js",
@@ -1999,6 +2000,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/node-graph-default-buttons.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-default-buttons.js"),
         ("/public/node-graph-file-actions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-file-actions.js"),
         ("/public/node-graph-module-definitions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-module-definitions.js"),
+        ("/public/node-graph-module-sizing.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-module-sizing.js"),
         ("/public/node-graph-parameter-metadata.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-parameter-metadata.js"),
         ("/public/node-graph-metadata-defaults.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-metadata-defaults.js"),
         ("/public/node-graph-patch-normalizers.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-patch-normalizers.js"),
@@ -3115,6 +3117,7 @@ def require_node_graph_mvp_contract() -> None:
     file_actions_source = (PUBLIC / "node-graph-file-actions.js").read_text(encoding="utf-8")
     default_buttons_source = (PUBLIC / "node-graph-default-buttons.js").read_text(encoding="utf-8")
     module_definitions_source = (PUBLIC / "node-graph-module-definitions.js").read_text(encoding="utf-8")
+    module_sizing_source = (PUBLIC / "node-graph-module-sizing.js").read_text(encoding="utf-8")
     parameter_metadata_source = (PUBLIC / "node-graph-parameter-metadata.js").read_text(encoding="utf-8")
     metadata_defaults_source = (PUBLIC / "node-graph-metadata-defaults.js").read_text(encoding="utf-8")
     patch_clone_source = (PUBLIC / "node-graph-patch-clone.js").read_text(encoding="utf-8")
@@ -3145,7 +3148,8 @@ def require_node_graph_mvp_contract() -> None:
         f"{default_preset_source}\n{script_status_source}\n{view_controls_source}\n"
         f"{history_source}\n{wire_source}\n"
         f"{file_actions_source}\n{default_buttons_source}\n"
-        f"{module_definitions_source}\n{parameter_metadata_source}\n{metadata_defaults_source}\n"
+        f"{module_definitions_source}\n{module_sizing_source}\n"
+        f"{parameter_metadata_source}\n{metadata_defaults_source}\n"
         f"{patch_normalizers_source}\n{patch_clone_source}\n{slider_metadata_source}\n"
         f"{slider_values_source}\n"
         f"{node_accessors_source}\n{slider_readout_source}\n{slider_readout_controls_source}\n"
