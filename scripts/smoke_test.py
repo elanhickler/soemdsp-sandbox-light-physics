@@ -4255,13 +4255,14 @@ def require_node_graph_mvp_contract() -> None:
         "node-slider-readout-value",
         "node-slider-readout-unit",
         "function syncNodeSliderPortalHandle",
+        "function nodeSliderChoiceDividerBackground",
         "readout.classList.toggle(\"wraparound-slider\"",
         "nodeSliderShouldWraparound(slider) && !usesChoices",
         "unitText.classList.toggle(\"is-empty\", !unit)",
         "readout.dataset.choiceCount = usesChoices ? String(choices.length) : \"0\"",
         "readout.classList.toggle(\"choices-divided\", dividesChoices)",
-        "readout.style.setProperty(\"--value-start\"",
-        "readout.style.setProperty(\"--value-end\"",
+        "--value-start",
+        "--value-end",
         "readout.style.setProperty(\"--choice-divider-background\"",
         "function nodeGraphValidate()",
         "function nodeGraphModuleOutputPorts(type)",
@@ -5061,17 +5062,37 @@ def require_node_graph_mvp_contract() -> None:
     ]:
         require(snippet in node_graph_source, f"node graph source missing {snippet}")
 
+    choice_divider_helper_source = slider_readout_source[
+        slider_readout_source.index("function nodeSliderChoiceDividerBackground"):
+        slider_readout_source.index("function syncNodeSliderReadout")
+    ]
+    require(
+        "Array.from({ length: Math.max(0, choices.length - 1)" in choice_divider_helper_source,
+        "choice slider dividers should be generated only for internal choice boundaries",
+    )
+    require(
+        "((index + 1) / choices.length) * 100" in choice_divider_helper_source,
+        "choice slider dividers should skip the leftmost and rightmost edges",
+    )
     choice_divider_source = slider_readout_source[
         slider_readout_source.index("if (dividesChoices)"):
         slider_readout_source.index("syncNodeSliderPortalHandle(readout, slider, position, false);")
     ]
     require(
-        "Array.from({ length: Math.max(0, choices.length - 1)" in choice_divider_source,
-        "choice slider dividers should be generated only for internal choice boundaries",
+        'readout.style.removeProperty("--value-start")' in choice_divider_source,
+        "choice slider should clear the numeric selected-handle start marker",
     )
     require(
-        "((index + 1) / choices.length) * 100" in choice_divider_source,
-        "choice slider dividers should skip the leftmost and rightmost edges",
+        'readout.style.removeProperty("--value-end")' in choice_divider_source,
+        "choice slider should clear the numeric selected-handle end marker",
+    )
+    require(
+        'readout.style.setProperty("--value-start"' not in choice_divider_source,
+        "choice slider should not draw a selected choice start marker",
+    )
+    require(
+        'readout.style.setProperty("--value-end"' not in choice_divider_source,
+        "choice slider should not draw a selected choice end marker",
     )
     require(
         "--choice-divider-width" not in slider_readout_source,
