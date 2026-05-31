@@ -20,6 +20,7 @@ from wave import open as open_wave
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "public"
+DEFAULT_UI_SETTINGS = PUBLIC / "presets" / "useruisettings.json"
 DEFAULT_MANIFEST = (
     ROOT.parent / "soemdsp" / "runtime_dsp_object_bound_wav_resync_demo.manifest.json"
 )
@@ -379,8 +380,9 @@ def request(
     url: str,
     method: str = "GET",
     headers: dict[str, str] | None = None,
+    data: bytes | None = None,
 ) -> Response:
-    request = urllib.request.Request(url, headers=headers or {}, method=method)
+    request = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
     try:
         with urllib.request.urlopen(request, timeout=5) as response:
             return Response(
@@ -1873,6 +1875,37 @@ def require_read_only_method_rejections(base_url: str) -> None:
     require_no_store(invalid_default, "empty default preset update")
 
 
+def require_user_ui_settings_update_contract(base_url: str) -> None:
+    original = DEFAULT_UI_SETTINGS.read_bytes()
+    payload = json.loads(original.decode("utf-8"))
+    payload["format"] = {
+        "kind": "soemdsp-sandbox-user-ui-settings",
+        "version": 2,
+    }
+    payload["view"] = {"gridVisible": False}
+    body = json.dumps(payload).encode("utf-8")
+    try:
+        response = request(
+            f"{base_url}/api/presets/useruisettings",
+            method="POST",
+            headers={"Content-Type": "application/json"},
+            data=body,
+        )
+        require(response.status == 200, "version 2 UI settings update did not return 200")
+        require_no_store(response, "version 2 UI settings update")
+        saved_payload = json.loads(DEFAULT_UI_SETTINGS.read_text(encoding="utf-8"))
+        require(
+            saved_payload.get("format", {}).get("version") == 2,
+            "version 2 UI settings update was not saved",
+        )
+        require(
+            saved_payload.get("view", {}).get("gridVisible") is False,
+            "UI settings update did not preserve view.gridVisible",
+        )
+    finally:
+        DEFAULT_UI_SETTINGS.write_bytes(original)
+
+
 def require_root_shell(base_url: str) -> None:
     expected = (PUBLIC / "index.html").read_bytes()
     expected_size = str(len(expected))
@@ -2975,7 +3008,12 @@ def require_node_graph_mvp_contract() -> None:
     signal_plot_settings_source = (PUBLIC / "signal-plot-settings.js").read_text(encoding="utf-8")
     ui_label_source = (PUBLIC / "ui-label-utils.js").read_text(encoding="utf-8")
     wire_source = (PUBLIC / "node-graph-wires.js").read_text(encoding="utf-8")
-    node_graph_source = f"{app_source}\n{audio_source}\n{format_source}\n{signal_plot_settings_source}\n{ui_label_source}\n{wire_source}"
+    server_source = (ROOT / "server.py").read_text(encoding="utf-8")
+    node_graph_source = (
+        f"{app_source}\n{audio_source}\n{format_source}\n"
+        f"{signal_plot_settings_source}\n{ui_label_source}\n{wire_source}\n"
+        f"{server_source}"
+    )
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     tooltip_source = (PUBLIC / "tooltips.json").read_text(encoding="utf-8")
     worklet_source = (PUBLIC / "node-live-audio-worklet.js").read_text(encoding="utf-8")
@@ -4640,6 +4678,8 @@ def require_node_graph_mvp_contract() -> None:
         "const nodeUiDevDefaultSettingsUrl = \"./public/presets/useruisettings.json\"",
         "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings\"",
         "soemdsp-sandbox-user-ui-settings",
+        "settings_format.get(\"version\") not in (1, 2)",
+        "ui settings view must be an object",
         "function serializeNodeUiDevSettings()",
         "function loadNodeUiDevSettingsFromScript(text)",
         "function applyNodeUiDevSettings(settings)",
@@ -4669,6 +4709,7 @@ def require_node_graph_mvp_contract() -> None:
         'getElementById("nodeUiDevModularHeaderButtonBackground")',
         'getElementById("nodeUiDevTooltipTextSize")',
         'getElementById("nodeUiDevMinimumGridBrightness")',
+        "controls.showGrid ?? nodeGraphMvp.gridVisible",
         'getElementById("nodeUiDevGridColor")',
         'getElementById("nodeUiDevWorkspaceBackgroundColor")',
         "--node-workspace-bg",
@@ -5549,6 +5590,10 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         run_step(
             "node metadata kinds transport",
             lambda: require_node_metadata_kinds_transport(base_url),
+        )
+        run_step(
+            "user UI settings update contract",
+            lambda: require_user_ui_settings_update_contract(base_url),
         )
 
         payload: dict[str, object] = {}

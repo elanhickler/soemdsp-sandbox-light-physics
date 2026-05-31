@@ -420,7 +420,7 @@ class SandboxServer(BaseHTTPRequestHandler):
                 status=400,
             )
             return
-        if settings_format.get("version") != 1:
+        if settings_format.get("version") not in (1, 2):
             self.send_json(
                 {"ok": False, "error": "ui settings format version mismatch"},
                 status=400,
@@ -435,6 +435,12 @@ class SandboxServer(BaseHTTPRequestHandler):
         if not isinstance(payload.get("nodeColors"), dict):
             self.send_json(
                 {"ok": False, "error": "ui settings missing nodeColors object"},
+                status=400,
+            )
+            return
+        if "view" in payload and not isinstance(payload.get("view"), dict):
+            self.send_json(
+                {"ok": False, "error": "ui settings view must be an object"},
                 status=400,
             )
             return

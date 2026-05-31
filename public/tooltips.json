@@ -44,7 +44,6 @@
   },
   "script": {
       "copy": "Copy patch script to clipboard",
-      "download": "Download patch script as a JSON file",
       "paste": "Paste patch script from clipboard",
     "updateDefault": "Validate current patch script and save it as the default preset",
     "load": "Load patch script",

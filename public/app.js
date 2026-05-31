@@ -15008,6 +15008,7 @@ function normalizeNodeUiDevSettings(settings = {}) {
       normalizedColors[property] = normalizeNodeUiDevColor(value);
     }
   }
+  const gridVisible = view.gridVisible ?? controls.gridVisible ?? controls.showGrid ?? nodeGraphMvp.gridVisible;
   return {
     format: {
       kind: "soemdsp-sandbox-user-ui-settings",
@@ -15027,7 +15028,7 @@ function normalizeNodeUiDevSettings(settings = {}) {
     ),
     nodeColors: normalizedColors,
     view: {
-      gridVisible: Boolean(view.gridVisible ?? nodeGraphMvp.gridVisible),
+      gridVisible: Boolean(gridVisible),
     },
   };
 }
@@ -18402,7 +18403,6 @@ async function initNodeGraphMvp() {
     .addEventListener("click", () => setNodeGraphViewMode("script"));
   document.getElementById("nodePatchScript").addEventListener("input", handleNodePatchScriptInput);
   document.getElementById("copyNodeGraphScriptButton").addEventListener("click", copyNodeGraphScriptToClipboard);
-  document.getElementById("downloadNodeGraphScriptButton").addEventListener("click", saveNodeGraphScript);
   document.getElementById("pasteNodeGraphScriptButton").addEventListener("click", pasteNodeGraphScriptFromClipboard);
   document.getElementById("updateDefaultPresetButton").addEventListener("click", handleUpdateDefaultNodeGraphPresetClick);
   document.getElementById("loadNodeGraphScriptButton").addEventListener("click", loadNodeGraphScript);
