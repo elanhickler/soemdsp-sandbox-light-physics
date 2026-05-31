@@ -574,6 +574,7 @@ def require_shell_contract(html: str) -> None:
             "./public/node-graph-slider-values.js",
             "./public/node-graph-node-accessors.js",
             "./public/node-graph-slider-readout.js",
+            "./public/node-graph-slider-readout-controls.js",
             "./public/node-graph-ghost-sliders.js",
             "./public/node-graph-metadata-kinds.js",
             "./public/node-graph-metadata-editor.js",
@@ -2004,6 +2005,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/node-graph-slider-values.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-slider-values.js"),
         ("/public/node-graph-node-accessors.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-node-accessors.js"),
         ("/public/node-graph-slider-readout.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-slider-readout.js"),
+        ("/public/node-graph-slider-readout-controls.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-slider-readout-controls.js"),
         ("/public/node-graph-ghost-sliders.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-ghost-sliders.js"),
         ("/public/node-graph-metadata-kinds.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-metadata-kinds.js"),
         ("/public/node-graph-metadata-editor.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-metadata-editor.js"),
@@ -3116,6 +3118,7 @@ def require_node_graph_mvp_contract() -> None:
     slider_values_source = (PUBLIC / "node-graph-slider-values.js").read_text(encoding="utf-8")
     node_accessors_source = (PUBLIC / "node-graph-node-accessors.js").read_text(encoding="utf-8")
     slider_readout_source = (PUBLIC / "node-graph-slider-readout.js").read_text(encoding="utf-8")
+    slider_readout_controls_source = (PUBLIC / "node-graph-slider-readout-controls.js").read_text(encoding="utf-8")
     ghost_sliders_source = (PUBLIC / "node-graph-ghost-sliders.js").read_text(encoding="utf-8")
     metadata_kinds_source = (PUBLIC / "node-graph-metadata-kinds.js").read_text(encoding="utf-8")
     metadata_editor_source = (PUBLIC / "node-graph-metadata-editor.js").read_text(encoding="utf-8")
@@ -3139,7 +3142,8 @@ def require_node_graph_mvp_contract() -> None:
         f"{module_definitions_source}\n{parameter_metadata_source}\n{metadata_defaults_source}\n"
         f"{patch_normalizers_source}\n{patch_clone_source}\n{slider_metadata_source}\n"
         f"{slider_values_source}\n"
-        f"{node_accessors_source}\n{slider_readout_source}\n{ghost_sliders_source}\n"
+        f"{node_accessors_source}\n{slider_readout_source}\n{slider_readout_controls_source}\n"
+        f"{ghost_sliders_source}\n"
         f"{metadata_kinds_source}\n{metadata_editor_source}\n{render_settings_source}\n"
         f"{text_box_utils_source}\n"
         f"{tooltip_utils_source}\n{visual_utils_source}\n"
