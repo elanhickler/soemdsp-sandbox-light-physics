@@ -177,18 +177,16 @@ function renderNodeGraphModuleScopeDotPreview(
     return;
   }
   const pixels = typeof nodeGraphModuleScopeGeneratedDotTextureData === "function"
-    ? nodeGraphModuleScopeGeneratedDotTextureData(
-      core1Size,
+    ? nodeGraphModuleScopeGeneratedDotTextureData({
       core1Brightness,
-      size,
       core1Color,
-      0,
-      core2Size,
+      core1Size,
       core2Brightness,
       core2Color,
-      0,
+      core2Size,
       lineThickness,
-    )
+      size,
+    })
     : new Uint8ClampedArray(size * size * 4);
   const imageData = new ImageData(
     pixels instanceof Uint8ClampedArray ? pixels : new Uint8ClampedArray(pixels),

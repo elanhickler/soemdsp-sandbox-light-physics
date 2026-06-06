@@ -3381,7 +3381,7 @@ function invalidateNodeGraphModuleScopeTraceImageTexture() {
   state.image = null;
 }
 
-function nodeGraphModuleScopeGeneratedDotTextureData(
+function nodeGraphModuleScopeDotTextureOptions(
   core1SizeValue,
   core1BrightnessValue,
   size = 64,
@@ -3393,19 +3393,39 @@ function nodeGraphModuleScopeGeneratedDotTextureData(
   core2BlurValue = 0,
   lineThicknessValue = nodeGraphMvp?.moduleScopeLineThickness,
 ) {
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(core1SizeValue, 3.18);
-  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(core1BrightnessValue, 4.5);
+  if (core1SizeValue && typeof core1SizeValue === "object" && !Array.isArray(core1SizeValue)) {
+    return core1SizeValue;
+  }
+  return {
+    core1Blur: core1BlurValue,
+    core1Brightness: core1BrightnessValue,
+    core1Color: core1ColorValue,
+    core1Size: core1SizeValue,
+    core2Blur: core2BlurValue,
+    core2Brightness: core2BrightnessValue,
+    core2Color: core2ColorValue,
+    core2Size: core2SizeValue,
+    lineThickness: lineThicknessValue,
+    size,
+  };
+}
+
+function nodeGraphModuleScopeGeneratedDotTextureData(...args) {
+  const options = nodeGraphModuleScopeDotTextureOptions(...args);
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(options.core1Size, 3.18);
+  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(options.core1Brightness, 4.5);
   const core1Color = nodeGraphScopeHexColorToRgb(
-    normalizeNodeGraphModuleScopeDotCoreColor(core1ColorValue ?? "#ffffff", "#ffffff"),
+    normalizeNodeGraphModuleScopeDotCoreColor(options.core1Color ?? "#ffffff", "#ffffff"),
   );
-  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(core2SizeValue, 4);
-  const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(core2BrightnessValue, 0.45);
+  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(options.core2Size, 4);
+  const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(options.core2Brightness, 0.45);
   const core2Color = nodeGraphScopeHexColorToRgb(
-    normalizeNodeGraphModuleScopeDotCoreColor(core2ColorValue ?? "#17002f", "#17002f"),
+    normalizeNodeGraphModuleScopeDotCoreColor(options.core2Color ?? "#17002f", "#17002f"),
   );
-  const core1Blur = normalizeNodeGraphModuleScopeDotBlur(core1BlurValue, 0);
-  const core2Blur = normalizeNodeGraphModuleScopeDotBlur(core2BlurValue, 0);
-  const lineThickness = normalizeNodeGraphModuleScopeLineThickness(lineThicknessValue ?? 2);
+  const core1Blur = normalizeNodeGraphModuleScopeDotBlur(options.core1Blur, 0);
+  const core2Blur = normalizeNodeGraphModuleScopeDotBlur(options.core2Blur, 0);
+  const lineThickness = normalizeNodeGraphModuleScopeLineThickness(options.lineThickness ?? 2);
+  const size = Math.max(1, Math.min(512, Math.round(Number(options.size) || 64)));
   const finalCore1Size = core1Size * lineThickness;
   const finalCore2Size = core2Size * lineThickness;
   const pixels = new Uint8Array(size * size * 4);
@@ -3479,18 +3499,18 @@ function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
     0,
     gl.RGBA,
     gl.UNSIGNED_BYTE,
-    nodeGraphModuleScopeGeneratedDotTextureData(
-      core1Size,
-      core1Brightness,
-      64,
-      core1Color,
+    nodeGraphModuleScopeGeneratedDotTextureData({
       core1Blur,
-      core2Size,
+      core1Brightness,
+      core1Color,
+      core1Size,
+      core2Blur,
       core2Brightness,
       core2Color,
-      core2Blur,
+      core2Size,
       lineThickness,
-    ),
+      size: 64,
+    }),
   );
   return state.texture;
 }
