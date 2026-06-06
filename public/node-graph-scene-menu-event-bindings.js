@@ -47,8 +47,8 @@ function bindNodeGraphSceneMenuEvents() {
   document.addEventListener("pointermove", dragNodeGlobalScopeMenu);
   document.addEventListener("pointerup", endNodeGlobalScopeMenuDrag);
   document.addEventListener("pointercancel", endNodeGlobalScopeMenuDrag);
-  bindNodeGraphSceneElementEvent("nodeSceneTextBoxHeightDecrease", "click", () => adjustNodeGraphTextBoxHeightFromContext(-1));
-  bindNodeGraphSceneElementEvent("nodeSceneTextBoxHeightIncrease", "click", () => adjustNodeGraphTextBoxHeightFromContext(1));
+  bindNodeGraphSceneElementEvent("nodeSceneTextBoxHeightDecrease", "click", () => adjustNodeGraphModuleHeightFromContext(-1));
+  bindNodeGraphSceneElementEvent("nodeSceneTextBoxHeightIncrease", "click", () => adjustNodeGraphModuleHeightFromContext(1));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxTextSizeDecrease", "click", () =>
     adjustNodeGraphTextBoxTextSizeFromContext(-nodeGraphTextBoxTextSizeLimits.stepPercent));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxTextSizeIncrease", "click", () =>
@@ -82,7 +82,10 @@ function bindNodeGraphSceneMenuEvents() {
   bindNodeGraphSceneElementEvent("nodeSceneGraphNodeContour", "change", () => setNodeGraphGraphNodeFromContext({ record: true }));
   bindNodeGraphSceneElementEvent("nodeSceneGraphNodeShape", "change", () => setNodeGraphGraphNodeFromContext({ record: true }));
   bindNodeGraphSceneElementEvent("nodeSceneGraphNodeList", "click", handleNodeGraphGraphNodeListClick);
+  bindNodeGraphSceneElementEvent("nodeSceneGraphNodeList", "input", handleNodeGraphGraphNodeListInput);
   bindNodeGraphSceneElementEvent("nodeSceneGraphNodeList", "change", handleNodeGraphGraphNodeListChange);
+  bindNodeGraphSceneElementEvent("nodeSceneGraphHeightDecrease", "click", () => adjustNodeGraphModuleHeightFromContext(-1));
+  bindNodeGraphSceneElementEvent("nodeSceneGraphHeightIncrease", "click", () => adjustNodeGraphModuleHeightFromContext(1));
   bindNodeGraphSceneElementEvent("nodeSceneGraphAddNode", "click", addNodeGraphGraphNodeFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneGraphRemoveNode", "click", removeNodeGraphGraphNodeFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneGraphReset", "click", resetNodeGraphGraphFromContext);

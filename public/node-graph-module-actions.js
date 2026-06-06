@@ -537,7 +537,7 @@ function adjustNodeGraphModuleWidthFromContext(delta) {
   configureNodeSceneContextMenu("module");
 }
 
-function adjustNodeGraphTextBoxHeightFromContext(delta) {
+function adjustNodeGraphModuleHeightFromContext(delta) {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
   if (!sourceNode) {
     return;

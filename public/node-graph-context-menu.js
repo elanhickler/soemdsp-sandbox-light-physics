@@ -346,6 +346,10 @@ function configureNodeSceneContextMenu(mode) {
   const graphNodeShape = document.getElementById("nodeSceneGraphNodeShape");
   const graphNodeList = document.getElementById("nodeSceneGraphNodeList");
   const graphRemoveNode = document.getElementById("nodeSceneGraphRemoveNode");
+  const graphHeightControls = document.getElementById("nodeSceneGraphHeightControls");
+  const graphHeightDecrease = document.getElementById("nodeSceneGraphHeightDecrease");
+  const graphHeightIncrease = document.getElementById("nodeSceneGraphHeightIncrease");
+  const graphHeightValue = document.getElementById("nodeSceneGraphHeightValue");
   const toggleButtonsButton = document.getElementById("nodeSceneToggleButtons");
   const toggleTitleButton = document.getElementById("nodeSceneToggleTitle");
   const imageControls = document.getElementById("nodeSceneImageControls");
@@ -406,7 +410,8 @@ function configureNodeSceneContextMenu(mode) {
   aliasControl.hidden = !moduleMode;
   widthControls.hidden = !moduleMode;
   const canResizeHeight = moduleMode && ["graph", "textBox", "valueSlider"].includes(targetNode?.type);
-  textBoxHeightControls.hidden = !canResizeHeight;
+  textBoxHeightControls.hidden = !canResizeHeight || targetNode?.type === "graph";
+  graphHeightControls.hidden = !(moduleMode && targetNode?.type === "graph");
   textBoxTextSizeControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   textBoxTextControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   codeblockControls.hidden = !(moduleMode && targetNode?.type === "codeblock");
@@ -461,6 +466,11 @@ function configureNodeSceneContextMenu(mode) {
     textBoxHeightDecrease.title = nodeGraphTooltipText("actions.textBoxHeightDecrease");
     textBoxHeightIncrease.disabled = !canResizeHeight || heightGu >= nodeGraphModuleHeightLimits.maxGu;
     textBoxHeightIncrease.title = nodeGraphTooltipText("actions.textBoxHeightIncrease");
+    graphHeightValue.textContent = `${heightGu} height gu`;
+    graphHeightDecrease.disabled = !targetNode || targetNode.type !== "graph" || heightGu <= nodeGraphModuleHeightLimits.minGu;
+    graphHeightDecrease.title = "Make this graph module one grid unit shorter.";
+    graphHeightIncrease.disabled = !targetNode || targetNode.type !== "graph" || heightGu >= nodeGraphModuleHeightLimits.maxGu;
+    graphHeightIncrease.title = "Make this graph module one grid unit taller.";
     textBoxTextSizeValue.textContent = `${textBoxLayout.textSizePercent}% text`;
     textBoxTextSizeDecrease.disabled =
       !targetNode ||

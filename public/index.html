@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=editable-graph-selection-1">
+  <link rel="stylesheet" href="./public/styles.css?v=editable-graph-height-1">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="Loading interface">
@@ -1711,6 +1711,11 @@
           <output id="nodeSceneCodeblockStatus" aria-live="polite">code ok</output>
         </div>
         <div id="nodeSceneGraphControls" class="scene-context-codeblock-controls scene-context-graph-controls" hidden>
+          <div id="nodeSceneGraphHeightControls" class="scene-context-width-controls">
+            <button id="nodeSceneGraphHeightDecrease" type="button" aria-label="Decrease graph height">-</button>
+            <span id="nodeSceneGraphHeightValue" aria-live="polite">6 height gu</span>
+            <button id="nodeSceneGraphHeightIncrease" type="button" aria-label="Increase graph height">+</button>
+          </div>
           <label>
             <span>cursor x</span>
             <input
@@ -2696,8 +2701,8 @@
   <script src="./public/node-graph-clap-host.js?v=clap-diagnostics-1"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-node-dragging.js?v=led-body-drag-1"></script>
-  <script src="./public/node-graph-context-menu.js?v=editable-graph-height-1"></script>
-  <script src="./public/node-graph-module-actions.js?v=editable-graph-selection-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=editable-graph-panel-height-1"></script>
+  <script src="./public/node-graph-module-actions.js?v=editable-graph-height-1"></script>
   <script src="./public/node-graph-code-screen.js?v=code-screen-1"></script>
   <script src="./public/node-graph-module-scopes.js?v=scope-1d-full-width-1"></script>
   <script src="./public/node-graph-shader-script.js?v=led-scope-shader-rects-1"></script>
@@ -2763,7 +2768,7 @@
   <script src="./public/node-graph-render-live-event-bindings.js?v=scope-frequency-reset-match-1780622400000"></script>
   <script src="./public/node-graph-header-event-bindings.js?v=scope-overdraw-points-1"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=node-graph-help-event-bindings-refactor-1780369200000"></script>
-  <script src="./public/node-graph-scene-menu-event-bindings.js?v=led-color-1"></script>
+  <script src="./public/node-graph-scene-menu-event-bindings.js?v=editable-graph-height-1"></script>
   <script src="./public/node-graph-uidev-event-bindings.js?v=text-light-registry-1780800000000"></script>
   <script src="./public/node-graph-settings-event-bindings.js?v=metadata-popover-bind-1"></script>
   <script src="./public/node-graph-slider-event-bindings.js?v=node-graph-slider-event-bindings-refactor-1780369200000"></script>
