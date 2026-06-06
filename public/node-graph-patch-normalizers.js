@@ -55,52 +55,27 @@ const nodeGraphScopeShaderDefaultSource = `// Prettyscope-style module scope sha
 // module-local scope renderer that will replace shared phosphor drawing.
 
 export default function drawScope(scope) {
-  const signal = scope.signal;
-  const style = scope.style;
-  const screen = scope.screen;
+  const prettyscope = scope.prettyscope;
 
-  // Screen Settings defaults, written as values so this is easy to edit.
-  // const backgroundColor = style.background;
-  const backgroundColor = "#000000";
-  // const screenBurn = style.screenBurn;
-  const screenBurn = 0.00;
-  // const overdrawPoints = style.overdrawPoints;
-  const overdrawPoints = 1;
-  // const skipSamples = style.skipSamples;
-  const skipSamples = 1;
-  // const lineThicknessPx = style.lineThicknessPx;
-  const lineThicknessPx = 2.00;
+  const dotColor1 = "#ffffff"; // white center
+  const dotColor2 = "#17002f"; // dark purple outer glow
 
-  // Dot 1 is the bright center layer.
-  // const dot1Color = style.dot1.color;
-  const dot1Color = "#ffa3a8";
-  // const dot1SizePx = style.dot1.sizePx;
-  const dot1SizePx = 3.18;
-  // const dot1Brightness = style.dot1.brightness;
-  const dot1Brightness = 4.50;
+  const dotSize1 = 0.035; // 3.5% of the smaller screen edge
+  const dotSize2 = 0.090; // 9.0% of the smaller screen edge
 
-  // Dot 2 is the larger outer layer.
-  // const dot2Color = style.dot2.color;
-  const dot2Color = "#444444";
-  // const dot2SizePx = style.dot2.sizePx;
-  const dot2SizePx = 4.00;
-  // const dot2Brightness = style.dot2.brightness;
-  const dot2Brightness = 0.45;
-
-  screen.fade({ color: backgroundColor, burn: screenBurn });
-  screen.trace(signal, {
-    overdrawPoints,
-    skipSamples,
+  prettyscope.draw(scope.signal, {
+    background: "#000000",
+    burn: 0.00,
     layers: [
       {
-        color: dot2Color,
-        radiusPx: dot2SizePx * lineThicknessPx,
-        brightness: dot2Brightness,
+        color: dotColor2,
+        size: dotSize2,
+        brightness: 0.45,
       },
       {
-        color: dot1Color,
-        radiusPx: dot1SizePx * lineThicknessPx,
-        brightness: dot1Brightness,
+        color: dotColor1,
+        size: dotSize1,
+        brightness: 4.50,
       },
     ],
   });
