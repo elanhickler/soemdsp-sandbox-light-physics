@@ -175,6 +175,11 @@ function nodeGraphGraphNextShape(value) {
   return nodeGraphGraphShapes[(index + 1) % nodeGraphGraphShapes.length];
 }
 
+function nodeGraphGraphContourShape(value) {
+  const shape = normalizeNodeGraphGraphShape(value);
+  return shape === "rational" || shape === "exponential" ? shape : "rational";
+}
+
 function normalizeNodeGraphGraphNumber(value, fallback = 0, min = 0, max = 1) {
   const number = Number(value);
   return Number.isFinite(number)
@@ -732,7 +737,7 @@ function dragNodeGraphGraphNode(event) {
     drag.graph.nodes[drag.index] = normalizeNodeGraphGraphNode({
       ...current,
       c: nodeGraphGraphContourFromPoint(drag.graph, drag.index, point),
-      shape: current.shape === "linear" ? "rational" : current.shape,
+      shape: nodeGraphGraphContourShape(current.shape),
     }, drag.index);
     drag.graph = normalizeNodeGraphGraph(drag.graph);
     setNodeGraphGraphSelectedNodeIndex(drag.nodeId, drag.graph, drag.index);
