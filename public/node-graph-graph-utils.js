@@ -420,6 +420,14 @@ function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null) 
     y2: "92",
   }));
   svg.append(createNodeGraphGraphSvgElement("line", {
+    class: "node-module-graph-cursor-hit",
+    "data-graph-cursor": "true",
+    x1: cursor.x.toFixed(3),
+    x2: cursor.x.toFixed(3),
+    y1: "8",
+    y2: "92",
+  }));
+  svg.append(createNodeGraphGraphSvgElement("line", {
     class: "node-module-graph-cursor-value-guide",
     x1: "8",
     x2: "92",
@@ -434,6 +442,7 @@ function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null) 
     class: "node-module-graph-cursor-value",
     cx: cursorPoint.x.toFixed(3),
     cy: cursorPoint.y.toFixed(3),
+    "data-graph-cursor": "true",
     r: "2.5",
   }));
   graph.nodes.forEach((node, index) => {
@@ -511,6 +520,11 @@ function beginNodeGraphGraphNodeDrag(event) {
     beginNodeGraphGraphContourDrag(event, contour);
     return;
   }
+  const cursor = event.target?.closest?.("[data-graph-cursor]");
+  if (cursor) {
+    beginNodeGraphGraphCursorDrag(event, cursor);
+    return;
+  }
   const circle = event.target?.closest?.(".node-module-graph-node, .node-module-graph-node-hit");
   if (!circle) {
     addNodeGraphGraphNodeFromDisplayEvent(event);
@@ -537,6 +551,31 @@ function beginNodeGraphGraphNodeDrag(event) {
   };
   display?.classList.add("dragging");
   circle.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function beginNodeGraphGraphCursorDrag(event, cursorElement) {
+  const moduleElement = cursorElement.closest(".dsp-node");
+  const nodeId = moduleElement?.dataset.node || "";
+  const patchNode = nodeGraphPatchNode(nodeId);
+  if (!patchNode || patchNode.type !== "graph") {
+    return;
+  }
+  const display = nodeGraphGraphDisplayFromEventTarget(cursorElement);
+  const svg = cursorElement.closest(".node-module-graph-svg");
+  const graph = normalizeNodeGraphGraph(patchNode.graph);
+  display?.focus?.({ preventScroll: true });
+  nodeGraphMvp.graphNodeDragging = {
+    display,
+    graph,
+    mode: "cursor",
+    nodeId,
+    svg,
+  };
+  display?.classList.add("dragging");
+  cursorElement.setPointerCapture?.(event.pointerId);
+  dragNodeGraphGraphNode(event);
   event.preventDefault();
   event.stopPropagation();
 }
@@ -641,6 +680,20 @@ function dragNodeGraphGraphNode(event) {
     return;
   }
   const point = nodeGraphGraphSvgToGraphPoint(drag.svg, event.clientX, event.clientY);
+  if (drag.mode === "cursor") {
+    drag.graph = normalizeNodeGraphGraph({
+      ...drag.graph,
+      cursorX: point.x,
+    });
+    renderNodeGraphGraphDisplay(drag.display, drag.graph);
+    drag.svg = drag.display.querySelector(".node-module-graph-svg");
+    if (nodeGraphModuleActionTargetNodeId() === drag.nodeId) {
+      syncNodeGraphGraphControls(drag.graph);
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   if (drag.mode === "contour") {
     const current = drag.graph.nodes[drag.index] || normalizeNodeGraphGraphNode({}, drag.index);
     drag.graph.nodes[drag.index] = normalizeNodeGraphGraphNode({
@@ -689,9 +742,15 @@ function endNodeGraphGraphNodeDrag(event) {
   const targetNode = patch.nodes.find((node) => node.id === drag.nodeId);
   if (targetNode?.type === "graph") {
     targetNode.graph = normalizeNodeGraphGraph(drag.graph);
-    commitNodeGraphPatch(patch, { status: "graph node moved" });
-    setNodeGraphGraphSelectedNodeIndex(drag.nodeId, targetNode.graph, drag.index);
-    syncNodeGraphGraphControls(targetNode.graph, drag.index);
+    const status = drag.mode === "cursor"
+      ? "graph cursor moved"
+      : drag.mode === "contour"
+        ? "graph curve changed"
+        : "graph node moved";
+    commitNodeGraphPatch(patch, { status });
+    const selectedIndex = nodeGraphGraphSelectedNodeIndex(drag.nodeId, targetNode.graph, drag.index ?? 0);
+    setNodeGraphGraphSelectedNodeIndex(drag.nodeId, targetNode.graph, selectedIndex);
+    syncNodeGraphGraphControls(targetNode.graph, selectedIndex);
   }
   event.preventDefault();
   event.stopPropagation();
