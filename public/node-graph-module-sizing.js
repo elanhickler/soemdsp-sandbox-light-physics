@@ -214,8 +214,12 @@ function nodeGraphModuleGridHeightUnitsForUi(type, ui = {}) {
 }
 
 function nodeGraphPatchNodeGridHeightUnits(node) {
+  const effectiveUi = normalizeNodeGraphPatchNodeUi({
+    ...node?.ui,
+    buttonsHidden: node?.ui?.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false,
+  });
   if (Object.hasOwn(node || {}, "heightGu")) {
-    return normalizeNodeGraphModuleHeightUnits(node.type, node.heightGu, node.ui);
+    return normalizeNodeGraphModuleHeightUnits(node.type, node.heightGu, effectiveUi);
   }
-  return nodeGraphModuleGridHeightUnitsForUi(node?.type, node?.ui);
+  return nodeGraphModuleGridHeightUnitsForUi(node?.type, effectiveUi);
 }
