@@ -7,6 +7,7 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
   stepPx: 0.75,
 });
 const nodeGraphShaderScriptClockPreviewToggleMs = 2000;
+const nodeGraphShaderScriptUtilityCameraPadding = 18;
 const nodeGraphShaderScriptColorWidgetModuleUrl = "./public/color-widget.js?v=shader-token-color-widget-1";
 const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
 const nodeGraphShaderScriptDefaultSyntaxColors = Object.freeze({
@@ -1024,7 +1025,7 @@ function drawNodeGraphShaderScriptScopePreview() {
   const camera = typeof createNodeGraphUtilityCameraForElement === "function"
     ? createNodeGraphUtilityCameraForElement(nodeGraphShaderScriptUtilityCameraId(node?.id), element, {
       name: node ? `Scope Shader: ${nodeGraphPatchNodeTitle(node)}` : "Scope Shader",
-      padding: 0,
+      padding: nodeGraphShaderScriptUtilityCameraPadding,
     })
     : null;
   if (!camera || typeof renderNodeGraphCameraFeed !== "function") {
