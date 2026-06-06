@@ -6741,6 +6741,19 @@ audio {
   stroke-width: 0.9;
 }
 
+.node-module-graph-cursor-value-guide {
+  stroke: rgba(255, 236, 181, 0.22);
+  stroke-dasharray: 2.2 2.8;
+  stroke-width: 0.7;
+}
+
+.node-module-graph-cursor-value {
+  fill: rgba(255, 241, 169, 0.98);
+  stroke: rgba(7, 10, 13, 0.9);
+  stroke-width: 0.7;
+  pointer-events: none;
+}
+
 .node-module-graph-curve {
   fill: none;
   stroke: rgba(92, 232, 212, 0.92);

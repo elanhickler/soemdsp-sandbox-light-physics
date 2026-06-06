@@ -388,7 +388,9 @@ function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null) 
   const activeIndex = selectedIndex === null
     ? nodeGraphGraphSelectedNodeIndex(nodeId, graph, 0)
     : nodeGraphGraphNodeIndexFromValue(graph, selectedIndex);
+  const cursorValue = nodeGraphGraphValueAt(graph, graph.cursorX);
   const cursor = nodeGraphGraphPointToSvg(graph.cursorX, 0);
+  const cursorPoint = nodeGraphGraphPointToSvg(graph.cursorX, cursorValue);
   element.replaceChildren();
   const svg = createNodeGraphGraphSvgElement("svg", {
     "aria-hidden": "true",
@@ -417,9 +419,22 @@ function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null) 
     y1: "8",
     y2: "92",
   }));
+  svg.append(createNodeGraphGraphSvgElement("line", {
+    class: "node-module-graph-cursor-value-guide",
+    x1: "8",
+    x2: "92",
+    y1: cursorPoint.y.toFixed(3),
+    y2: cursorPoint.y.toFixed(3),
+  }));
   svg.append(createNodeGraphGraphSvgElement("path", {
     class: "node-module-graph-curve",
     d: nodeGraphGraphCurvePath(graph),
+  }));
+  svg.append(createNodeGraphGraphSvgElement("circle", {
+    class: "node-module-graph-cursor-value",
+    cx: cursorPoint.x.toFixed(3),
+    cy: cursorPoint.y.toFixed(3),
+    r: "2.5",
   }));
   graph.nodes.forEach((node, index) => {
     if (index <= 0) {
