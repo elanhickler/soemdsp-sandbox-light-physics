@@ -9108,8 +9108,9 @@ button.saved-default,
 }
 
 .node-shader-script-heading strong {
-  color: rgba(248, 253, 247, 0.96);
+  color: rgba(190, 211, 209, 0.74);
   font-size: 1rem;
+  font-weight: 700;
   line-height: 1.1;
 }
 
