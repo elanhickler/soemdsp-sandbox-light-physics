@@ -49,37 +49,16 @@ function normalizeNodeGraphPatchGrid(grid = {}) {
   };
 }
 
-const nodeGraphScopeShaderDefaultSource = `// Prettyscope-style module scope shader
-// V1 authoring contract. This script is saved on one module.
-// The current renderer does not execute it yet; use it to design the
-// module-local scope renderer that will replace shared phosphor drawing.
+const nodeGraphScopeShaderDefaultSource = `// Prettyscope scope style
+// drawScope(scope), signal routing, and the draw call are assumed.
 
-export default function drawScope(scope) {
-  const prettyscope = scope.prettyscope;
+dot1.color = "#ffffff"; // white center
+dot1.size = 0.035;      // 3.5% of the smaller screen edge
+dot1.brightness = 4.50;
 
-  const dotColor1 = "#ffffff"; // white center
-  const dotColor2 = "#17002f"; // dark purple outer glow
-
-  const dotSize1 = 0.035; // 3.5% of the smaller screen edge
-  const dotSize2 = 0.090; // 9.0% of the smaller screen edge
-
-  prettyscope.draw(scope.signal, {
-    background: "#000000",
-    burn: 0.00,
-    layers: [
-      {
-        color: dotColor2,
-        size: dotSize2,
-        brightness: 0.45,
-      },
-      {
-        color: dotColor1,
-        size: dotSize1,
-        brightness: 4.50,
-      },
-    ],
-  });
-}`;
+dot2.color = "#17002f"; // dark purple outer glow
+dot2.size = 0.090;      // 9.0% of the smaller screen edge
+dot2.brightness = 0.45;`;
 
 function normalizeNodeGraphScopeShader(scopeShader = {}) {
   const source = typeof scopeShader === "string"
