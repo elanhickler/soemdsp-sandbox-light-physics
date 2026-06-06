@@ -9365,14 +9365,6 @@ button.saved-default,
     0 0 18px rgba(76, 220, 224, 0.08);
 }
 
-.node-shader-script-token-widget:has(#nodeShaderScriptNumberWidget:not([hidden])) {
-  cursor: grab;
-}
-
-.node-shader-script-token-widget.dragging {
-  cursor: grabbing;
-}
-
 .node-shader-script-token-widget input,
 .node-shader-script-token-widget button {
   cursor: auto;
@@ -9425,12 +9417,6 @@ button.saved-default,
   background: rgba(0, 5, 7, 0.92);
   color: rgba(236, 251, 246, 0.94);
   font: inherit;
-}
-
-.node-shader-script-token-widget-section input[type="number"] {
-  width: 76px;
-  padding: 0 6px;
-  font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
 }
 
 .node-shader-script-token-widget-section button {

@@ -472,10 +472,6 @@ REQUIRED_SHELL_IDS = {
     "nodeShaderScriptTokenWidget",
     "nodeShaderScriptColorWidget",
     "nodeShaderScriptColorWidgetHost",
-    "nodeShaderScriptNumberWidget",
-    "nodeShaderScriptNumberDecrease",
-    "nodeShaderScriptNumberInput",
-    "nodeShaderScriptNumberIncrease",
     "nodeShaderScriptModeWidget",
     "nodeScriptGridHeightPxValue",
     "nodeScriptGridWidthPxValue",
@@ -8780,16 +8776,11 @@ def require_node_graph_mvp_contract() -> None:
         "function replaceNodeGraphShaderScriptToken(nextToken)",
         "source.setRangeText(replacement, token.start, token.end, \"end\")",
         "function openNodeGraphShaderScriptTokenWidget(token, event)",
-        "function beginNodeGraphShaderScriptTokenWidgetDrag(event)",
-        "function dragNodeGraphShaderScriptTokenWidget(event)",
-        "function endNodeGraphShaderScriptTokenWidgetDrag(event)",
-        "nodeGraphShaderScriptState.tokenWidget?.type === \"number\"",
         "function findNodeGraphShaderScriptNumberTokenAtPoint(event, options = {})",
         "function beginNodeGraphShaderScriptNumberTokenDrag(event)",
         "function dragNodeGraphShaderScriptNumberToken(event)",
         "function endNodeGraphShaderScriptNumberTokenDrag(event)",
         "source.style.cursor = findNodeGraphShaderScriptNumberTokenAtPoint(event, { refresh: false }) ? \"ew-resize\" : \"\"",
-        "function changeNodeGraphShaderScriptNumberToken(delta)",
         "function normalizeNodeGraphShaderScriptColorToken(value = \"\")",
         "function nodeGraphScopeShaderDefaultModuleKey(node)",
         "function normalizeNodeGraphScopeShaderModuleDefaults(defaults = {})",
@@ -8851,13 +8842,9 @@ def require_node_graph_mvp_contract() -> None:
         "document.getElementById(\"nodeShaderScriptToDesktop\")?.addEventListener(\"click\", exportNodeGraphShaderScriptToDesktop)",
         "source?.addEventListener(\"pointerup\", handleNodeGraphShaderScriptSourcePointer)",
         "const host = document.getElementById(\"nodeShaderScriptColorWidgetHost\")",
-        "document.getElementById(\"nodeShaderScriptNumberInput\")?.addEventListener(\"input\"",
-        "document.getElementById(\"nodeShaderScriptNumberDecrease\")?.addEventListener(\"click\"",
-        "document.getElementById(\"nodeShaderScriptNumberIncrease\")?.addEventListener(\"click\"",
         "source?.addEventListener(\"pointerdown\", beginNodeGraphShaderScriptNumberTokenDrag)",
         "source?.addEventListener(\"pointermove\", dragNodeGraphShaderScriptNumberToken)",
         "source?.addEventListener(\"pointerup\", endNodeGraphShaderScriptNumberTokenDrag)",
-        "tokenWidget?.addEventListener(\"pointerdown\", beginNodeGraphShaderScriptTokenWidgetDrag)",
         "document.querySelectorAll(\"[data-shader-blend-mode]\").forEach((button) => {",
         "source?.addEventListener(\"scroll\", updateNodeGraphShaderScriptHighlight)",
         "panel?.addEventListener(\"pointerdown\", beginNodeGraphShaderScriptDialogDrag)",
@@ -9524,6 +9511,27 @@ def require_node_graph_mvp_contract() -> None:
         "initSandboxApp().catch((error) =>",
     ]:
         require(snippet in node_graph_source, f"node graph source missing {snippet}")
+
+    for snippet in [
+        "nodeShaderScriptNumberWidget",
+        "nodeShaderScriptNumberDecrease",
+        "nodeShaderScriptNumberInput",
+        "nodeShaderScriptNumberIncrease",
+        "function beginNodeGraphShaderScriptTokenWidgetDrag(event)",
+        "function dragNodeGraphShaderScriptTokenWidget(event)",
+        "function endNodeGraphShaderScriptTokenWidgetDrag(event)",
+        "function changeNodeGraphShaderScriptNumberToken(delta)",
+        "document.getElementById(\"nodeShaderScriptNumberInput\")?.addEventListener(\"input\"",
+        "nodeGraphShaderScriptState.tokenWidget?.type === \"number\"",
+        ".node-shader-script-token-widget:has(#nodeShaderScriptNumberWidget:not([hidden]))",
+        ".node-shader-script-token-widget-section input[type=\"number\"]",
+    ]:
+        require(
+            snippet not in node_graph_source
+            and snippet not in index_source
+            and snippet not in style_source,
+            f"shader number popup contract should be absent: {snippet}",
+        )
 
     model_display_source = node_graph_source[
         node_graph_source.index("function nodeGraphModuleScopeHasModelDisplay()"):

@@ -324,7 +324,6 @@ const nodeGraphShaderScriptState = {
   syntaxColors: { ...nodeGraphShaderScriptDefaultSyntaxColors },
   numberTokenDrag: null,
   tokenWidget: null,
-  tokenWidgetDrag: null,
 };
 
 function nodeGraphShaderScriptCanvas() {
@@ -653,15 +652,12 @@ function updateNodeGraphShaderScriptHighlight() {
 function closeNodeGraphShaderScriptTokenWidget() {
   destroyNodeGraphShaderScriptColorWidget();
   nodeGraphShaderScriptState.numberTokenDrag = null;
-  nodeGraphShaderScriptState.tokenWidgetDrag = null;
   const widget = document.getElementById("nodeShaderScriptTokenWidget");
   if (widget) {
     widget.hidden = true;
-    widget.classList.remove("dragging");
   }
   for (const id of [
     "nodeShaderScriptColorWidget",
-    "nodeShaderScriptNumberWidget",
     "nodeShaderScriptModeWidget",
   ]) {
     const section = document.getElementById(id);
@@ -862,13 +858,7 @@ function replaceNodeGraphShaderScriptNumberDragToken(nextValue) {
     end: drag.token.start + nextToken.length,
     token: nextToken,
   };
-  nodeGraphShaderScriptState.tokenWidget = drag.token;
   updateNodeGraphShaderScriptHighlight();
-  const input = document.getElementById("nodeShaderScriptNumberInput");
-  if (input) {
-    input.value = nextToken;
-    input.step = String(drag.step);
-  }
 }
 
 function beginNodeGraphShaderScriptNumberTokenDrag(event) {
@@ -895,7 +885,6 @@ function beginNodeGraphShaderScriptNumberTokenDrag(event) {
     step: nodeGraphShaderScriptNumberStep(token.token),
     token,
   };
-  openNodeGraphShaderScriptTokenWidget(token, event);
   source.setPointerCapture?.(event.pointerId);
   event.preventDefault();
   event.stopPropagation();
@@ -955,113 +944,20 @@ function positionNodeGraphShaderScriptTokenWidget(event) {
   widget.style.top = `${y}px`;
 }
 
-function nodeGraphShaderScriptTokenWidgetCanDrag(event) {
-  return (
-    nodeGraphShaderScriptState.tokenWidget?.type === "number" &&
-    !event.target?.closest?.("button, input, select, textarea")
-  );
-}
-
-function beginNodeGraphShaderScriptTokenWidgetDrag(event) {
-  const widget = document.getElementById("nodeShaderScriptTokenWidget");
-  const editor = document.querySelector(".node-shader-script-editor");
-  if (
-    event.button > 0 ||
-    !widget ||
-    widget.hidden ||
-    !editor ||
-    !nodeGraphShaderScriptTokenWidgetCanDrag(event)
-  ) {
-    return;
-  }
-  const widgetRect = widget.getBoundingClientRect();
-  const editorRect = editor.getBoundingClientRect();
-  nodeGraphShaderScriptState.tokenWidgetDrag = {
-    offsetX: event.clientX - widgetRect.left,
-    offsetY: event.clientY - widgetRect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  widget.classList.add("dragging");
-  widget.setPointerCapture?.(event.pointerId);
-  event.preventDefault();
-  event.stopPropagation();
-  const clampCurrentPosition = () => {
-    const left = clampNodeSliderValue(widgetRect.left - editorRect.left, 8, Math.max(8, editorRect.width - widgetRect.width - 8));
-    const top = clampNodeSliderValue(widgetRect.top - editorRect.top, 8, Math.max(8, editorRect.height - widgetRect.height - 8));
-    widget.style.left = `${left}px`;
-    widget.style.top = `${top}px`;
-  };
-  clampCurrentPosition();
-}
-
-function dragNodeGraphShaderScriptTokenWidget(event) {
-  const drag = nodeGraphShaderScriptState.tokenWidgetDrag;
-  const widget = document.getElementById("nodeShaderScriptTokenWidget");
-  const editor = document.querySelector(".node-shader-script-editor");
-  if (
-    !drag ||
-    !widget ||
-    !editor ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  const editorRect = editor.getBoundingClientRect();
-  const widgetRect = widget.getBoundingClientRect();
-  const left = clampNodeSliderValue(
-    event.clientX - editorRect.left - drag.offsetX,
-    8,
-    Math.max(8, editorRect.width - widgetRect.width - 8),
-  );
-  const top = clampNodeSliderValue(
-    event.clientY - editorRect.top - drag.offsetY,
-    8,
-    Math.max(8, editorRect.height - widgetRect.height - 8),
-  );
-  widget.style.left = `${left}px`;
-  widget.style.top = `${top}px`;
-  event.preventDefault();
-  event.stopPropagation();
-}
-
-function endNodeGraphShaderScriptTokenWidgetDrag(event) {
-  const drag = nodeGraphShaderScriptState.tokenWidgetDrag;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  nodeGraphShaderScriptState.tokenWidgetDrag = null;
-  const widget = document.getElementById("nodeShaderScriptTokenWidget");
-  widget?.classList.remove("dragging");
-  widget?.releasePointerCapture?.(event.pointerId);
-  event.preventDefault();
-  event.stopPropagation();
-}
-
 function openNodeGraphShaderScriptTokenWidget(token, event) {
   const widget = document.getElementById("nodeShaderScriptTokenWidget");
   const colorSection = document.getElementById("nodeShaderScriptColorWidget");
-  const numberSection = document.getElementById("nodeShaderScriptNumberWidget");
   const modeSection = document.getElementById("nodeShaderScriptModeWidget");
-  if (!widget || !colorSection || !numberSection || !modeSection || !token) {
+  if (!widget || !colorSection || !modeSection || !token || token.type === "number") {
     closeNodeGraphShaderScriptTokenWidget();
     return;
   }
   nodeGraphShaderScriptState.tokenWidget = token;
   widget.hidden = false;
   colorSection.hidden = token.type !== "color";
-  numberSection.hidden = token.type !== "number";
   modeSection.hidden = token.type !== "mode";
   if (token.type === "color") {
     mountNodeGraphShaderScriptColorWidget(token);
-  } else if (token.type === "number") {
-    const input = document.getElementById("nodeShaderScriptNumberInput");
-    if (input) {
-      input.value = token.token;
-      input.step = String(nodeGraphShaderScriptNumberStep(token.token));
-    }
   }
   positionNodeGraphShaderScriptTokenWidget(event);
 }
@@ -1079,21 +975,6 @@ function handleNodeGraphShaderScriptSourcePointer(event) {
       closeNodeGraphShaderScriptTokenWidget();
     }
   }, 0);
-}
-
-function changeNodeGraphShaderScriptNumberToken(delta) {
-  const token = nodeGraphShaderScriptState.tokenWidget;
-  if (!token || token.type !== "number") {
-    return;
-  }
-  const step = nodeGraphShaderScriptNumberStep(token.token);
-  const nextValue = Number(token.token) + (Number(delta) || 0) * step;
-  const nextToken = formatNodeGraphShaderScriptNumberToken(nextValue, token.token);
-  replaceNodeGraphShaderScriptToken(nextToken);
-  const input = document.getElementById("nodeShaderScriptNumberInput");
-  if (input) {
-    input.value = nextToken;
-  }
 }
 
 function nodeGraphShaderScriptSourceText() {
@@ -1784,22 +1665,6 @@ function bindNodeGraphShaderScriptEvents() {
       }
     }
   });
-  document.getElementById("nodeShaderScriptNumberInput")?.addEventListener("input", (event) => {
-    const token = nodeGraphShaderScriptState.tokenWidget;
-    if (!token || token.type !== "number") {
-      return;
-    }
-    replaceNodeGraphShaderScriptToken(formatNodeGraphShaderScriptNumberToken(event.target.value, token.token));
-  });
-  document.getElementById("nodeShaderScriptNumberDecrease")?.addEventListener("click", () =>
-    changeNodeGraphShaderScriptNumberToken(-1));
-  document.getElementById("nodeShaderScriptNumberIncrease")?.addEventListener("click", () =>
-    changeNodeGraphShaderScriptNumberToken(1));
-  const tokenWidget = document.getElementById("nodeShaderScriptTokenWidget");
-  tokenWidget?.addEventListener("pointerdown", beginNodeGraphShaderScriptTokenWidgetDrag);
-  tokenWidget?.addEventListener("pointermove", dragNodeGraphShaderScriptTokenWidget);
-  tokenWidget?.addEventListener("pointerup", endNodeGraphShaderScriptTokenWidgetDrag);
-  tokenWidget?.addEventListener("pointercancel", endNodeGraphShaderScriptTokenWidgetDrag);
   document.querySelectorAll("[data-shader-blend-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       const mode = button.dataset.shaderBlendMode;
