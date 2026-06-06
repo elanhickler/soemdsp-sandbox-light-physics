@@ -1,4 +1,4 @@
-const nodeGraphGraphShapes = Object.freeze(["linear", "rational", "exponential", "hold"]);
+const nodeGraphGraphShapes = Object.freeze(["linear", "smooth", "rational", "exponential", "hold"]);
 
 const nodeGraphDefaultGraphData = Object.freeze({
   cursorX: 0.5,
@@ -226,6 +226,11 @@ function nodeGraphGraphExponentialCurve(position, contour = 0) {
   return (1 - Math.exp(p * a)) / denominator;
 }
 
+function nodeGraphGraphSmoothCurve(position) {
+  const p = normalizeNodeGraphGraphNumber(position, 0, 0, 1);
+  return p * p * (3 - 2 * p);
+}
+
 function nodeGraphGraphSegmentValue(graph, x, index) {
   const left = graph.nodes[index];
   const right = graph.nodes[index + 1];
@@ -239,6 +244,8 @@ function nodeGraphGraphSegmentValue(graph, x, index) {
     ? nodeGraphGraphExponentialCurve(p, contour)
     : right.shape === "hold"
       ? (p >= 1 ? 1 : 0)
+    : right.shape === "smooth"
+      ? nodeGraphGraphSmoothCurve(p)
     : right.shape === "linear"
       ? p
       : nodeGraphGraphRationalCurve(p, contour);

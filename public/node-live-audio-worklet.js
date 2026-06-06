@@ -802,7 +802,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   normalizeGraphShape(value) {
     const shape = String(value || "").trim();
-    return shape === "linear" || shape === "exponential" || shape === "rational" || shape === "hold"
+    return shape === "linear" || shape === "smooth" || shape === "exponential" || shape === "rational" || shape === "hold"
       ? shape
       : "rational";
   }
@@ -860,6 +860,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return Math.abs(denominator) < 0.000001 ? p : (1 - Math.exp(p * a)) / denominator;
   }
 
+  graphSmoothCurve(position) {
+    const p = this.normalizeGraphNumber(position, 0, 0, 1);
+    return p * p * (3 - 2 * p);
+  }
+
   graphSegmentValue(graph, x, index) {
     const left = graph.nodes[index];
     const right = graph.nodes[index + 1];
@@ -873,6 +878,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       ? this.graphExponentialCurve(p, contour)
       : right.shape === "hold"
         ? (p >= 1 ? 1 : 0)
+      : right.shape === "smooth"
+        ? this.graphSmoothCurve(p)
       : right.shape === "linear"
         ? p
         : this.graphRationalCurve(p, contour);
