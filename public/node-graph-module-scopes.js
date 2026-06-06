@@ -45,6 +45,19 @@ const nodeGraphModuleScopeDefaultSettings = Object.freeze({
   sync: true,
   timeMs: 20,
 });
+const nodeGraphModuleScopeDefaultDotCores = Object.freeze({
+  dot1: Object.freeze({
+    brightness: 4.5,
+    color: "#ffffff",
+    size: 3.18,
+  }),
+  dot2: Object.freeze({
+    brightness: 0.45,
+    color: "#17002f",
+    size: 4,
+  }),
+  traceColor: "#3de0ff",
+});
 const nodeGraphModuleScopeInfiniteZoomCycles = 1e-6;
 const nodeGraphModuleScopeDiscontinuityThreshold = 0.85;
 const nodeGraphModuleScopeUnipolarTypes = new Set([
@@ -110,7 +123,7 @@ function nodeGraphNormalizeScopeTraceColor(value) {
     const [, r, g, b] = color.toLowerCase();
     return `#${r}${r}${g}${g}${b}${b}`;
   }
-  return nodeGraphModuleScopeDefaultSettings.traceColor;
+  return nodeGraphModuleScopeDefaultDotCores.traceColor;
 }
 
 function nodeGraphScopeHexColorToRgb(color) {
@@ -185,16 +198,30 @@ function nodeGraphModuleScopeShaderNumber(source, dotName, key, fallback) {
 function nodeGraphModuleScopeShaderGlobalValue(dotName, key, fallback) {
   const dotIndex = dotName === "dot2" ? 2 : 1;
   if (key === "size") {
-    const defaultGlobalSize = dotIndex === 2 ? 4 : 3.18;
+    const defaultGlobalSize = dotIndex === 2
+      ? nodeGraphModuleScopeDefaultDotCores.dot2.size
+      : nodeGraphModuleScopeDefaultDotCores.dot1.size;
     const size = dotIndex === 2
-      ? normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4)
-      : normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
+      ? normalizeNodeGraphModuleScopeDotCoreSize(
+        nodeGraphMvp?.moduleScopeDotCore2Size ?? nodeGraphModuleScopeDefaultDotCores.dot2.size,
+        nodeGraphModuleScopeDefaultDotCores.dot2.size,
+      )
+      : normalizeNodeGraphModuleScopeDotCoreSize(
+        nodeGraphMvp?.moduleScopeDotCore1Size ?? nodeGraphModuleScopeDefaultDotCores.dot1.size,
+        nodeGraphModuleScopeDefaultDotCores.dot1.size,
+      );
     return clampNodeSliderValue((Number(fallback) || 0) * (size / defaultGlobalSize), 0, 1);
   }
   if (key === "brightness") {
     return dotIndex === 2
-      ? normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45)
-      : normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
+      ? normalizeNodeGraphModuleScopeDotCoreBrightness(
+        nodeGraphMvp?.moduleScopeDotCore2Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+        nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+      )
+      : normalizeNodeGraphModuleScopeDotCoreBrightness(
+        nodeGraphMvp?.moduleScopeDotCore1Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+        nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+      );
   }
   return fallback;
 }
@@ -254,8 +281,8 @@ function nodeGraphModuleScopeShaderBlurRatio(source, dotName, fallback = 0) {
 function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
   const source = nodeGraphModuleScopeShaderSourceForSlot(slot);
   const outerFallback = normalizeNodeGraphModuleScopeDotCoreColor(
-    buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? "#17002f",
-    "#17002f",
+    buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? nodeGraphModuleScopeDefaultDotCores.dot2.color,
+    nodeGraphModuleScopeDefaultDotCores.dot2.color,
   );
   const centerFallback = normalizeNodeGraphModuleScopeDotCoreColor(
     buffer.nodeGraphScopeLightCenterColor ?? outerFallback,
@@ -267,7 +294,10 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
         source,
         "dot1",
         "brightness",
-        normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5),
+        normalizeNodeGraphModuleScopeDotCoreBrightness(
+          nodeGraphMvp?.moduleScopeDotCore1Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+          nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+        ),
       ),
       0,
       40,
@@ -284,7 +314,10 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
         source,
         "dot2",
         "brightness",
-        normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45),
+        normalizeNodeGraphModuleScopeDotCoreBrightness(
+          nodeGraphMvp?.moduleScopeDotCore2Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+          nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+        ),
       ),
       0,
       40,
@@ -3385,11 +3418,11 @@ function nodeGraphModuleScopeDotTextureOptions(
   core1SizeValue,
   core1BrightnessValue,
   size = 64,
-  core1ColorValue = "#ffffff",
+  core1ColorValue = nodeGraphModuleScopeDefaultDotCores.dot1.color,
   core1BlurValue = 0,
   core2SizeValue = nodeGraphMvp?.moduleScopeDotCore2Size,
   core2BrightnessValue = nodeGraphMvp?.moduleScopeDotCore2Brightness,
-  core2ColorValue = "#17002f",
+  core2ColorValue = nodeGraphModuleScopeDefaultDotCores.dot2.color,
   core2BlurValue = 0,
   lineThicknessValue = nodeGraphMvp?.moduleScopeLineThickness,
 ) {
@@ -3412,15 +3445,21 @@ function nodeGraphModuleScopeDotTextureOptions(
 
 function nodeGraphModuleScopeGeneratedDotTextureData(...args) {
   const options = nodeGraphModuleScopeDotTextureOptions(...args);
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(options.core1Size, 3.18);
-  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(options.core1Brightness, 4.5);
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(options.core1Size, nodeGraphModuleScopeDefaultDotCores.dot1.size);
+  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(options.core1Brightness, nodeGraphModuleScopeDefaultDotCores.dot1.brightness);
   const core1Color = nodeGraphScopeHexColorToRgb(
-    normalizeNodeGraphModuleScopeDotCoreColor(options.core1Color ?? "#ffffff", "#ffffff"),
+    normalizeNodeGraphModuleScopeDotCoreColor(
+      options.core1Color ?? nodeGraphModuleScopeDefaultDotCores.dot1.color,
+      nodeGraphModuleScopeDefaultDotCores.dot1.color,
+    ),
   );
-  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(options.core2Size, 4);
-  const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(options.core2Brightness, 0.45);
+  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(options.core2Size, nodeGraphModuleScopeDefaultDotCores.dot2.size);
+  const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(options.core2Brightness, nodeGraphModuleScopeDefaultDotCores.dot2.brightness);
   const core2Color = nodeGraphScopeHexColorToRgb(
-    normalizeNodeGraphModuleScopeDotCoreColor(options.core2Color ?? "#17002f", "#17002f"),
+    normalizeNodeGraphModuleScopeDotCoreColor(
+      options.core2Color ?? nodeGraphModuleScopeDefaultDotCores.dot2.color,
+      nodeGraphModuleScopeDefaultDotCores.dot2.color,
+    ),
   );
   const core1Blur = normalizeNodeGraphModuleScopeDotBlur(options.core1Blur, 0);
   const core2Blur = normalizeNodeGraphModuleScopeDotBlur(options.core2Blur, 0);
@@ -3464,12 +3503,30 @@ function nodeGraphModuleScopeGeneratedDotTextureData(...args) {
 
 function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
   const state = nodeGraphModuleScopeState.traceImageTexture;
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
-  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
-  const core1Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp?.moduleScopeDotCore1Color ?? "#ffffff", "#ffffff");
-  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4);
-  const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
-  const core2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp?.moduleScopeDotCore2Color ?? "#17002f", "#17002f");
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(
+    nodeGraphMvp?.moduleScopeDotCore1Size ?? nodeGraphModuleScopeDefaultDotCores.dot1.size,
+    nodeGraphModuleScopeDefaultDotCores.dot1.size,
+  );
+  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(
+    nodeGraphMvp?.moduleScopeDotCore1Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+    nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+  );
+  const core1Color = normalizeNodeGraphModuleScopeDotCoreColor(
+    nodeGraphMvp?.moduleScopeDotCore1Color ?? nodeGraphModuleScopeDefaultDotCores.dot1.color,
+    nodeGraphModuleScopeDefaultDotCores.dot1.color,
+  );
+  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(
+    nodeGraphMvp?.moduleScopeDotCore2Size ?? nodeGraphModuleScopeDefaultDotCores.dot2.size,
+    nodeGraphModuleScopeDefaultDotCores.dot2.size,
+  );
+  const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(
+    nodeGraphMvp?.moduleScopeDotCore2Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+    nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+  );
+  const core2Color = normalizeNodeGraphModuleScopeDotCoreColor(
+    nodeGraphMvp?.moduleScopeDotCore2Color ?? nodeGraphModuleScopeDefaultDotCores.dot2.color,
+    nodeGraphModuleScopeDefaultDotCores.dot2.color,
+  );
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
   const core1Blur = 0;
   const core2Blur = 0;
@@ -3551,8 +3608,14 @@ function nodeGraphModuleScopeTraceImageTexture(renderer) {
 }
 
 function nodeGraphModuleScopeDotSizeScale() {
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
-  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4);
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(
+    nodeGraphMvp?.moduleScopeDotCore1Size ?? nodeGraphModuleScopeDefaultDotCores.dot1.size,
+    nodeGraphModuleScopeDefaultDotCores.dot1.size,
+  );
+  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(
+    nodeGraphMvp?.moduleScopeDotCore2Size ?? nodeGraphModuleScopeDefaultDotCores.dot2.size,
+    nodeGraphModuleScopeDefaultDotCores.dot2.size,
+  );
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
   return clampNodeSliderValue(Math.max(core1Size, core2Size) * lineThickness, 0.01, 40);
 }
