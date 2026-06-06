@@ -230,13 +230,17 @@
       if (!element.classList.contains("connected-port") || patchPointSize <= 0) {
         return box;
       }
-      const centerX = endpoint.io === "output" ? rect.right : rect.left;
-      const centerY = rect.top + rect.height * 0.5;
+      const center = typeof nodeGraphElementPatchPointClientCenter === "function"
+        ? nodeGraphElementPatchPointClientCenter(element, endpoint.io)
+        : {
+          x: endpoint.io === "output" ? rect.right : rect.left,
+          y: rect.top + rect.height * 0.5,
+        };
       const radius = patchPointSize * 0.5;
-      const left = Math.min(box.left, centerX - radius);
-      const right = Math.max(box.right, centerX + radius);
-      const top = Math.min(box.top, centerY - radius);
-      const bottom = Math.max(box.bottom, centerY + radius);
+      const left = Math.min(box.left, center.x - radius);
+      const right = Math.max(box.right, center.x + radius);
+      const top = Math.min(box.top, center.y - radius);
+      const bottom = Math.max(box.bottom, center.y + radius);
       return {
         bottom,
         height: bottom - top,
@@ -273,9 +277,13 @@
         ) {
           continue;
         }
-        const centerX = endpoint.io === "output" ? elementRect.right : elementRect.left;
-        const centerY = elementRect.top + elementRect.height * 0.5;
-        const distance = Math.hypot(clientX - centerX, clientY - centerY);
+        const center = typeof nodeGraphElementPatchPointClientCenter === "function"
+          ? nodeGraphElementPatchPointClientCenter(visualElement, endpoint.io)
+          : {
+            x: endpoint.io === "output" ? elementRect.right : elementRect.left,
+            y: elementRect.top + elementRect.height * 0.5,
+          };
+        const distance = Math.hypot(clientX - center.x, clientY - center.y);
         if (distance < bestDistance) {
           best = target;
           bestDistance = distance;

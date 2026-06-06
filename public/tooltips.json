@@ -201,6 +201,8 @@
     "phaseListUnavailable": "Phase list unavailable: manifest required",
     "manifestReloading": "Manifest reload in progress",
     "manifestReload": "Reload manifest and artifacts",
+    "visualOutputCopy": "Copy visual output PNG to clipboard",
+    "visualOutputCopyRenderFirst": "Render Sample before copying visual output",
     "visualOutputSave": "Save visual output as PNG",
     "visualOutputRenderFirst": "Render Sample before saving visual output",
     "visualOutputWaiting": "Node graph visual output waiting for Render Sample"

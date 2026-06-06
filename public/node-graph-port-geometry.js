@@ -52,17 +52,32 @@ function nodeGraphElementCenter(element, io = null) {
   }
 
   const surfaceRect = surface.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
   const zoom = nodeGraphZoom();
-  const centerX = elementRect.left + elementRect.width / 2;
-  const anchorX = io === "output"
-    ? elementRect.right
-    : io === "input" || io === "modulation"
-      ? elementRect.left
-      : centerX;
+  const anchor = nodeGraphElementPatchPointClientCenter(element, io);
   return {
-    x: (anchorX - surfaceRect.left) / zoom,
-    y: (elementRect.top + elementRect.height / 2 - surfaceRect.top) / zoom,
+    x: (anchor.x - surfaceRect.left) / zoom,
+    y: (anchor.y - surfaceRect.top) / zoom,
+  };
+}
+
+function nodeGraphElementPatchPointClientCenter(element, io = null) {
+  if (!element) {
+    return { x: 0, y: 0 };
+  }
+  const rect = element.getBoundingClientRect();
+  const style = getComputedStyle(element);
+  const cssX = style.getPropertyValue("--node-patch-point-x").trim();
+  const percentMatch = cssX.match(/^(-?\d+(?:\.\d+)?)%$/);
+  const xRatio = percentMatch
+    ? Number(percentMatch[1]) / 100
+    : io === "output"
+      ? 1
+      : io === "input" || io === "modulation"
+        ? 0
+        : 0.5;
+  return {
+    x: rect.left + rect.width * Math.max(0, Math.min(1, Number.isFinite(xRatio) ? xRatio : 0.5)),
+    y: rect.top + rect.height * 0.5,
   };
 }
 

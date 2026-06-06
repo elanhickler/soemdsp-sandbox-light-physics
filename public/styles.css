@@ -9994,6 +9994,7 @@ body.node-slider-dragging .node-param-port {
 }
 
 .node-port.output {
+  --node-patch-point-x: 100%;
   --node-port-hover-color: var(--node-output-fill);
   border-right-width: 0;
   border-radius: 999px 0 0 999px;
@@ -10014,6 +10015,7 @@ body.node-slider-dragging .node-param-port {
 }
 
 .node-port.input {
+  --node-patch-point-x: 0%;
   --node-port-hover-color: var(--node-input-fill);
   border-left-width: 0;
   border-radius: 0 999px 999px 0;
@@ -10061,6 +10063,7 @@ body.node-slider-dragging .node-param-port {
 }
 
 .node-param-port.modulation-input {
+  --node-patch-point-x: 0%;
   --node-param-hover-color: var(--node-mod-input-fill);
   --node-param-hover-stroke: var(--node-mod-input-stroke);
 }
@@ -10077,6 +10080,7 @@ body.node-slider-dragging .node-param-port {
 }
 
 .node-param-port.parameter-output {
+  --node-patch-point-x: 100%;
   --node-param-hover-color: var(--node-param-output-fill);
   --node-param-hover-stroke: var(--node-param-output-stroke);
   grid-column: 3;
@@ -10114,6 +10118,15 @@ body.node-slider-dragging .node-param-port {
   --node-port-stroke-mask-color: color-mix(in srgb, var(--node-param-output-fill) 15%, transparent);
   border-color: color-mix(in srgb, var(--node-param-output-stroke) 62%, transparent);
   background: transparent;
+}
+
+.node-param-port.parameter-output.connected-port::before {
+  border-color: color-mix(in srgb, var(--node-param-output-stroke) 62%, transparent);
+  background: color-mix(in srgb, var(--node-param-output-fill) 28%, transparent);
+  box-shadow:
+    1px 0 0 color-mix(in srgb, var(--node-param-output-fill) 28%, transparent),
+    2px 0 0 color-mix(in srgb, var(--node-param-output-fill) 18%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--node-param-output-fill) 24%, transparent) inset;
 }
 
 .node-port.input.connected-port {
