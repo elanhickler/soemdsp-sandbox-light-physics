@@ -247,6 +247,9 @@ function renderNodeGraphCameraFeed(options = {}) {
   }
   const wireSvg = nodeGraphCameraCloneWireSvg(document.getElementById("nodeWireSvg"));
   const clone = createNodeGraphCameraWorldClone(workspace, wireSvg);
+  if (typeof options.decorateClone === "function") {
+    options.decorateClone(clone, { camera, surface, viewport });
+  }
   surface.append(clone);
   const scale = Math.min(
     viewport.clientWidth / Math.max(1, camera.width),
