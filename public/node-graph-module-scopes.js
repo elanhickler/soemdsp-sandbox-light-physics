@@ -364,6 +364,7 @@ function bindNodeGraphModuleScopeViewDrag(scopeElement) {
   }
   scopeElement.dataset.scopeViewDragBound = "true";
   scopeElement.addEventListener("pointerdown", beginNodeGraphModuleScopeViewDrag);
+  scopeElement.addEventListener("dblclick", beginNodeGraphModuleScopeWindowNumberEdit);
 }
 
 function ensureNodeGraphModuleScopeViewDragEvents() {
@@ -405,6 +406,38 @@ function beginNodeGraphModuleScopeViewDrag(event) {
   if (event.pointerId !== undefined) {
     scopeElement.setPointerCapture?.(event.pointerId);
   }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function beginNodeGraphModuleScopeWindowNumberEdit(event) {
+  const scopeElement = event.currentTarget;
+  const moduleElement = scopeElement?.closest?.(".dsp-node");
+  const nodeId = moduleElement?.dataset?.node || scopeElement?.dataset?.node || "";
+  const menu = document.getElementById("nodeGlobalScopeMenu");
+  if (!nodeId || !nodeGraphPatchNode(nodeId) || !menu) {
+    return;
+  }
+  nodeGraphMvp.scopeContextTargetNode = nodeId;
+  nodeGraphMvp.sceneContextTargetNode = nodeId;
+  setNodeGraphSelection({ type: "node", id: nodeId });
+  if (typeof positionNodeGlobalScopeMenuAtSavedOr === "function") {
+    positionNodeGlobalScopeMenuAtSavedOr(menu, event.clientX + 10, event.clientY + 10);
+  } else {
+    menu.hidden = false;
+  }
+  renderNodeGraphSceneScopeControls(nodeId);
+  renderNodeGraphModuleScopeBrightnessControl();
+  window.requestAnimationFrame(() => {
+    const input = document.getElementById("nodeSceneScopeTime");
+    if (input) {
+      beginNodeGraphScopeNumberEdit({
+        currentTarget: input,
+        preventDefault() {},
+        stopPropagation() {},
+      });
+    }
+  });
   event.preventDefault();
   event.stopPropagation();
 }
