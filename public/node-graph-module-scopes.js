@@ -3693,6 +3693,17 @@ function drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, ra
   }
 }
 
+function nodeGraphModuleScopeEmissiveShaderRgb(rgb, brightness) {
+  const values = (rgb || []).map((component) => Math.round(clampNodeSliderValue(component, 0, 255)));
+  const maxChannel = Math.max(0, ...values);
+  if (maxChannel <= 0) {
+    return values;
+  }
+  const targetMax = clampNodeSliderValue(72 + Math.max(0, Number(brightness) || 0) * 144, 72, 255);
+  const scale = Math.max(1, targetMax / maxChannel);
+  return values.map((component) => Math.round(clampNodeSliderValue(component * scale, 0, 255)));
+}
+
 function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio, slot) {
   if (!context || !buffer?.nodeGraphScopeLightDisplay) {
     return;
@@ -3759,14 +3770,20 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
     : lightStyle.usesShader ? 1 : 0.5;
   const outerAlpha = clampNodeSliderValue(alpha * core2Brightness * outerAlphaScale, 0, 1);
   const centerAlpha = clampNodeSliderValue(alpha * core1Brightness * centerAlphaScale, 0, 1);
+  const visibleOuterRgb = lightStyle.usesShader
+    ? nodeGraphModuleScopeEmissiveShaderRgb(outerRgb, core2Brightness)
+    : outerRgb;
+  const visibleCenterRgb = lightStyle.usesShader
+    ? nodeGraphModuleScopeEmissiveShaderRgb(centerRgb, core1Brightness)
+    : centerRgb;
 
   context.save();
   context.globalCompositeOperation = lightStyle.usesShader ? "source-over" : "lighter";
-  context.fillStyle = `rgba(${outerRgb[0]}, ${outerRgb[1]}, ${outerRgb[2]}, ${lightStyle.usesShader ? Math.max(0.42, outerAlpha) : clampNodeSliderValue(outerAlpha, 0, 0.92)})`;
+  context.fillStyle = `rgba(${visibleOuterRgb[0]}, ${visibleOuterRgb[1]}, ${visibleOuterRgb[2]}, ${lightStyle.usesShader ? Math.max(0.42, outerAlpha) : clampNodeSliderValue(outerAlpha, 0, 0.92)})`;
   drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);
   context.fill();
   context.globalCompositeOperation = "lighter";
-  context.fillStyle = `rgba(${centerRgb[0]}, ${centerRgb[1]}, ${centerRgb[2]}, ${centerAlpha})`;
+  context.fillStyle = `rgba(${visibleCenterRgb[0]}, ${visibleCenterRgb[1]}, ${visibleCenterRgb[2]}, ${centerAlpha})`;
   drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius * centerRatio);
   context.fill();
   context.restore();

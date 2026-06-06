@@ -9363,6 +9363,9 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphModuleScopeState.lightDisplayStates.get(nodeId)",
         "nodeGraphModuleScopeState.lightDisplayStates.delete(nodeId)",
         "function drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius)",
+        "function nodeGraphModuleScopeEmissiveShaderRgb(rgb, brightness)",
+        "const targetMax = clampNodeSliderValue(72 + Math.max(0, Number(brightness) || 0) * 144, 72, 255)",
+        "const visibleOuterRgb = lightStyle.usesShader",
         "context.globalCompositeOperation = lightStyle.usesShader ? \"source-over\" : \"lighter\"",
         "Math.max(0.42, outerAlpha)",
         "context.globalCompositeOperation = \"lighter\"",
@@ -9646,6 +9649,7 @@ def require_node_graph_mvp_contract() -> None:
         and "const outerColor = lightStyle.outerColor" in light_display_source
         and "const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1" in light_display_source
         and ": lightStyle.usesShader ? 1 : 0.38" in light_display_source
+        and "nodeGraphModuleScopeEmissiveShaderRgb(outerRgb, core2Brightness)" in light_display_source
         and "context.globalCompositeOperation = lightStyle.usesShader ? \"source-over\" : \"lighter\"" in light_display_source
         and "Math.max(0.42, outerAlpha)" in light_display_source
         and "drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);" in light_display_source,
