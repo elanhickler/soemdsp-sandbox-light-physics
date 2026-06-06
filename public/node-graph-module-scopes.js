@@ -167,6 +167,14 @@ function nodeGraphModuleScopeShaderNumber(source, dotName, key, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function nodeGraphModuleScopeShaderSizeRatio(source, dotName, fallback) {
+  return clampNodeSliderValue(
+    nodeGraphModuleScopeShaderNumber(source, dotName, "size", fallback),
+    0,
+    1,
+  );
+}
+
 function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
   const source = nodeGraphModuleScopeShaderSourceForSlot(slot);
   const outerFallback = normalizeNodeGraphModuleScopeDotCoreColor(
@@ -189,14 +197,10 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
       40,
     ),
     centerColor: nodeGraphModuleScopeShaderColor(source, "dot1", centerFallback),
-    centerSize: Math.max(
-      0.01,
-      nodeGraphModuleScopeShaderNumber(
-        source,
-        "dot1",
-        "size",
-        normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18),
-      ),
+    centerSize: nodeGraphModuleScopeShaderSizeRatio(
+      source,
+      "dot1",
+      0.035,
     ),
     outerBrightness: clampNodeSliderValue(
       nodeGraphModuleScopeShaderNumber(
@@ -209,14 +213,10 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
       40,
     ),
     outerColor: nodeGraphModuleScopeShaderColor(source, "dot2", outerFallback),
-    outerSize: Math.max(
-      0.01,
-      nodeGraphModuleScopeShaderNumber(
-        source,
-        "dot2",
-        "size",
-        normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4),
-      ),
+    outerSize: nodeGraphModuleScopeShaderSizeRatio(
+      source,
+      "dot2",
+      0.09,
     ),
     source,
     usesShader: Boolean(source),
@@ -3739,28 +3739,23 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
   const core1Brightness = lightStyle.centerBrightness;
   const core2Size = lightStyle.outerSize;
   const core2Brightness = lightStyle.outerBrightness;
-  const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
-  const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1;
-  const dot2Scale = shaderUsesRatioSize
-    ? clampNodeSliderValue(core2Size * 2, 0.05, 2)
-    : clampNodeSliderValue((core2Size * lineThickness) / 8, 0.1, 2);
-  const size = Math.max(1, Math.min(rect.width, rect.height) * clampNodeSliderValue(
-    (Number(buffer.nodeGraphScopeLightBaseRatio) || 0.5) * dot2Scale,
-    0.05,
-    1,
-  ));
+  const availableSize = Math.max(1, Math.min(rect.width, rect.height));
+  const outerSizeRatio = clampNodeSliderValue(core2Size, 0, 1);
+  const centerSizeRatio = clampNodeSliderValue(core1Size, 0, 1);
+  const size = Math.max(1, availableSize * outerSizeRatio);
   const centerX = (rect.left + rect.width * 0.5) * pixelRatio;
   const centerY = (rect.top + rect.height * 0.5) * pixelRatio;
   const radius = size * pixelRatio * 0.5;
   const masterBrightness = nodeGraphModuleScopeTraceBrightness(slot, settings);
-  const outerCoreSize = Math.max(0.01, core2Size);
   const alpha = clampNodeSliderValue(brightness * masterBrightness, 0, 1);
   const shape = ["circle", "square", "diamond"].includes(buffer.nodeGraphScopeLightShape)
     ? buffer.nodeGraphScopeLightShape
     : "circle";
   const centerRatio = Math.max(
     Number(buffer.nodeGraphScopeLightCenterMinRatio) || 0,
-    clampNodeSliderValue(core1Size / outerCoreSize, 0.05, 1),
+    outerSizeRatio > 0
+      ? clampNodeSliderValue(centerSizeRatio / outerSizeRatio, 0, 1)
+      : 0,
   );
   const outerAlphaScale = Number.isFinite(Number(buffer.nodeGraphScopeLightOuterAlphaScale))
     ? clampNodeSliderValue(Number(buffer.nodeGraphScopeLightOuterAlphaScale), 0, 4)

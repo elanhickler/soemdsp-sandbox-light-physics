@@ -9357,8 +9357,11 @@ def require_node_graph_mvp_contract() -> None:
         "const core1Brightness = lightStyle.centerBrightness",
         "const core2Size = lightStyle.outerSize",
         "const core2Brightness = lightStyle.outerBrightness",
-        "normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2)",
-        "const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1",
+        "function nodeGraphModuleScopeShaderSizeRatio(source, dotName, fallback)",
+        "const availableSize = Math.max(1, Math.min(rect.width, rect.height))",
+        "const outerSizeRatio = clampNodeSliderValue(core2Size, 0, 1)",
+        "const centerSizeRatio = clampNodeSliderValue(core1Size, 0, 1)",
+        "const size = Math.max(1, availableSize * outerSizeRatio)",
         "nodeGraphModuleScopeTraceBrightness(slot, settings)",
         "nodeGraphModuleScopeState.lightDisplayStates.get(nodeId)",
         "nodeGraphModuleScopeState.lightDisplayStates.delete(nodeId)",
@@ -9372,7 +9375,7 @@ def require_node_graph_mvp_contract() -> None:
         "if (shape === \"square\")",
         "else if (shape === \"diamond\")",
         "drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);",
-        "core1Size / outerCoreSize",
+        "centerSizeRatio / outerSizeRatio",
         "function drawNodeGraphModuleScopeLightDisplays(items, pixelRatio)",
         "drawNodeGraphModuleScopeLightDisplay(context, item.scopeRect, item.buffer, pixelRatio, item.slot)",
         "if (buffer?.nodeGraphScopeLightDisplay)",
@@ -9647,7 +9650,7 @@ def require_node_graph_mvp_contract() -> None:
     require(
         "const lightStyle = nodeGraphModuleScopeLightShaderStyle(slot, buffer)" in light_display_source
         and "const outerColor = lightStyle.outerColor" in light_display_source
-        and "const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1" in light_display_source
+        and "const size = Math.max(1, availableSize * outerSizeRatio)" in light_display_source
         and ": lightStyle.usesShader ? 1 : 0.38" in light_display_source
         and "nodeGraphModuleScopeEmissiveShaderRgb(outerRgb, core2Brightness)" in light_display_source
         and "context.globalCompositeOperation = lightStyle.usesShader ? \"source-over\" : \"lighter\"" in light_display_source
