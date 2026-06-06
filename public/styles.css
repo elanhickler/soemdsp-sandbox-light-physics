@@ -9301,6 +9301,19 @@ button.saved-default,
     0 0 18px rgba(76, 220, 224, 0.08);
 }
 
+.node-shader-script-token-widget:has(#nodeShaderScriptNumberWidget:not([hidden])) {
+  cursor: grab;
+}
+
+.node-shader-script-token-widget.dragging {
+  cursor: grabbing;
+}
+
+.node-shader-script-token-widget input,
+.node-shader-script-token-widget button {
+  cursor: auto;
+}
+
 .node-shader-script-token-widget[hidden],
 .node-shader-script-token-widget-section[hidden] {
   display: none;

@@ -118,6 +118,96 @@ function nodeGraphScopeHexColorToRgb(color) {
   return [0, 2, 4].map((offset) => parseInt(normalized.slice(offset + 1, offset + 3), 16) / 255);
 }
 
+function nodeGraphModuleScopeShaderSourceForSlot(slot) {
+  const node = nodeGraphModuleScopeNodeForSlot(slot);
+  if (!node) {
+    return "";
+  }
+  try {
+    const liveState = typeof nodeGraphShaderScriptState !== "undefined" ? nodeGraphShaderScriptState : null;
+    const dialog = typeof nodeGraphShaderScriptDialog === "function" ? nodeGraphShaderScriptDialog() : null;
+    if (
+      liveState?.dialogMode === "scope" &&
+      liveState.scopeTargetNodeId === node.id &&
+      dialog &&
+      !dialog.hidden
+    ) {
+      return document.getElementById("nodeShaderScriptSource")?.value || "";
+    }
+  } catch {
+    // Scope rendering should survive if the editor is unavailable.
+  }
+  return Object.hasOwn(node, "scopeShader")
+    ? normalizeNodeGraphScopeShader(node.scopeShader).source
+    : "";
+}
+
+function nodeGraphModuleScopeShaderColor(source, dotName, fallback) {
+  const match = String(source || "").match(new RegExp(`\\b${dotName}\\.color\\s*=\\s*(#[0-9a-fA-F]{3,8})\\s*;`));
+  return match ? nodeGraphNormalizeScopeTraceColor(match[1]) : fallback;
+}
+
+function nodeGraphModuleScopeShaderNumber(source, dotName, key, fallback) {
+  const match = String(source || "").match(new RegExp(`\\b${dotName}\\.${key}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`));
+  const value = Number(match?.[1]);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
+  const source = nodeGraphModuleScopeShaderSourceForSlot(slot);
+  const outerFallback = normalizeNodeGraphModuleScopeDotCoreColor(
+    buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? "#17002f",
+    "#17002f",
+  );
+  const centerFallback = normalizeNodeGraphModuleScopeDotCoreColor(
+    buffer.nodeGraphScopeLightCenterColor ?? outerFallback,
+    outerFallback,
+  );
+  return {
+    centerBrightness: clampNodeSliderValue(
+      nodeGraphModuleScopeShaderNumber(
+        source,
+        "dot1",
+        "brightness",
+        normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5),
+      ),
+      0,
+      40,
+    ),
+    centerColor: nodeGraphModuleScopeShaderColor(source, "dot1", centerFallback),
+    centerSize: Math.max(
+      0.01,
+      nodeGraphModuleScopeShaderNumber(
+        source,
+        "dot1",
+        "size",
+        normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18),
+      ),
+    ),
+    outerBrightness: clampNodeSliderValue(
+      nodeGraphModuleScopeShaderNumber(
+        source,
+        "dot2",
+        "brightness",
+        normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45),
+      ),
+      0,
+      40,
+    ),
+    outerColor: nodeGraphModuleScopeShaderColor(source, "dot2", outerFallback),
+    outerSize: Math.max(
+      0.01,
+      nodeGraphModuleScopeShaderNumber(
+        source,
+        "dot2",
+        "size",
+        normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4),
+      ),
+    ),
+    source,
+  };
+}
+
 function normalizeNodeGraphModuleScopeSettings(value = {}) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return Object.fromEntries(
@@ -3612,24 +3702,22 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
     return;
   }
 
-  const outerColor = normalizeNodeGraphModuleScopeDotCoreColor(
-    buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? "#17002f",
-    "#17002f",
-  );
-  const centerColor = normalizeNodeGraphModuleScopeDotCoreColor(
-    buffer.nodeGraphScopeLightCenterColor ?? outerColor,
-    outerColor,
-  );
+  const lightStyle = nodeGraphModuleScopeLightShaderStyle(slot, buffer);
+  const outerColor = lightStyle.outerColor;
+  const centerColor = lightStyle.centerColor;
   const outerRgb = nodeGraphScopeHexColorToRgb(outerColor)
     .map((component) => Math.round(clampNodeSliderValue(component, 0, 1) * 255));
   const centerRgb = nodeGraphScopeHexColorToRgb(centerColor)
     .map((component) => Math.round(clampNodeSliderValue(component, 0, 1) * 255));
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
-  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
-  const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4);
-  const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
+  const core1Size = lightStyle.centerSize;
+  const core1Brightness = lightStyle.centerBrightness;
+  const core2Size = lightStyle.outerSize;
+  const core2Brightness = lightStyle.outerBrightness;
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
-  const dot2Scale = clampNodeSliderValue((core2Size * lineThickness) / 8, 0.1, 2);
+  const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1;
+  const dot2Scale = shaderUsesRatioSize
+    ? clampNodeSliderValue(core2Size * 2, 0.05, 2)
+    : clampNodeSliderValue((core2Size * lineThickness) / 8, 0.1, 2);
   const size = Math.max(1, Math.min(rect.width, rect.height) * clampNodeSliderValue(
     (Number(buffer.nodeGraphScopeLightBaseRatio) || 0.5) * dot2Scale,
     0.05,

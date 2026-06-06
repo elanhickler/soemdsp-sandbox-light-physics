@@ -323,6 +323,7 @@ const nodeGraphShaderScriptState = {
   scopeTargetNodeId: "",
   syntaxColors: { ...nodeGraphShaderScriptDefaultSyntaxColors },
   tokenWidget: null,
+  tokenWidgetDrag: null,
 };
 
 function nodeGraphShaderScriptCanvas() {
@@ -650,9 +651,11 @@ function updateNodeGraphShaderScriptHighlight() {
 
 function closeNodeGraphShaderScriptTokenWidget() {
   destroyNodeGraphShaderScriptColorWidget();
+  nodeGraphShaderScriptState.tokenWidgetDrag = null;
   const widget = document.getElementById("nodeShaderScriptTokenWidget");
   if (widget) {
     widget.hidden = true;
+    widget.classList.remove("dragging");
   }
   for (const id of [
     "nodeShaderScriptColorWidget",
@@ -822,6 +825,91 @@ function positionNodeGraphShaderScriptTokenWidget(event) {
   const y = clampNodeSliderValue((event?.clientY || rect.top + 16) - rect.top + 8, 8, Math.max(8, rect.height - 58));
   widget.style.left = `${x}px`;
   widget.style.top = `${y}px`;
+}
+
+function nodeGraphShaderScriptTokenWidgetCanDrag(event) {
+  return (
+    nodeGraphShaderScriptState.tokenWidget?.type === "number" &&
+    !event.target?.closest?.("button, input, select, textarea")
+  );
+}
+
+function beginNodeGraphShaderScriptTokenWidgetDrag(event) {
+  const widget = document.getElementById("nodeShaderScriptTokenWidget");
+  const editor = document.querySelector(".node-shader-script-editor");
+  if (
+    event.button > 0 ||
+    !widget ||
+    widget.hidden ||
+    !editor ||
+    !nodeGraphShaderScriptTokenWidgetCanDrag(event)
+  ) {
+    return;
+  }
+  const widgetRect = widget.getBoundingClientRect();
+  const editorRect = editor.getBoundingClientRect();
+  nodeGraphShaderScriptState.tokenWidgetDrag = {
+    offsetX: event.clientX - widgetRect.left,
+    offsetY: event.clientY - widgetRect.top,
+    pointerId: event.pointerId ?? null,
+  };
+  widget.classList.add("dragging");
+  widget.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+  const clampCurrentPosition = () => {
+    const left = clampNodeSliderValue(widgetRect.left - editorRect.left, 8, Math.max(8, editorRect.width - widgetRect.width - 8));
+    const top = clampNodeSliderValue(widgetRect.top - editorRect.top, 8, Math.max(8, editorRect.height - widgetRect.height - 8));
+    widget.style.left = `${left}px`;
+    widget.style.top = `${top}px`;
+  };
+  clampCurrentPosition();
+}
+
+function dragNodeGraphShaderScriptTokenWidget(event) {
+  const drag = nodeGraphShaderScriptState.tokenWidgetDrag;
+  const widget = document.getElementById("nodeShaderScriptTokenWidget");
+  const editor = document.querySelector(".node-shader-script-editor");
+  if (
+    !drag ||
+    !widget ||
+    !editor ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  const editorRect = editor.getBoundingClientRect();
+  const widgetRect = widget.getBoundingClientRect();
+  const left = clampNodeSliderValue(
+    event.clientX - editorRect.left - drag.offsetX,
+    8,
+    Math.max(8, editorRect.width - widgetRect.width - 8),
+  );
+  const top = clampNodeSliderValue(
+    event.clientY - editorRect.top - drag.offsetY,
+    8,
+    Math.max(8, editorRect.height - widgetRect.height - 8),
+  );
+  widget.style.left = `${left}px`;
+  widget.style.top = `${top}px`;
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function endNodeGraphShaderScriptTokenWidgetDrag(event) {
+  const drag = nodeGraphShaderScriptState.tokenWidgetDrag;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  nodeGraphShaderScriptState.tokenWidgetDrag = null;
+  const widget = document.getElementById("nodeShaderScriptTokenWidget");
+  widget?.classList.remove("dragging");
+  widget?.releasePointerCapture?.(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 function openNodeGraphShaderScriptTokenWidget(token, event) {
@@ -1489,6 +1577,11 @@ function bindNodeGraphShaderScriptEvents() {
     changeNodeGraphShaderScriptNumberToken(-1));
   document.getElementById("nodeShaderScriptNumberIncrease")?.addEventListener("click", () =>
     changeNodeGraphShaderScriptNumberToken(1));
+  const tokenWidget = document.getElementById("nodeShaderScriptTokenWidget");
+  tokenWidget?.addEventListener("pointerdown", beginNodeGraphShaderScriptTokenWidgetDrag);
+  tokenWidget?.addEventListener("pointermove", dragNodeGraphShaderScriptTokenWidget);
+  tokenWidget?.addEventListener("pointerup", endNodeGraphShaderScriptTokenWidgetDrag);
+  tokenWidget?.addEventListener("pointercancel", endNodeGraphShaderScriptTokenWidgetDrag);
   document.querySelectorAll("[data-shader-blend-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       const mode = button.dataset.shaderBlendMode;

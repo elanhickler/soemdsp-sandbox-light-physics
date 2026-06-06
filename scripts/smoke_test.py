@@ -8778,6 +8778,10 @@ def require_node_graph_mvp_contract() -> None:
         "function replaceNodeGraphShaderScriptToken(nextToken)",
         "source.setRangeText(replacement, token.start, token.end, \"end\")",
         "function openNodeGraphShaderScriptTokenWidget(token, event)",
+        "function beginNodeGraphShaderScriptTokenWidgetDrag(event)",
+        "function dragNodeGraphShaderScriptTokenWidget(event)",
+        "function endNodeGraphShaderScriptTokenWidgetDrag(event)",
+        "nodeGraphShaderScriptState.tokenWidget?.type === \"number\"",
         "function changeNodeGraphShaderScriptNumberToken(delta)",
         "function normalizeNodeGraphShaderScriptColorToken(value = \"\")",
         "function nodeGraphScopeShaderDefaultModuleKey(node)",
@@ -8836,6 +8840,7 @@ def require_node_graph_mvp_contract() -> None:
         "document.getElementById(\"nodeShaderScriptNumberInput\")?.addEventListener(\"input\"",
         "document.getElementById(\"nodeShaderScriptNumberDecrease\")?.addEventListener(\"click\"",
         "document.getElementById(\"nodeShaderScriptNumberIncrease\")?.addEventListener(\"click\"",
+        "tokenWidget?.addEventListener(\"pointerdown\", beginNodeGraphShaderScriptTokenWidgetDrag)",
         "document.querySelectorAll(\"[data-shader-blend-mode]\").forEach((button) => {",
         "source?.addEventListener(\"scroll\", updateNodeGraphShaderScriptHighlight)",
         "panel?.addEventListener(\"pointerdown\", beginNodeGraphShaderScriptDialogDrag)",
@@ -9339,12 +9344,13 @@ def require_node_graph_mvp_contract() -> None:
         "if (!buffer.nodeGraphScopeLightInstant)",
         "const burn = nodeGraphModuleScopeTraceBurn(settings)",
         "0.018 + burn * 0.72",
-        "normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18)",
-        "normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5)",
-        "normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4)",
-        "normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45)",
+        "const lightStyle = nodeGraphModuleScopeLightShaderStyle(slot, buffer)",
+        "const core1Size = lightStyle.centerSize",
+        "const core1Brightness = lightStyle.centerBrightness",
+        "const core2Size = lightStyle.outerSize",
+        "const core2Brightness = lightStyle.outerBrightness",
         "normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2)",
-        "const dot2Scale = clampNodeSliderValue((core2Size * lineThickness) / 8, 0.1, 2)",
+        "const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1",
         "nodeGraphModuleScopeTraceBrightness(slot, settings)",
         "nodeGraphModuleScopeState.lightDisplayStates.get(nodeId)",
         "nodeGraphModuleScopeState.lightDisplayStates.delete(nodeId)",
@@ -9559,6 +9565,8 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphScopeLightCenterMinRatio: 0.42",
         "nodeGraphScopeLightOuterAlphaScale: 1",
         "function nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer)",
+        "function nodeGraphModuleScopeShaderSourceForSlot(slot)",
+        "function nodeGraphModuleScopeLightShaderStyle(slot, buffer)",
         "nodeGraphScopeLightInstant: true",
         "nodeGraphScopeLightTarget: nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer) ?? 0",
         "for (const sink of runtime.visualSinks || [])",
@@ -9621,17 +9629,17 @@ def require_node_graph_mvp_contract() -> None:
         "clock light display should not draw an extra outline stroke",
     )
     require(
-        'buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? "#17002f"'
-        in light_display_source
-        and "const dot2Scale = clampNodeSliderValue((core2Size * lineThickness) / 8, 0.1, 2)" in light_display_source
+        "const lightStyle = nodeGraphModuleScopeLightShaderStyle(slot, buffer)" in light_display_source
+        and "const outerColor = lightStyle.outerColor" in light_display_source
+        and "const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1" in light_display_source
         and "drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);" in light_display_source,
-        "clock light display should assume dot 2 color and dot 2 size for the outer light",
+        "clock light display should let scope shader dot 2 define the outer light",
     )
     require(
-        "buffer.nodeGraphScopeLightCenterColor ?? outerColor" in light_display_source
+        "const centerColor = lightStyle.centerColor" in light_display_source
         and "const centerRatio = Math.max(" in light_display_source
         and "nodeGraphScopeLightCenterAlphaScale" in light_display_source,
-        "LED light display should be able to draw a separate bright center dot",
+        "LED and clock light display should be able to draw a separate bright center dot",
     )
     require(
         "if (cycles === 0) {\n    return buffer.length;\n  }" not in node_graph_source,
