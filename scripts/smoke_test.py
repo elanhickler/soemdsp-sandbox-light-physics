@@ -3409,6 +3409,7 @@ def require_node_graph_mvp_contract() -> None:
         "--node-shader-token-number",
         "--node-shader-token-mode",
         "--node-shader-token-comment",
+        "--node-shader-scope-preview-aspect",
         ".node-shader-script-syntax-colors-panel",
         "#nodeShaderScriptSyntaxColorsButton",
     ]:
@@ -8761,6 +8762,7 @@ def require_node_graph_mvp_contract() -> None:
         "async function exportNodeGraphShaderScriptToDesktop()",
         "\"/api/shader-script/to-desktop\"",
         "function drawNodeGraphShaderScriptScopePreview()",
+        "canvas.style.setProperty(\"--node-shader-scope-preview-aspect\"",
         "function scheduleNodeGraphShaderScriptScopePreview()",
         "nodeGraphShaderScriptState.previewFrame",
         "function beginNodeGraphShaderScriptDialogDrag(event)",

@@ -9204,7 +9204,7 @@ button.saved-default,
 
 .node-shader-script-preview-panel canvas {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--node-shader-scope-preview-aspect, 1 / 1);
   border: 1px solid rgba(127, 199, 217, 0.18);
   border-radius: 5px;
   background: #000;

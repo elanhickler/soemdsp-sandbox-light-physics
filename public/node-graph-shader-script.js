@@ -931,6 +931,9 @@ function drawNodeGraphShaderScriptScopePreview() {
   }
   const sourceRect = sourceCanvas.getBoundingClientRect();
   const scopeRect = scopeElement.getBoundingClientRect();
+  const previewAspectWidth = Math.max(1, Number(scopeRect.width) || 1);
+  const previewAspectHeight = Math.max(1, Number(scopeRect.height) || 1);
+  canvas.style.setProperty("--node-shader-scope-preview-aspect", `${previewAspectWidth} / ${previewAspectHeight}`);
   const scaleX = sourceCanvas.width / Math.max(1, sourceRect.width);
   const scaleY = sourceCanvas.height / Math.max(1, sourceRect.height);
   const sx = Math.max(0, Math.floor((scopeRect.left - sourceRect.left) * scaleX));
