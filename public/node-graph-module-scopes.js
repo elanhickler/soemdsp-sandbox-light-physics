@@ -3757,13 +3757,16 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
   const centerAlphaScale = Number.isFinite(Number(buffer.nodeGraphScopeLightCenterAlphaScale))
     ? clampNodeSliderValue(Number(buffer.nodeGraphScopeLightCenterAlphaScale), 0, 4)
     : lightStyle.usesShader ? 1 : 0.5;
+  const outerAlpha = clampNodeSliderValue(alpha * core2Brightness * outerAlphaScale, 0, 1);
+  const centerAlpha = clampNodeSliderValue(alpha * core1Brightness * centerAlphaScale, 0, 1);
 
   context.save();
-  context.globalCompositeOperation = "lighter";
-  context.fillStyle = `rgba(${outerRgb[0]}, ${outerRgb[1]}, ${outerRgb[2]}, ${clampNodeSliderValue(alpha * core2Brightness * outerAlphaScale, 0, 0.92)})`;
+  context.globalCompositeOperation = lightStyle.usesShader ? "source-over" : "lighter";
+  context.fillStyle = `rgba(${outerRgb[0]}, ${outerRgb[1]}, ${outerRgb[2]}, ${lightStyle.usesShader ? Math.max(0.42, outerAlpha) : clampNodeSliderValue(outerAlpha, 0, 0.92)})`;
   drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);
   context.fill();
-  context.fillStyle = `rgba(${centerRgb[0]}, ${centerRgb[1]}, ${centerRgb[2]}, ${clampNodeSliderValue(alpha * core1Brightness * centerAlphaScale, 0, 1)})`;
+  context.globalCompositeOperation = "lighter";
+  context.fillStyle = `rgba(${centerRgb[0]}, ${centerRgb[1]}, ${centerRgb[2]}, ${centerAlpha})`;
   drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius * centerRatio);
   context.fill();
   context.restore();

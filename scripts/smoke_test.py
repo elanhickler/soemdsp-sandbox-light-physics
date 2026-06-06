@@ -9363,6 +9363,8 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphModuleScopeState.lightDisplayStates.get(nodeId)",
         "nodeGraphModuleScopeState.lightDisplayStates.delete(nodeId)",
         "function drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius)",
+        "context.globalCompositeOperation = lightStyle.usesShader ? \"source-over\" : \"lighter\"",
+        "Math.max(0.42, outerAlpha)",
         "context.globalCompositeOperation = \"lighter\"",
         "if (shape === \"square\")",
         "else if (shape === \"diamond\")",
@@ -9644,6 +9646,8 @@ def require_node_graph_mvp_contract() -> None:
         and "const outerColor = lightStyle.outerColor" in light_display_source
         and "const shaderUsesRatioSize = Boolean(lightStyle.source) && core2Size <= 1" in light_display_source
         and ": lightStyle.usesShader ? 1 : 0.38" in light_display_source
+        and "context.globalCompositeOperation = lightStyle.usesShader ? \"source-over\" : \"lighter\"" in light_display_source
+        and "Math.max(0.42, outerAlpha)" in light_display_source
         and "drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);" in light_display_source,
         "clock light display should let scope shader dot 2 define the outer light",
     )
