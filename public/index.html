@@ -435,6 +435,7 @@
             <div class="node-shader-script-size-controls" aria-label="Shader editor text size">
               <button id="nodeShaderScriptTextSizeIncrease" type="button" aria-label="Increase shader editor text size">+</button>
               <button id="nodeShaderScriptTextSizeDecrease" type="button" aria-label="Decrease shader editor text size">-</button>
+              <button id="nodeShaderScriptSyntaxColorsButton" type="button" aria-expanded="false">Colors</button>
             </div>
             <button
               id="nodeShaderScriptClose"
@@ -481,6 +482,36 @@
               <canvas id="nodeShaderScriptPreviewCanvas" width="320" height="180" aria-label="Current scope preview"></canvas>
               <p id="nodeShaderScriptPreviewStatus">No live scope selected.</p>
             </aside>
+          </div>
+          <div id="nodeShaderScriptSyntaxColorsPanel" class="node-shader-script-syntax-colors-panel" hidden>
+            <div class="node-shader-script-syntax-colors-heading">
+              <span>text colors</span>
+              <button id="nodeShaderScriptSyntaxColorsReset" type="button">Reset</button>
+            </div>
+            <label>
+              <span>property</span>
+              <input id="nodeShaderScriptSyntaxColorProperty" type="color" data-shader-syntax-color="property" value="#84e6ff">
+            </label>
+            <label>
+              <span>equals</span>
+              <input id="nodeShaderScriptSyntaxColorAssignment" type="color" data-shader-syntax-color="assignment" value="#ffd87f">
+            </label>
+            <label>
+              <span>hex</span>
+              <input id="nodeShaderScriptSyntaxColorColor" type="color" data-shader-syntax-color="color" value="#ffffff">
+            </label>
+            <label>
+              <span>number</span>
+              <input id="nodeShaderScriptSyntaxColorNumber" type="color" data-shader-syntax-color="number" value="#b4ffb2">
+            </label>
+            <label>
+              <span>blend</span>
+              <input id="nodeShaderScriptSyntaxColorMode" type="color" data-shader-syntax-color="mode" value="#ffae6e">
+            </label>
+            <label>
+              <span>comment</span>
+              <input id="nodeShaderScriptSyntaxColorComment" type="color" data-shader-syntax-color="comment" value="#9ca4a6">
+            </label>
           </div>
           <div class="node-shader-script-actions">
             <button id="nodeShaderScriptApply" type="button">Apply</button>

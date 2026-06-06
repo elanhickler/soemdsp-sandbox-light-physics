@@ -7,6 +7,14 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
   stepPx: 0.75,
 });
 const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
+const nodeGraphShaderScriptDefaultSyntaxColors = Object.freeze({
+  assignment: "#ffd87f",
+  color: "#ffffff",
+  comment: "#9ca4a6",
+  mode: "#ffae6e",
+  number: "#b4ffb2",
+  property: "#84e6ff",
+});
 
 const nodeGraphShaderScriptVertexSource = `
 attribute vec2 aPosition;
@@ -262,6 +270,7 @@ const nodeGraphShaderScriptState = {
   previewFrame: 0,
   renderer: null,
   scopeTargetNodeId: "",
+  syntaxColors: { ...nodeGraphShaderScriptDefaultSyntaxColors },
   tokenWidget: null,
 };
 
@@ -282,9 +291,11 @@ function loadNodeGraphShaderScriptState() {
     nodeGraphShaderScriptState.editorFontSizePx = normalizeNodeGraphShaderScriptEditorFontSize(
       parsed.editorFontSizePx,
     );
+    nodeGraphShaderScriptState.syntaxColors = normalizeNodeGraphShaderScriptSyntaxColors(parsed.syntaxColors);
   } catch {
     nodeGraphShaderScriptState.fragmentSource = nodeGraphShaderScriptDefaultFragmentSource.trim();
     nodeGraphShaderScriptState.editorFontSizePx = nodeGraphShaderScriptEditorFontSizeLimits.defaultPx;
+    nodeGraphShaderScriptState.syntaxColors = { ...nodeGraphShaderScriptDefaultSyntaxColors };
     nodeGraphShaderScriptState.enabled = false;
   }
 }
@@ -297,6 +308,7 @@ function saveNodeGraphShaderScriptState() {
         enabled: Boolean(nodeGraphShaderScriptState.enabled),
         editorFontSizePx: nodeGraphShaderScriptState.editorFontSizePx,
         fragmentSource: nodeGraphShaderScriptState.fragmentSource,
+        syntaxColors: normalizeNodeGraphShaderScriptSyntaxColors(nodeGraphShaderScriptState.syntaxColors),
       }),
     );
   } catch {
@@ -309,6 +321,57 @@ function normalizeNodeGraphShaderScriptEditorFontSize(value) {
   return Number.isFinite(number)
     ? clampNodeSliderValue(number, nodeGraphShaderScriptEditorFontSizeLimits.minPx, nodeGraphShaderScriptEditorFontSizeLimits.maxPx)
     : nodeGraphShaderScriptEditorFontSizeLimits.defaultPx;
+}
+
+function normalizeNodeGraphShaderScriptSyntaxColor(value, fallback) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-fA-F]{6}$/.test(color)
+    ? color.toLowerCase()
+    : fallback;
+}
+
+function normalizeNodeGraphShaderScriptSyntaxColors(value = {}) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(
+    Object.entries(nodeGraphShaderScriptDefaultSyntaxColors).map(([key, fallback]) => [
+      key,
+      normalizeNodeGraphShaderScriptSyntaxColor(source[key], fallback),
+    ]),
+  );
+}
+
+function applyNodeGraphShaderScriptSyntaxColors() {
+  const root = document.documentElement;
+  if (!root) {
+    return;
+  }
+  const colors = normalizeNodeGraphShaderScriptSyntaxColors(nodeGraphShaderScriptState.syntaxColors);
+  nodeGraphShaderScriptState.syntaxColors = colors;
+  for (const [key, value] of Object.entries(colors)) {
+    root.style.setProperty(`--node-shader-token-${key}`, value);
+    const input = document.querySelector(`[data-shader-syntax-color="${key}"]`);
+    if (input) {
+      input.value = value;
+    }
+  }
+}
+
+function setNodeGraphShaderScriptSyntaxColor(key, value) {
+  if (!Object.hasOwn(nodeGraphShaderScriptDefaultSyntaxColors, key)) {
+    return;
+  }
+  nodeGraphShaderScriptState.syntaxColors = normalizeNodeGraphShaderScriptSyntaxColors({
+    ...nodeGraphShaderScriptState.syntaxColors,
+    [key]: value,
+  });
+  applyNodeGraphShaderScriptSyntaxColors();
+  saveNodeGraphShaderScriptState();
+}
+
+function resetNodeGraphShaderScriptSyntaxColors() {
+  nodeGraphShaderScriptState.syntaxColors = { ...nodeGraphShaderScriptDefaultSyntaxColors };
+  applyNodeGraphShaderScriptSyntaxColors();
+  saveNodeGraphShaderScriptState();
 }
 
 function applyNodeGraphShaderScriptEditorFontSize() {
@@ -327,6 +390,25 @@ function applyNodeGraphShaderScriptEditorFontSize() {
   if (increase) {
     increase.disabled = size >= nodeGraphShaderScriptEditorFontSizeLimits.maxPx;
   }
+}
+
+function setNodeGraphShaderScriptSyntaxColorsPanelVisible(visible) {
+  const panel = document.getElementById("nodeShaderScriptSyntaxColorsPanel");
+  const button = document.getElementById("nodeShaderScriptSyntaxColorsButton");
+  if (panel) {
+    panel.hidden = !visible;
+  }
+  if (button) {
+    button.setAttribute("aria-expanded", String(Boolean(visible)));
+  }
+  if (visible) {
+    applyNodeGraphShaderScriptSyntaxColors();
+  }
+}
+
+function toggleNodeGraphShaderScriptSyntaxColorsPanel() {
+  const panel = document.getElementById("nodeShaderScriptSyntaxColorsPanel");
+  setNodeGraphShaderScriptSyntaxColorsPanelVisible(Boolean(panel?.hidden));
 }
 
 function changeNodeGraphShaderScriptEditorFontSize(delta) {
@@ -955,6 +1037,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
   }
   nodeGraphShaderScriptWorkspace()?.classList.toggle("shader-enabled", Boolean(nodeGraphShaderScriptState.enabled));
   applyNodeGraphShaderScriptEditorFontSize();
+  applyNodeGraphShaderScriptSyntaxColors();
   scheduleNodeGraphShaderScriptScopePreview();
 }
 
@@ -1084,9 +1167,12 @@ function setNodeGraphShaderScriptDialogVisible(visible) {
   if (visible) {
     syncNodeGraphShaderScriptControls({ forceSource: true });
     document.getElementById("nodeShaderScriptSource")?.focus();
-  } else if (nodeGraphShaderScriptState.previewFrame) {
-    window.cancelAnimationFrame(nodeGraphShaderScriptState.previewFrame);
-    nodeGraphShaderScriptState.previewFrame = 0;
+  } else {
+    if (nodeGraphShaderScriptState.previewFrame) {
+      window.cancelAnimationFrame(nodeGraphShaderScriptState.previewFrame);
+      nodeGraphShaderScriptState.previewFrame = 0;
+    }
+    setNodeGraphShaderScriptSyntaxColorsPanelVisible(false);
   }
 }
 
@@ -1205,6 +1291,11 @@ function bindNodeGraphShaderScriptEvents() {
     changeNodeGraphShaderScriptEditorFontSize(-nodeGraphShaderScriptEditorFontSizeLimits.stepPx));
   document.getElementById("nodeShaderScriptTextSizeIncrease")?.addEventListener("click", () =>
     changeNodeGraphShaderScriptEditorFontSize(nodeGraphShaderScriptEditorFontSizeLimits.stepPx));
+  document.getElementById("nodeShaderScriptSyntaxColorsButton")?.addEventListener("click", toggleNodeGraphShaderScriptSyntaxColorsPanel);
+  document.getElementById("nodeShaderScriptSyntaxColorsReset")?.addEventListener("click", resetNodeGraphShaderScriptSyntaxColors);
+  document.querySelectorAll("[data-shader-syntax-color]").forEach((input) => {
+    input.addEventListener("input", () => setNodeGraphShaderScriptSyntaxColor(input.dataset.shaderSyntaxColor, input.value));
+  });
   const source = document.getElementById("nodeShaderScriptSource");
   source?.addEventListener("input", () => {
     updateNodeGraphShaderScriptHighlight();
