@@ -89,6 +89,11 @@ function bindNodeGraphSceneMenuEvents() {
   bindNodeGraphSceneElementEvent("nodeSceneGraphAddNode", "click", addNodeGraphGraphNodeFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneGraphRemoveNode", "click", removeNodeGraphGraphNodeFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneGraphReset", "click", resetNodeGraphGraphFromContext);
+  document
+    .querySelectorAll("#nodeSceneGraphPresetControls [data-graph-preset]")
+    .forEach((button) => {
+      button.addEventListener("click", () => setNodeGraphGraphPresetFromContext(button.dataset.graphPreset));
+    });
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignLeft", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("left"));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignCenter", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("center"));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignRight", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("right"));

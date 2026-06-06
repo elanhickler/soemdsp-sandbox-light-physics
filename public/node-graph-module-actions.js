@@ -914,6 +914,17 @@ function resetNodeGraphGraphFromContext() {
   commitNodeGraphGraphEdit(patch, targetNode, "graph reset", { selectedIndex: 1 });
 }
 
+function setNodeGraphGraphPresetFromContext(preset) {
+  const { patch, targetNode } = nodeGraphGraphTargetFromContext();
+  if (!targetNode) {
+    return;
+  }
+  targetNode.graph = nodeGraphGraphPresetData(preset);
+  commitNodeGraphGraphEdit(patch, targetNode, `graph preset: ${preset}`, {
+    selectedIndex: Math.min(1, targetNode.graph.nodes.length - 1),
+  });
+}
+
 function nodeGraphCodeblockBuildFunctionBody(codeblock) {
   const context = [
     "const state = __state;",

@@ -8,6 +8,51 @@ const nodeGraphDefaultGraphData = Object.freeze({
   ]),
 });
 
+const nodeGraphGraphPresets = Object.freeze({
+  envelope: Object.freeze({
+    cursorX: 0,
+    nodes: Object.freeze([
+      Object.freeze({ c: 0, shape: "linear", x: 0, y: 0 }),
+      Object.freeze({ c: 0.45, shape: "exponential", x: 0.12, y: 1 }),
+      Object.freeze({ c: -0.25, shape: "rational", x: 0.48, y: 0.48 }),
+      Object.freeze({ c: 0.25, shape: "exponential", x: 0.82, y: 0.48 }),
+      Object.freeze({ c: -0.35, shape: "exponential", x: 1, y: 0 }),
+    ]),
+  }),
+  ramp: Object.freeze({
+    cursorX: 0,
+    nodes: Object.freeze([
+      Object.freeze({ c: 0, shape: "linear", x: 0, y: 0 }),
+      Object.freeze({ c: 0, shape: "linear", x: 1, y: 1 }),
+    ]),
+  }),
+  steps: Object.freeze({
+    cursorX: 0,
+    nodes: Object.freeze([
+      Object.freeze({ c: 0, shape: "linear", x: 0, y: 0.2 }),
+      Object.freeze({ c: -0.999, shape: "rational", x: 0.25, y: 0.2 }),
+      Object.freeze({ c: 0.999, shape: "rational", x: 0.25, y: 0.72 }),
+      Object.freeze({ c: -0.999, shape: "rational", x: 0.5, y: 0.72 }),
+      Object.freeze({ c: 0.999, shape: "rational", x: 0.5, y: 0.4 }),
+      Object.freeze({ c: -0.999, shape: "rational", x: 0.75, y: 0.4 }),
+      Object.freeze({ c: 0.999, shape: "rational", x: 0.75, y: 0.88 }),
+      Object.freeze({ c: 0, shape: "linear", x: 1, y: 0.88 }),
+    ]),
+  }),
+  triangle: Object.freeze({
+    cursorX: 0,
+    nodes: Object.freeze([
+      Object.freeze({ c: 0, shape: "linear", x: 0, y: 0 }),
+      Object.freeze({ c: 0, shape: "linear", x: 0.5, y: 1 }),
+      Object.freeze({ c: 0, shape: "linear", x: 1, y: 0 }),
+    ]),
+  }),
+});
+
+function nodeGraphGraphPresetData(name) {
+  return normalizeNodeGraphGraph(nodeGraphGraphPresets[String(name || "").trim()] || nodeGraphDefaultGraphData);
+}
+
 function normalizeNodeGraphGraphShape(value) {
   const shape = String(value || "").trim();
   return nodeGraphGraphShapes.includes(shape) ? shape : "rational";
