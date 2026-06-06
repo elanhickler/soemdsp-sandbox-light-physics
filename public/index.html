@@ -454,6 +454,18 @@
               spellcheck="false"
               autocomplete="off"
               aria-label="Modular view fragment shader source"></textarea>
+            <div id="nodeShaderScriptTokenWidget" class="node-shader-script-token-widget" hidden>
+              <div id="nodeShaderScriptColorWidget" class="node-shader-script-token-widget-section" hidden>
+                <span>color</span>
+                <input id="nodeShaderScriptColorInput" type="color" value="#ffffff" aria-label="Shader token color">
+              </div>
+              <div id="nodeShaderScriptNumberWidget" class="node-shader-script-token-widget-section" hidden>
+                <span>number</span>
+                <button id="nodeShaderScriptNumberDecrease" type="button" aria-label="Decrease shader token number">-</button>
+                <input id="nodeShaderScriptNumberInput" type="number" step="0.01" aria-label="Shader token number">
+                <button id="nodeShaderScriptNumberIncrease" type="button" aria-label="Increase shader token number">+</button>
+              </div>
+            </div>
           </div>
           <div class="node-shader-script-actions">
             <button id="nodeShaderScriptApply" type="button">Apply</button>

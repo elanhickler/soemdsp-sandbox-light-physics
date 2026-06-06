@@ -260,6 +260,7 @@ const nodeGraphShaderScriptState = {
   program: null,
   renderer: null,
   scopeTargetNodeId: "",
+  tokenWidget: null,
 };
 
 function nodeGraphShaderScriptCanvas() {
@@ -447,11 +448,11 @@ function escapeNodeGraphShaderScriptHtml(text = "") {
     .replace(/>/g, "&gt;");
 }
 
-function colorizeNodeGraphShaderScriptLine(line = "") {
+function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
   const commentIndex = line.indexOf("//");
   const code = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
   const comment = commentIndex >= 0 ? line.slice(commentIndex) : "";
-  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]|blend)\.[a-zA-Z_][\w]*\b|\b(?:laser|led|light|paint|solid)\b|\b\d+(?:\.\d+)?\b|=)/g;
+  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]|blend)\.[a-zA-Z_][\w]*\b|\b(?:laser|led|light|paint|solid)\b|-?\d+(?:\.\d+)?\b|=)/g;
   let html = "";
   let lastIndex = 0;
   for (const match of code.matchAll(tokenPattern)) {
@@ -466,7 +467,18 @@ function colorizeNodeGraphShaderScriptLine(line = "") {
           : token.startsWith("dot") || token.startsWith("blend")
           ? "node-shader-token-property"
           : "node-shader-token-number";
-    html += `<span class="${className}">${escapeNodeGraphShaderScriptHtml(token)}</span>`;
+    const tokenStart = lineStart + match.index;
+    const tokenEnd = tokenStart + token.length;
+    const tokenType = token.startsWith("#")
+      ? "color"
+      : className === "node-shader-token-number"
+        ? "number"
+        : "";
+    const tokenAttributes = tokenType
+      ? ` data-token-type="${tokenType}" data-token-start="${tokenStart}" data-token-end="${tokenEnd}"`
+      : "";
+    const linkClass = tokenType ? " node-shader-token-link" : "";
+    html += `<span class="${className}${linkClass}"${tokenAttributes}>${escapeNodeGraphShaderScriptHtml(token)}</span>`;
     lastIndex = match.index + token.length;
   }
   html += escapeNodeGraphShaderScriptHtml(code.slice(lastIndex));
@@ -483,12 +495,170 @@ function updateNodeGraphShaderScriptHighlight() {
     return;
   }
   const text = source.value || "";
-  highlight.innerHTML = text
-    .split("\n")
-    .map(colorizeNodeGraphShaderScriptLine)
-    .join("\n") || "&nbsp;";
+  let lineStart = 0;
+  highlight.innerHTML = text.split("\n").map((line) => {
+    const html = colorizeNodeGraphShaderScriptLine(line, lineStart);
+    lineStart += line.length + 1;
+    return html;
+  }).join("\n") || "&nbsp;";
   highlight.scrollTop = source.scrollTop;
   highlight.scrollLeft = source.scrollLeft;
+}
+
+function closeNodeGraphShaderScriptTokenWidget() {
+  const widget = document.getElementById("nodeShaderScriptTokenWidget");
+  if (widget) {
+    widget.hidden = true;
+  }
+  const colorSection = document.getElementById("nodeShaderScriptColorWidget");
+  const numberSection = document.getElementById("nodeShaderScriptNumberWidget");
+  if (colorSection) {
+    colorSection.hidden = true;
+  }
+  if (numberSection) {
+    numberSection.hidden = true;
+  }
+  nodeGraphShaderScriptState.tokenWidget = null;
+}
+
+function normalizeNodeGraphShaderScriptColorToken(value = "") {
+  const token = String(value || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(token)) {
+    return token.toLowerCase();
+  }
+  if (/^#[0-9a-fA-F]{3}$/.test(token)) {
+    return `#${token[1]}${token[1]}${token[2]}${token[2]}${token[3]}${token[3]}`.toLowerCase();
+  }
+  if (/^#[0-9a-fA-F]{8}$/.test(token)) {
+    return token.slice(0, 7).toLowerCase();
+  }
+  return "#ffffff";
+}
+
+function nodeGraphShaderScriptNumberPrecision(token = "") {
+  const match = String(token).match(/\.(\d+)/);
+  return match ? match[1].length : 0;
+}
+
+function nodeGraphShaderScriptNumberStep(token = "") {
+  const precision = nodeGraphShaderScriptNumberPrecision(token);
+  return precision > 0 ? 1 / (10 ** precision) : 1;
+}
+
+function formatNodeGraphShaderScriptNumberToken(value, previousToken = "") {
+  const precision = nodeGraphShaderScriptNumberPrecision(previousToken);
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? number.toFixed(precision)
+    : String(previousToken || "0");
+}
+
+function findNodeGraphShaderScriptEditableTokenAt(index) {
+  const source = document.getElementById("nodeShaderScriptSource");
+  const text = source?.value || "";
+  const position = clampNodeSliderValue(Number(index) || 0, 0, text.length);
+  const tokenPattern = /#[0-9a-fA-F]{3,8}\b|-?\d+(?:\.\d+)?\b/g;
+  for (const match of text.matchAll(tokenPattern)) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (position >= start && position <= end) {
+      const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+      const commentIndex = text.indexOf("//", lineStart);
+      if (commentIndex >= 0 && commentIndex < start) {
+        return null;
+      }
+      return {
+        end,
+        start,
+        token: match[0],
+        type: match[0].startsWith("#") ? "color" : "number",
+      };
+    }
+  }
+  return null;
+}
+
+function replaceNodeGraphShaderScriptToken(nextToken) {
+  const source = document.getElementById("nodeShaderScriptSource");
+  const token = nodeGraphShaderScriptState.tokenWidget;
+  if (!source || !token) {
+    return;
+  }
+  const replacement = String(nextToken);
+  source.setRangeText(replacement, token.start, token.end, "end");
+  nodeGraphShaderScriptState.tokenWidget = {
+    ...token,
+    end: token.start + replacement.length,
+    token: replacement,
+  };
+  updateNodeGraphShaderScriptHighlight();
+}
+
+function positionNodeGraphShaderScriptTokenWidget(event) {
+  const widget = document.getElementById("nodeShaderScriptTokenWidget");
+  const editor = document.querySelector(".node-shader-script-editor");
+  if (!widget || !editor) {
+    return;
+  }
+  const rect = editor.getBoundingClientRect();
+  const x = clampNodeSliderValue((event?.clientX || rect.left + 16) - rect.left + 8, 8, Math.max(8, rect.width - 180));
+  const y = clampNodeSliderValue((event?.clientY || rect.top + 16) - rect.top + 8, 8, Math.max(8, rect.height - 58));
+  widget.style.left = `${x}px`;
+  widget.style.top = `${y}px`;
+}
+
+function openNodeGraphShaderScriptTokenWidget(token, event) {
+  const widget = document.getElementById("nodeShaderScriptTokenWidget");
+  const colorSection = document.getElementById("nodeShaderScriptColorWidget");
+  const numberSection = document.getElementById("nodeShaderScriptNumberWidget");
+  if (!widget || !colorSection || !numberSection || !token) {
+    closeNodeGraphShaderScriptTokenWidget();
+    return;
+  }
+  nodeGraphShaderScriptState.tokenWidget = token;
+  widget.hidden = false;
+  colorSection.hidden = token.type !== "color";
+  numberSection.hidden = token.type !== "number";
+  if (token.type === "color") {
+    const input = document.getElementById("nodeShaderScriptColorInput");
+    if (input) {
+      input.value = normalizeNodeGraphShaderScriptColorToken(token.token);
+    }
+  } else if (token.type === "number") {
+    const input = document.getElementById("nodeShaderScriptNumberInput");
+    if (input) {
+      input.value = token.token;
+      input.step = String(nodeGraphShaderScriptNumberStep(token.token));
+    }
+  }
+  positionNodeGraphShaderScriptTokenWidget(event);
+}
+
+function handleNodeGraphShaderScriptSourcePointer(event) {
+  window.setTimeout(() => {
+    const source = document.getElementById("nodeShaderScriptSource");
+    const token = findNodeGraphShaderScriptEditableTokenAt(source?.selectionStart ?? 0);
+    if (token) {
+      openNodeGraphShaderScriptTokenWidget(token, event);
+    } else {
+      closeNodeGraphShaderScriptTokenWidget();
+    }
+  }, 0);
+}
+
+function changeNodeGraphShaderScriptNumberToken(delta) {
+  const token = nodeGraphShaderScriptState.tokenWidget;
+  if (!token || token.type !== "number") {
+    return;
+  }
+  const step = nodeGraphShaderScriptNumberStep(token.token);
+  const nextValue = Number(token.token) + (Number(delta) || 0) * step;
+  const nextToken = formatNodeGraphShaderScriptNumberToken(nextValue, token.token);
+  replaceNodeGraphShaderScriptToken(nextToken);
+  const input = document.getElementById("nodeShaderScriptNumberInput");
+  if (input) {
+    input.value = nextToken;
+  }
 }
 
 function nodeGraphShaderScriptDialog() {
@@ -870,8 +1040,36 @@ function bindNodeGraphShaderScriptEvents() {
   document.getElementById("nodeShaderScriptTextSizeIncrease")?.addEventListener("click", () =>
     changeNodeGraphShaderScriptEditorFontSize(nodeGraphShaderScriptEditorFontSizeLimits.stepPx));
   const source = document.getElementById("nodeShaderScriptSource");
-  source?.addEventListener("input", updateNodeGraphShaderScriptHighlight);
+  source?.addEventListener("input", () => {
+    updateNodeGraphShaderScriptHighlight();
+    closeNodeGraphShaderScriptTokenWidget();
+  });
   source?.addEventListener("scroll", updateNodeGraphShaderScriptHighlight);
+  source?.addEventListener("pointerup", handleNodeGraphShaderScriptSourcePointer);
+  source?.addEventListener("keyup", (event) => {
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+      const token = findNodeGraphShaderScriptEditableTokenAt(source.selectionStart ?? 0);
+      if (token) {
+        openNodeGraphShaderScriptTokenWidget(token, event);
+      } else {
+        closeNodeGraphShaderScriptTokenWidget();
+      }
+    }
+  });
+  document.getElementById("nodeShaderScriptColorInput")?.addEventListener("input", (event) => {
+    replaceNodeGraphShaderScriptToken(normalizeNodeGraphShaderScriptColorToken(event.target.value));
+  });
+  document.getElementById("nodeShaderScriptNumberInput")?.addEventListener("input", (event) => {
+    const token = nodeGraphShaderScriptState.tokenWidget;
+    if (!token || token.type !== "number") {
+      return;
+    }
+    replaceNodeGraphShaderScriptToken(formatNodeGraphShaderScriptNumberToken(event.target.value, token.token));
+  });
+  document.getElementById("nodeShaderScriptNumberDecrease")?.addEventListener("click", () =>
+    changeNodeGraphShaderScriptNumberToken(-1));
+  document.getElementById("nodeShaderScriptNumberIncrease")?.addEventListener("click", () =>
+    changeNodeGraphShaderScriptNumberToken(1));
   const panel = document.querySelector("#nodeShaderScriptDialog .node-shader-script-panel");
   panel?.addEventListener("pointerdown", beginNodeGraphShaderScriptDialogDrag);
   panel?.addEventListener("pointermove", dragNodeGraphShaderScriptDialog);

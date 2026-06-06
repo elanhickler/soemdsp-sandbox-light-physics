@@ -9189,6 +9189,12 @@ button.saved-default,
   pointer-events: none;
 }
 
+.node-shader-token-link {
+  border-bottom: 1px dotted currentColor;
+  text-decoration: none;
+  text-underline-offset: 0.16em;
+}
+
 .node-shader-token-property {
   color: rgba(132, 230, 255, 0.98);
 }
@@ -9230,6 +9236,72 @@ button.saved-default,
 .node-shader-script-editor:focus-within {
   border-color: rgba(127, 199, 217, 0.58);
   box-shadow: 0 0 0 1px rgba(127, 199, 217, 0.12);
+}
+
+.node-shader-script-token-widget {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+  padding: 8px;
+  border: 1px solid rgba(127, 199, 217, 0.32);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(17, 28, 32, 0.98), rgba(3, 10, 12, 0.98));
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.55),
+    0 0 18px rgba(76, 220, 224, 0.08);
+}
+
+.node-shader-script-token-widget[hidden],
+.node-shader-script-token-widget-section[hidden] {
+  display: none;
+}
+
+.node-shader-script-token-widget-section {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.node-shader-script-token-widget-section span {
+  color: rgba(156, 164, 166, 0.78);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.node-shader-script-token-widget-section input {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid rgba(127, 199, 217, 0.22);
+  border-radius: 4px;
+  background: rgba(0, 5, 7, 0.92);
+  color: rgba(236, 251, 246, 0.94);
+  font: inherit;
+}
+
+.node-shader-script-token-widget-section input[type="color"] {
+  width: 82px;
+  padding: 2px;
+}
+
+.node-shader-script-token-widget-section input[type="number"] {
+  width: 76px;
+  padding: 0 6px;
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+}
+
+.node-shader-script-token-widget-section button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(127, 199, 217, 0.24);
+  border-radius: 4px;
+  background: rgba(9, 24, 30, 0.9);
+  color: rgba(236, 251, 246, 0.94);
+  font: inherit;
 }
 
 .node-shader-script-actions {
