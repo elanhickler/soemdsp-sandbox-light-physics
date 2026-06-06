@@ -53,12 +53,12 @@ const nodeGraphScopeShaderDefaultSource = `video.input     = ~;
 
 
 dot1.color      = #ffffff;
-dot1.size       = 0.035;
+dot1.size       = 1.0 * dot1.global.size;
 dot1.brightness = 4.50;
 
 
 dot2.color      = #17002f;
-dot2.size       = 0.090;
+dot2.size       = 1.0 * dot2.global.size;
 dot2.brightness = 0.45;
 
 

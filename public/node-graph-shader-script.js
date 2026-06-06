@@ -592,7 +592,7 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
   const commentIndex = line.indexOf("//");
   const code = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
   const comment = commentIndex >= 0 ? line.slice(commentIndex) : "";
-  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*\b|\b(?:laser|led|light|paint|solid|none)\b|~|-?\d+(?:\.\d+)?\b|=)/g;
+  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]\.(?:global|globals)\.(?:size|brightness)|(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*|globalsize|global\.size)\b|\b(?:laser|led|light|paint|solid|none)\b|~|-?\d+(?:\.\d+)?\b|[=*])/g;
   let html = "";
   let lastIndex = 0;
   for (const match of code.matchAll(tokenPattern)) {
@@ -600,11 +600,11 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
     html += escapeNodeGraphShaderScriptHtml(code.slice(lastIndex, match.index));
     const className = token.startsWith("#")
       ? "node-shader-token-color"
-      : token === "="
+      : token === "=" || token === "*"
         ? "node-shader-token-assignment"
         : nodeGraphShaderScriptBlendModes.includes(token) || token === "~" || token === "none"
           ? "node-shader-token-mode"
-          : token.startsWith("dot") || token.startsWith("blend") || token.startsWith("video")
+        : token.startsWith("dot") || token.startsWith("blend") || token.startsWith("video") || token.startsWith("global")
           ? "node-shader-token-property"
           : "node-shader-token-number";
     const tokenStart = lineStart + match.index;

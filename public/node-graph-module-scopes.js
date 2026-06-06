@@ -162,9 +162,58 @@ function nodeGraphModuleScopeShaderColor(source, dotName, fallback) {
 }
 
 function nodeGraphModuleScopeShaderNumber(source, dotName, key, fallback) {
-  const match = String(source || "").match(new RegExp(`\\b${dotName}\\.${key}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`));
-  const value = Number(match?.[1]);
+  const match = String(source || "").match(new RegExp(`\\b${dotName}\\.${key}\\s*=\\s*([^;]+)\\s*;`));
+  const value = nodeGraphModuleScopeShaderExpressionValue(match?.[1], dotName, key, fallback);
   return Number.isFinite(value) ? value : fallback;
+}
+
+function nodeGraphModuleScopeShaderGlobalValue(dotName, key, fallback) {
+  const dotIndex = dotName === "dot2" ? 2 : 1;
+  if (key === "size") {
+    const defaultGlobalSize = dotIndex === 2 ? 4 : 3.18;
+    const size = dotIndex === 2
+      ? normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4)
+      : normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
+    return clampNodeSliderValue((Number(fallback) || 0) * (size / defaultGlobalSize), 0, 1);
+  }
+  if (key === "brightness") {
+    return dotIndex === 2
+      ? normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45)
+      : normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
+  }
+  return fallback;
+}
+
+function nodeGraphModuleScopeShaderExpressionPartValue(part, dotName, key, fallback) {
+  const text = String(part || "").trim();
+  if (!text) {
+    return NaN;
+  }
+  if (/^-?\d+(?:\.\d+)?$/.test(text)) {
+    return Number(text);
+  }
+  const globalMatch = text.match(/^dot([12])\.(?:global|globals)\.(size|brightness)$/);
+  if (globalMatch) {
+    return nodeGraphModuleScopeShaderGlobalValue(`dot${globalMatch[1]}`, globalMatch[2], fallback);
+  }
+  if (text === "globalsize" || text === "global.size") {
+    return nodeGraphModuleScopeShaderGlobalValue(dotName, "size", fallback);
+  }
+  return NaN;
+}
+
+function nodeGraphModuleScopeShaderExpressionValue(expression, dotName, key, fallback) {
+  const text = String(expression || "").trim();
+  if (!text) {
+    return fallback;
+  }
+  const product = text
+    .split("*")
+    .map((part) => nodeGraphModuleScopeShaderExpressionPartValue(part, dotName, key, fallback));
+  if (product.length && product.every((value) => Number.isFinite(value))) {
+    return product.reduce((value, part) => value * part, 1);
+  }
+  return fallback;
 }
 
 function nodeGraphModuleScopeShaderSizeRatio(source, dotName, fallback) {
