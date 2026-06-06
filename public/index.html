@@ -432,6 +432,10 @@
               <span>modular view</span>
               <strong id="nodeShaderScriptTitle">Shader Script</strong>
             </div>
+            <div class="node-shader-script-size-controls" aria-label="Shader editor text size">
+              <button id="nodeShaderScriptTextSizeDecrease" type="button" aria-label="Decrease shader editor text size">-</button>
+              <button id="nodeShaderScriptTextSizeIncrease" type="button" aria-label="Increase shader editor text size">+</button>
+            </div>
             <button
               id="nodeShaderScriptClose"
               class="panel-close-button"
@@ -440,11 +444,17 @@
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <textarea
-            id="nodeShaderScriptSource"
-            spellcheck="false"
-            autocomplete="off"
-            aria-label="Modular view fragment shader source"></textarea>
+          <div class="node-shader-script-editor">
+            <pre
+              id="nodeShaderScriptHighlight"
+              class="node-shader-script-highlight"
+              aria-hidden="true"></pre>
+            <textarea
+              id="nodeShaderScriptSource"
+              spellcheck="false"
+              autocomplete="off"
+              aria-label="Modular view fragment shader source"></textarea>
+          </div>
           <div class="node-shader-script-actions">
             <button id="nodeShaderScriptApply" type="button">Apply</button>
             <button id="nodeShaderScriptDefault" type="button">Ghost Phosphor</button>
@@ -2634,7 +2644,7 @@
   <script src="./public/node-graph-module-actions.js?v=codeblock-state-context-1"></script>
   <script src="./public/node-graph-code-screen.js?v=code-screen-1"></script>
   <script src="./public/node-graph-module-scopes.js?v=scope-dot-emission-1"></script>
-  <script src="./public/node-graph-shader-script.js?v=scope-shader-authoring-1"></script>
+  <script src="./public/node-graph-shader-script.js?v=scope-code-coloring-2"></script>
   <script src="./public/node-graph-module-factories.js?v=led-module-1"></script>
   <script src="./public/node-graph-module-header-rendering.js?v=hidden-title-bypass-1"></script>
   <script src="./public/node-graph-module-rendering.js?v=led-module-1"></script>

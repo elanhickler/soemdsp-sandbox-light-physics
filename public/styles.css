@@ -9071,6 +9071,19 @@ button.saved-default,
   box-shadow:
     0 18px 54px rgba(0, 0, 0, 0.48),
     0 0 34px rgba(76, 220, 224, 0.1);
+  cursor: grab;
+}
+
+.node-shader-script-dialog.dragging .node-shader-script-panel {
+  cursor: grabbing;
+}
+
+.node-shader-script-panel button,
+.node-shader-script-panel textarea,
+.node-shader-script-panel input,
+.node-shader-script-panel select,
+.node-shader-script-editor {
+  cursor: auto;
 }
 
 .node-shader-script-heading {
@@ -9080,7 +9093,7 @@ button.saved-default,
   gap: 12px;
 }
 
-.node-shader-script-heading div {
+.node-shader-script-heading > div:first-child {
   display: grid;
   gap: 2px;
 }
@@ -9099,26 +9112,118 @@ button.saved-default,
   line-height: 1.1;
 }
 
+.node-shader-script-size-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.node-shader-script-size-controls button {
+  display: grid;
+  width: 38px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(127, 199, 217, 0.28);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(20, 32, 36, 0.96), rgba(5, 12, 14, 0.98));
+  color: rgba(235, 255, 246, 0.96);
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 1.36rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.node-shader-script-size-controls button:hover {
+  border-color: rgba(127, 199, 217, 0.62);
+  color: #ffffff;
+}
+
+.node-shader-script-size-controls button:disabled {
+  color: rgba(127, 199, 217, 0.26);
+  cursor: default;
+}
+
+.node-shader-script-editor {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 240px;
+  border: 1px solid rgba(127, 199, 217, 0.22);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(1, 8, 10, 0.88), rgba(0, 0, 0, 0.92));
+  overflow: hidden;
+}
+
+.node-shader-script-highlight,
 .node-shader-script-dialog textarea {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
   min-height: 240px;
-  resize: vertical;
-  border: 1px solid rgba(127, 199, 217, 0.22);
-  border-radius: 6px;
-  background:
-    linear-gradient(180deg, rgba(1, 8, 10, 0.88), rgba(0, 0, 0, 0.92));
-  color: rgba(232, 255, 246, 0.92);
+  margin: 0;
+  padding: 10px;
+  border: 0;
+  background: transparent;
   font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
-  font-size: 0.72rem;
+  font-size: var(--node-shader-script-font-size, 0.72rem);
   line-height: 1.35;
   tab-size: 2;
+  white-space: pre;
+}
+
+.node-shader-script-highlight {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: rgba(232, 255, 246, 0.92);
+  pointer-events: none;
+}
+
+.node-shader-token-property {
+  color: rgba(132, 230, 255, 0.98);
+}
+
+.node-shader-token-assignment {
+  color: rgba(255, 216, 127, 0.9);
+}
+
+.node-shader-token-color {
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 0 10px currentColor;
+}
+
+.node-shader-token-number {
+  color: rgba(180, 255, 178, 0.96);
+}
+
+.node-shader-token-mode {
+  color: rgba(255, 174, 110, 0.98);
+}
+
+.node-shader-token-comment {
+  color: rgba(127, 199, 217, 0.58);
+}
+
+.node-shader-script-dialog textarea {
+  position: relative;
+  display: block;
+  resize: vertical;
+  color: rgba(232, 255, 246, 0.92);
+  caret-color: rgba(255, 255, 255, 0.98);
+  -webkit-text-fill-color: transparent;
 }
 
 .node-shader-script-dialog textarea:focus {
-  border-color: rgba(127, 199, 217, 0.58);
   outline: 0;
+}
+
+.node-shader-script-editor:focus-within {
+  border-color: rgba(127, 199, 217, 0.58);
   box-shadow: 0 0 0 1px rgba(127, 199, 217, 0.12);
 }
 

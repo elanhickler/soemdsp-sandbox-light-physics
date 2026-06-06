@@ -56,7 +56,12 @@ dot1.brightness = 4.50;
 
 dot2.color      = #17002f;
 dot2.size       = 0.090;
-dot2.brightness = 0.45;`;
+dot2.brightness = 0.45;
+
+
+// Blend options: laser, led, light, paint, solid
+// Change the word after = to switch modes.
+blend.mode      = laser;`;
 
 function normalizeNodeGraphScopeShader(scopeShader = {}) {
   const source = typeof scopeShader === "string"

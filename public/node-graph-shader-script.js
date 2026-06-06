@@ -1,5 +1,11 @@
 const nodeGraphShaderScriptStorageKey = "soemdsp-sandbox.modularShader.v1";
 const nodeGraphShaderScriptMaxScopes = 32;
+const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
+  defaultPx: 11.5,
+  maxPx: 22,
+  minPx: 8,
+  stepPx: 0.75,
+});
 
 const nodeGraphShaderScriptVertexSource = `
 attribute vec2 aPosition;
@@ -245,6 +251,8 @@ void main() {
 const nodeGraphShaderScriptState = {
   animationFrame: 0,
   dialogMode: "global",
+  dialogDrag: null,
+  editorFontSizePx: nodeGraphShaderScriptEditorFontSizeLimits.defaultPx,
   enabled: false,
   fragmentSource: nodeGraphShaderScriptDefaultFragmentSource.trim(),
   gl: null,
@@ -268,8 +276,12 @@ function loadNodeGraphShaderScriptState() {
     if (typeof parsed.fragmentSource === "string" && parsed.fragmentSource.trim()) {
       nodeGraphShaderScriptState.fragmentSource = parsed.fragmentSource;
     }
+    nodeGraphShaderScriptState.editorFontSizePx = normalizeNodeGraphShaderScriptEditorFontSize(
+      parsed.editorFontSizePx,
+    );
   } catch {
     nodeGraphShaderScriptState.fragmentSource = nodeGraphShaderScriptDefaultFragmentSource.trim();
+    nodeGraphShaderScriptState.editorFontSizePx = nodeGraphShaderScriptEditorFontSizeLimits.defaultPx;
     nodeGraphShaderScriptState.enabled = false;
   }
 }
@@ -280,12 +292,47 @@ function saveNodeGraphShaderScriptState() {
       nodeGraphShaderScriptStorageKey,
       JSON.stringify({
         enabled: Boolean(nodeGraphShaderScriptState.enabled),
+        editorFontSizePx: nodeGraphShaderScriptState.editorFontSizePx,
         fragmentSource: nodeGraphShaderScriptState.fragmentSource,
       }),
     );
   } catch {
     // Visual customization is nice-to-have UI state.
   }
+}
+
+function normalizeNodeGraphShaderScriptEditorFontSize(value) {
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? clampNodeSliderValue(number, nodeGraphShaderScriptEditorFontSizeLimits.minPx, nodeGraphShaderScriptEditorFontSizeLimits.maxPx)
+    : nodeGraphShaderScriptEditorFontSizeLimits.defaultPx;
+}
+
+function applyNodeGraphShaderScriptEditorFontSize() {
+  const root = document.documentElement;
+  if (!root) {
+    return;
+  }
+  const size = normalizeNodeGraphShaderScriptEditorFontSize(nodeGraphShaderScriptState.editorFontSizePx);
+  nodeGraphShaderScriptState.editorFontSizePx = size;
+  root.style.setProperty("--node-shader-script-font-size", `${size.toFixed(2)}px`);
+  const decrease = document.getElementById("nodeShaderScriptTextSizeDecrease");
+  const increase = document.getElementById("nodeShaderScriptTextSizeIncrease");
+  if (decrease) {
+    decrease.disabled = size <= nodeGraphShaderScriptEditorFontSizeLimits.minPx;
+  }
+  if (increase) {
+    increase.disabled = size >= nodeGraphShaderScriptEditorFontSizeLimits.maxPx;
+  }
+}
+
+function changeNodeGraphShaderScriptEditorFontSize(delta) {
+  nodeGraphShaderScriptState.editorFontSizePx = normalizeNodeGraphShaderScriptEditorFontSize(
+    nodeGraphShaderScriptState.editorFontSizePx + delta,
+  );
+  applyNodeGraphShaderScriptEditorFontSize();
+  saveNodeGraphShaderScriptState();
+  updateNodeGraphShaderScriptHighlight();
 }
 
 function compileNodeGraphShader(gl, type, source) {
@@ -393,6 +440,126 @@ function nodeGraphShaderScriptStatus(message, isError = false) {
   status.classList.toggle("good", !isError);
 }
 
+function escapeNodeGraphShaderScriptHtml(text = "") {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function colorizeNodeGraphShaderScriptLine(line = "") {
+  const commentIndex = line.indexOf("//");
+  const code = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
+  const comment = commentIndex >= 0 ? line.slice(commentIndex) : "";
+  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]|blend)\.[a-zA-Z_][\w]*\b|\b(?:laser|led|light|paint|solid)\b|\b\d+(?:\.\d+)?\b|=)/g;
+  let html = "";
+  let lastIndex = 0;
+  for (const match of code.matchAll(tokenPattern)) {
+    const token = match[0];
+    html += escapeNodeGraphShaderScriptHtml(code.slice(lastIndex, match.index));
+    const className = token.startsWith("#")
+      ? "node-shader-token-color"
+      : token === "="
+        ? "node-shader-token-assignment"
+        : ["laser", "led", "light", "paint", "solid"].includes(token)
+          ? "node-shader-token-mode"
+          : token.startsWith("dot") || token.startsWith("blend")
+          ? "node-shader-token-property"
+          : "node-shader-token-number";
+    html += `<span class="${className}">${escapeNodeGraphShaderScriptHtml(token)}</span>`;
+    lastIndex = match.index + token.length;
+  }
+  html += escapeNodeGraphShaderScriptHtml(code.slice(lastIndex));
+  if (comment) {
+    html += `<span class="node-shader-token-comment">${escapeNodeGraphShaderScriptHtml(comment)}</span>`;
+  }
+  return html;
+}
+
+function updateNodeGraphShaderScriptHighlight() {
+  const source = document.getElementById("nodeShaderScriptSource");
+  const highlight = document.getElementById("nodeShaderScriptHighlight");
+  if (!source || !highlight) {
+    return;
+  }
+  const text = source.value || "";
+  highlight.innerHTML = text
+    .split("\n")
+    .map(colorizeNodeGraphShaderScriptLine)
+    .join("\n") || "&nbsp;";
+  highlight.scrollTop = source.scrollTop;
+  highlight.scrollLeft = source.scrollLeft;
+}
+
+function nodeGraphShaderScriptDialog() {
+  return document.getElementById("nodeShaderScriptDialog");
+}
+
+function nodeGraphShaderScriptDialogCanDragTarget(target) {
+  return !target?.closest?.("button, textarea, input, select, option, .node-shader-script-editor");
+}
+
+function positionNodeGraphShaderScriptDialog(left, top) {
+  const dialog = nodeGraphShaderScriptDialog();
+  if (!dialog) {
+    return;
+  }
+  const margin = 12;
+  const rect = dialog.getBoundingClientRect();
+  const nextLeft = clampNodeSliderValue(Number(left) || 0, margin, Math.max(margin, window.innerWidth - rect.width - margin));
+  const nextTop = clampNodeSliderValue(Number(top) || 0, margin, Math.max(margin, window.innerHeight - rect.height - margin));
+  dialog.style.left = `${nextLeft}px`;
+  dialog.style.top = `${nextTop}px`;
+  dialog.style.right = "auto";
+  dialog.style.bottom = "auto";
+}
+
+function beginNodeGraphShaderScriptDialogDrag(event) {
+  if (event.button > 0 || !nodeGraphShaderScriptDialogCanDragTarget(event.target)) {
+    return;
+  }
+  const dialog = nodeGraphShaderScriptDialog();
+  if (!dialog || dialog.hidden) {
+    return;
+  }
+  const rect = dialog.getBoundingClientRect();
+  nodeGraphShaderScriptState.dialogDrag = {
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top,
+    pointerId: event.pointerId ?? null,
+  };
+  dialog.classList.add("dragging");
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphShaderScriptDialog(event) {
+  const drag = nodeGraphShaderScriptState.dialogDrag;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  positionNodeGraphShaderScriptDialog(event.clientX - drag.offsetX, event.clientY - drag.offsetY);
+  event.preventDefault();
+}
+
+function endNodeGraphShaderScriptDialogDrag(event) {
+  const drag = nodeGraphShaderScriptState.dialogDrag;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  nodeGraphShaderScriptState.dialogDrag = null;
+  nodeGraphShaderScriptDialog()?.classList.remove("dragging");
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  event.preventDefault();
+}
+
 function nodeGraphShaderScriptDialogScopeNode() {
   const nodeId = String(nodeGraphShaderScriptState.scopeTargetNodeId || "").trim();
   return nodeId ? nodeGraphPatchNode(nodeId) : null;
@@ -411,6 +578,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
       ? nodeGraphShaderScriptDialogScopeSource()
       : nodeGraphShaderScriptState.fragmentSource;
   }
+  updateNodeGraphShaderScriptHighlight();
   const title = document.getElementById("nodeShaderScriptTitle");
   const targetNode = scopeMode ? nodeGraphShaderScriptDialogScopeNode() : null;
   if (title) {
@@ -457,6 +625,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
     uiSetting.checked = Boolean(nodeGraphShaderScriptState.enabled);
   }
   nodeGraphShaderScriptWorkspace()?.classList.toggle("shader-enabled", Boolean(nodeGraphShaderScriptState.enabled));
+  applyNodeGraphShaderScriptEditorFontSize();
 }
 
 function clearNodeGraphShaderScriptCanvas() {
@@ -577,7 +746,7 @@ function setNodeGraphShaderScriptEnabled(enabled, options = {}) {
 }
 
 function setNodeGraphShaderScriptDialogVisible(visible) {
-  const dialog = document.getElementById("nodeShaderScriptDialog");
+  const dialog = nodeGraphShaderScriptDialog();
   if (!dialog) {
     return;
   }
@@ -653,11 +822,13 @@ function applyNodeGraphShaderScriptFromDialog() {
 function applyNodeGraphShaderScriptPreset(fragmentSource) {
   if (nodeGraphShaderScriptState.dialogMode === "scope") {
     document.getElementById("nodeShaderScriptSource").value = nodeGraphScopeShaderDefaultSource;
+    updateNodeGraphShaderScriptHighlight();
     nodeGraphShaderScriptStatus("scope starter loaded", false);
     return;
   }
   nodeGraphShaderScriptState.fragmentSource = fragmentSource.trim();
   document.getElementById("nodeShaderScriptSource").value = nodeGraphShaderScriptState.fragmentSource;
+  updateNodeGraphShaderScriptHighlight();
   updateNodeGraphShaderProgram(nodeGraphShaderScriptState.fragmentSource);
   setNodeGraphShaderScriptEnabled(true);
 }
@@ -694,6 +865,18 @@ function bindNodeGraphShaderScriptEvents() {
   document.getElementById("nodeShaderScriptClose")?.addEventListener("click", () =>
     setNodeGraphShaderScriptDialogVisible(false));
   document.getElementById("nodeShaderScriptApply")?.addEventListener("click", applyNodeGraphShaderScriptFromDialog);
+  document.getElementById("nodeShaderScriptTextSizeDecrease")?.addEventListener("click", () =>
+    changeNodeGraphShaderScriptEditorFontSize(-nodeGraphShaderScriptEditorFontSizeLimits.stepPx));
+  document.getElementById("nodeShaderScriptTextSizeIncrease")?.addEventListener("click", () =>
+    changeNodeGraphShaderScriptEditorFontSize(nodeGraphShaderScriptEditorFontSizeLimits.stepPx));
+  const source = document.getElementById("nodeShaderScriptSource");
+  source?.addEventListener("input", updateNodeGraphShaderScriptHighlight);
+  source?.addEventListener("scroll", updateNodeGraphShaderScriptHighlight);
+  const panel = document.querySelector("#nodeShaderScriptDialog .node-shader-script-panel");
+  panel?.addEventListener("pointerdown", beginNodeGraphShaderScriptDialogDrag);
+  panel?.addEventListener("pointermove", dragNodeGraphShaderScriptDialog);
+  panel?.addEventListener("pointerup", endNodeGraphShaderScriptDialogDrag);
+  panel?.addEventListener("pointercancel", endNodeGraphShaderScriptDialogDrag);
   document.getElementById("nodeShaderScriptDefault")?.addEventListener("click", resetNodeGraphShaderScriptDefault);
   document.getElementById("nodeShaderScriptGreenPreset")?.addEventListener("click", applyNodeGraphShaderScriptGreenPreset);
   document.getElementById("nodeShaderScriptAmberPreset")?.addEventListener("click", applyNodeGraphShaderScriptAmberPreset);
