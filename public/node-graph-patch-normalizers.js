@@ -52,11 +52,11 @@ function normalizeNodeGraphPatchGrid(grid = {}) {
 const nodeGraphScopeShaderDefaultSource = `// Prettyscope scope style
 // drawScope(scope), signal routing, and the draw call are assumed.
 
-dot1.color = "#ffffff"; // white center
+dot1.color = #ffffff; // white center
 dot1.size = 0.035;      // 3.5% of the smaller screen edge
 dot1.brightness = 4.50;
 
-dot2.color = "#17002f"; // dark purple outer glow
+dot2.color = #17002f; // dark purple outer glow
 dot2.size = 0.090;      // 9.0% of the smaller screen edge
 dot2.brightness = 0.45;`;
 
