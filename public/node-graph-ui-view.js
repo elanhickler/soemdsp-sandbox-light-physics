@@ -152,6 +152,69 @@ function nodeGraphUiGraphSelectionSummary(sourceNode) {
   };
 }
 
+function nodeGraphUiItemGridHeightPx() {
+  return typeof nodeGraphGridHeight === "function" ? nodeGraphGridHeight() : 32;
+}
+
+function nodeGraphUiItemHeightGu(item) {
+  const gridHeight = nodeGraphUiItemGridHeightPx();
+  return Math.max(1, Math.round((Number(item?.h) || gridHeight) / gridHeight));
+}
+
+function resizeNodeGraphUiItemHeightGu(button, delta) {
+  const item = nodeGraphUiItemFromElement(button);
+  if (!item) {
+    return false;
+  }
+  const gridHeight = nodeGraphUiItemGridHeightPx();
+  const nextHeightGu = Math.max(3, Math.min(14, nodeGraphUiItemHeightGu(item) + Number(delta || 0)));
+  return updateNodeGraphUiItem(
+    item.id,
+    { h: nextHeightGu * gridHeight },
+    "ui graph height changed",
+  );
+}
+
+function updateNodeGraphUiGraphSelectedPoint(sourceNode, updates = {}) {
+  if (!sourceNode || sourceNode.type !== "graph") {
+    return false;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
+  if (!targetNode || targetNode.type !== "graph") {
+    return false;
+  }
+  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  const selectedIndex = nodeGraphGraphSelectedNodeIndex(targetNode.id, graph, graph.nodes.length - 1);
+  const selectedNode = graph.nodes[selectedIndex];
+  if (!selectedNode) {
+    return false;
+  }
+
+  const nextNode = {
+    ...selectedNode,
+    ...(Object.hasOwn(updates, "shape") ? { shape: normalizeNodeGraphGraphShape(updates.shape) } : {}),
+    ...(Object.hasOwn(updates, "x") ? { x: normalizeNodeGraphGraphNumber(updates.x, selectedNode.x) } : {}),
+    ...(Object.hasOwn(updates, "y") ? { y: normalizeNodeGraphGraphNumber(updates.y, selectedNode.y) } : {}),
+  };
+  graph.nodes[selectedIndex] = nextNode;
+  targetNode.graph = normalizeNodeGraphGraph(graph);
+  const nextIndex = targetNode.graph.nodes.reduce((bestIndex, node, index) => {
+    const bestNode = targetNode.graph.nodes[bestIndex];
+    const distance = Math.abs(node.x - nextNode.x) + Math.abs(node.y - nextNode.y);
+    const bestDistance = Math.abs(bestNode.x - nextNode.x) + Math.abs(bestNode.y - nextNode.y);
+    return distance < bestDistance ? index : bestIndex;
+  }, 0);
+  setNodeGraphGraphSelectedNodeIndex(targetNode.id, targetNode.graph, nextIndex);
+  commitNodeGraphPatch(patch, { status: "ui graph point changed" });
+  syncNodeGraphGraphDisplaysForNode(targetNode.id, targetNode);
+  if (nodeGraphModuleActionTargetNodeId() === targetNode.id) {
+    syncNodeGraphGraphControls(targetNode.graph, nextIndex);
+  }
+  renderNodeGraphUiView();
+  return true;
+}
+
 function runNodeGraphUiGraphAction(button, action) {
   const display = button?.closest?.(".node-ui-item")?.querySelector?.(".node-module-graph-display");
   if (!display || typeof action !== "function") {
@@ -165,7 +228,7 @@ function runNodeGraphUiGraphAction(button, action) {
   return Boolean(changed);
 }
 
-function createNodeGraphUiGraphToolbar(sourceNode) {
+function createNodeGraphUiGraphToolbar(sourceNode, item) {
   const summary = nodeGraphUiGraphSelectionSummary(sourceNode);
   const toolbar = document.createElement("div");
   toolbar.className = "node-ui-graph-toolbar";
@@ -174,13 +237,13 @@ function createNodeGraphUiGraphToolbar(sourceNode) {
     {
       action: () => selectFocusedNodeGraphGraphNodeOffset(-1),
       disabled: summary.selectedIndex <= 0,
-      label: "Prev",
+      label: "<",
       title: "Select previous point",
     },
     {
       action: () => selectFocusedNodeGraphGraphNodeOffset(1),
       disabled: summary.selectedIndex >= summary.graph.nodes.length - 1,
-      label: "Next",
+      label: ">",
       title: "Select next point",
     },
     {
@@ -204,6 +267,18 @@ function createNodeGraphUiGraphToolbar(sourceNode) {
       label: "Shape",
       title: "Cycle selected point curve shape",
     },
+    {
+      action: (button) => resizeNodeGraphUiItemHeightGu(button, -1),
+      disabled: nodeGraphUiItemHeightGu(item) <= 3,
+      label: "H-",
+      title: "Shrink UI graph by one grid unit",
+    },
+    {
+      action: (button) => resizeNodeGraphUiItemHeightGu(button, 1),
+      disabled: nodeGraphUiItemHeightGu(item) >= 14,
+      label: "H+",
+      title: "Grow UI graph by one grid unit",
+    },
   ];
 
   actions.forEach((entry) => {
@@ -212,18 +287,65 @@ function createNodeGraphUiGraphToolbar(sourceNode) {
     button.textContent = entry.label;
     button.title = entry.title;
     button.disabled = Boolean(entry.disabled);
-    button.addEventListener("click", () => runNodeGraphUiGraphAction(button, entry.action));
+    button.addEventListener("click", () => {
+      if (entry.label === "H-" || entry.label === "H+") {
+        entry.action(button);
+      } else {
+        runNodeGraphUiGraphAction(button, entry.action);
+      }
+    });
     toolbar.append(button);
   });
 
   return toolbar;
 }
 
-function createNodeGraphUiGraphStatus(sourceNode) {
+function createNodeGraphUiGraphInspector(sourceNode) {
+  const summary = nodeGraphUiGraphSelectionSummary(sourceNode);
+  const inspector = document.createElement("div");
+  inspector.className = "node-ui-graph-inspector";
+
+  [
+    { label: "x", key: "x", value: summary.x },
+    { label: "y", key: "y", value: summary.y },
+  ].forEach((entry) => {
+    const label = document.createElement("label");
+    label.textContent = entry.label;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.max = "1";
+    input.step = "0.001";
+    input.value = entry.value.toFixed(3);
+    input.addEventListener("change", () => updateNodeGraphUiGraphSelectedPoint(sourceNode, {
+      [entry.key]: input.value,
+    }));
+    label.append(input);
+    inspector.append(label);
+  });
+
+  const shapeLabel = document.createElement("label");
+  shapeLabel.textContent = "curve";
+  const shape = document.createElement("select");
+  (Array.isArray(nodeGraphGraphShapes) ? nodeGraphGraphShapes : ["rational", "linear", "smooth", "hold"]).forEach((optionValue) => {
+    const option = document.createElement("option");
+    option.value = optionValue;
+    option.textContent = optionValue;
+    option.selected = optionValue === summary.shape;
+    shape.append(option);
+  });
+  shape.addEventListener("change", () => updateNodeGraphUiGraphSelectedPoint(sourceNode, { shape: shape.value }));
+  shapeLabel.append(shape);
+  inspector.append(shapeLabel);
+
+  return inspector;
+}
+
+function createNodeGraphUiGraphStatus(sourceNode, item) {
   const summary = nodeGraphUiGraphSelectionSummary(sourceNode);
   const status = document.createElement("div");
   status.className = "node-ui-graph-status";
-  status.textContent = `${summary.pointLabel} x ${summary.x.toFixed(3)} y ${summary.y.toFixed(3)} ${summary.shape}`;
+  status.textContent = `${summary.pointLabel} - ${nodeGraphUiItemHeightGu(item)} height gu`;
   return status;
 }
 
@@ -251,7 +373,7 @@ function createNodeGraphUiItemElement(item) {
   const body = document.createElement("div");
   body.className = "node-ui-item-body";
   if (sourceNode?.type === "graph") {
-    body.append(createNodeGraphUiGraphToolbar(sourceNode));
+    body.append(createNodeGraphUiGraphToolbar(sourceNode, item));
     const display = document.createElement("div");
     display.className = "node-module-graph-display node-ui-graph-display";
     display.dataset.graphNode = sourceNode.id;
@@ -260,7 +382,8 @@ function createNodeGraphUiItemElement(item) {
     display.addEventListener("pointerdown", beginNodeGraphGraphNodeDrag, true);
     renderNodeGraphGraphDisplay(display, sourceNode.graph);
     body.append(display);
-    body.append(createNodeGraphUiGraphStatus(sourceNode));
+    body.append(createNodeGraphUiGraphInspector(sourceNode));
+    body.append(createNodeGraphUiGraphStatus(sourceNode, item));
   } else {
     const empty = document.createElement("div");
     empty.className = "node-ui-item-placeholder";
