@@ -182,6 +182,30 @@ function nodeGraphGraphContourHandlePoint(graph, index) {
   return nodeGraphGraphPointToSvg(x, y);
 }
 
+function nodeGraphGraphSegmentMidpoint(graph, index) {
+  const left = graph.nodes[index - 1];
+  const right = graph.nodes[index];
+  if (!left || !right) {
+    return null;
+  }
+  return {
+    x: left.x + (right.x - left.x) * 0.5,
+    y: left.y + (right.y - left.y) * 0.5,
+  };
+}
+
+function nodeGraphGraphContourFromPoint(graph, index, point) {
+  const midpoint = nodeGraphGraphSegmentMidpoint(graph, index);
+  const left = graph.nodes[index - 1];
+  const right = graph.nodes[index];
+  if (!midpoint || !left || !right) {
+    return 0;
+  }
+  const direction = right.y >= left.y ? 1 : -1;
+  const range = Math.max(0.08, Math.abs(right.y - left.y));
+  return normalizeNodeGraphGraphNumber(((point.y - midpoint.y) / range) * direction * 1.8, 0, -0.999, 0.999);
+}
+
 function renderNodeGraphGraphDisplay(element, graphValue) {
   if (!element) {
     return;
@@ -271,8 +295,14 @@ function beginNodeGraphGraphNodeDrag(event) {
   if (event.button !== undefined && event.button !== 0) {
     return;
   }
+  const contour = event.target?.closest?.(".node-module-graph-contour-handle");
+  if (contour) {
+    beginNodeGraphGraphContourDrag(event, contour);
+    return;
+  }
   const circle = event.target?.closest?.(".node-module-graph-node, .node-module-graph-node-hit");
   if (!circle) {
+    addNodeGraphGraphNodeFromDisplayEvent(event);
     return;
   }
   const moduleElement = circle.closest(".dsp-node");
@@ -298,12 +328,93 @@ function beginNodeGraphGraphNodeDrag(event) {
   event.stopPropagation();
 }
 
+function beginNodeGraphGraphContourDrag(event, contour) {
+  const moduleElement = contour.closest(".dsp-node");
+  const nodeId = moduleElement?.dataset.node || "";
+  const patchNode = nodeGraphPatchNode(nodeId);
+  if (!patchNode || patchNode.type !== "graph") {
+    return;
+  }
+  const display = nodeGraphGraphDisplayFromEventTarget(contour);
+  const svg = contour.closest(".node-module-graph-svg");
+  const graph = normalizeNodeGraphGraph(patchNode.graph);
+  const index = nodeGraphGraphNodeIndexFromValue(graph, contour.dataset.graphContourIndex);
+  nodeGraphMvp.graphNodeDragging = {
+    display,
+    graph,
+    index,
+    mode: "contour",
+    nodeId,
+    svg,
+  };
+  display?.classList.add("dragging");
+  contour.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function addNodeGraphGraphNodeFromDisplayEvent(event) {
+  const svg = event.target?.closest?.(".node-module-graph-svg");
+  if (!svg) {
+    return;
+  }
+  const display = nodeGraphGraphDisplayFromEventTarget(event.target);
+  const moduleElement = display?.closest(".dsp-node");
+  const nodeId = moduleElement?.dataset.node || "";
+  const patchNode = nodeGraphPatchNode(nodeId);
+  if (!display || !patchNode || patchNode.type !== "graph") {
+    return;
+  }
+  const point = nodeGraphGraphSvgToGraphPoint(svg, event.clientX, event.clientY);
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === nodeId);
+  if (!targetNode || targetNode.type !== "graph") {
+    return;
+  }
+  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  graph.cursorX = point.x;
+  graph.nodes.push({
+    c: 0,
+    shape: "rational",
+    x: point.x,
+    y: point.y,
+  });
+  targetNode.graph = graph;
+  commitNodeGraphPatch(patch, { status: "graph node added" });
+  const normalized = normalizeNodeGraphGraph(targetNode.graph);
+  const selectedIndex = normalized.nodes.reduce((bestIndex, node, index) => (
+    Math.abs(node.x - point.x) < Math.abs(normalized.nodes[bestIndex].x - point.x)
+      ? index
+      : bestIndex
+  ), 0);
+  syncNodeGraphGraphControls(normalized, selectedIndex);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
 function dragNodeGraphGraphNode(event) {
   const drag = nodeGraphMvp.graphNodeDragging;
   if (!drag?.svg || !drag?.display) {
     return;
   }
   const point = nodeGraphGraphSvgToGraphPoint(drag.svg, event.clientX, event.clientY);
+  if (drag.mode === "contour") {
+    const current = drag.graph.nodes[drag.index] || normalizeNodeGraphGraphNode({}, drag.index);
+    drag.graph.nodes[drag.index] = normalizeNodeGraphGraphNode({
+      ...current,
+      c: nodeGraphGraphContourFromPoint(drag.graph, drag.index, point),
+      shape: current.shape === "linear" ? "rational" : current.shape,
+    }, drag.index);
+    drag.graph = normalizeNodeGraphGraph(drag.graph);
+    renderNodeGraphGraphDisplay(drag.display, drag.graph);
+    drag.svg = drag.display.querySelector(".node-module-graph-svg");
+    if (nodeGraphModuleActionTargetNodeId() === drag.nodeId) {
+      syncNodeGraphGraphControls(drag.graph, drag.index);
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   const constrained = nodeGraphGraphConstrainedNodePoint(drag.graph, drag.index, point);
   const current = drag.graph.nodes[drag.index] || normalizeNodeGraphGraphNode({}, drag.index);
   drag.graph.nodes[drag.index] = normalizeNodeGraphGraphNode({

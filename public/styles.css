@@ -6397,7 +6397,7 @@ audio {
 }
 
 .dsp-node.graph-node-layout {
-  grid-template-rows: var(--node-header-height) minmax(0, 1fr);
+  grid-template-rows: var(--node-header-height) minmax(0, 1fr) minmax(var(--node-io-section-min-height), auto);
 }
 
 .dsp-node.slider-widget-layout {
@@ -6748,7 +6748,8 @@ audio {
   fill: none;
   stroke: rgba(255, 236, 181, 0.72);
   stroke-width: 0.9;
-  pointer-events: none;
+  pointer-events: all;
+  touch-action: none;
 }
 
 .node-module-graph-node {

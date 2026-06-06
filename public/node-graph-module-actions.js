@@ -565,7 +565,7 @@ function adjustNodeGraphTextBoxHeightFromContext(delta) {
   } else {
     targetNode.heightGu = nextHeightGu;
   }
-  commitNodeGraphPatch(patch, { status: "module height changed" });
+  commitNodeGraphPatch(patch, { status: targetNode.type === "graph" ? "graph height changed" : "module height changed" });
   configureNodeSceneContextMenu("module");
 }
 

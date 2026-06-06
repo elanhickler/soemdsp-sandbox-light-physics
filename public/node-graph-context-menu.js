@@ -405,7 +405,7 @@ function configureNodeSceneContextMenu(mode) {
   wireTypeControl.hidden = !wireMode;
   aliasControl.hidden = !moduleMode;
   widthControls.hidden = !moduleMode;
-  const canResizeHeight = moduleMode && ["textBox", "valueSlider"].includes(targetNode?.type);
+  const canResizeHeight = moduleMode && ["graph", "textBox", "valueSlider"].includes(targetNode?.type);
   textBoxHeightControls.hidden = !canResizeHeight;
   textBoxTextSizeControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   textBoxTextControls.hidden = !(moduleMode && targetNode?.type === "textBox");
@@ -456,7 +456,7 @@ function configureNodeSceneContextMenu(mode) {
     widthDecrease.title = nodeGraphTooltipText("actions.widthDecrease");
     widthIncrease.disabled = !targetNode || widthGu >= nodeGraphModuleWidthLimits.maxGu;
     widthIncrease.title = nodeGraphTooltipText("actions.widthIncrease");
-    textBoxHeightValue.textContent = `${heightGu} gu high`;
+    textBoxHeightValue.textContent = targetNode?.type === "graph" ? `${heightGu} height gu` : `${heightGu} gu high`;
     textBoxHeightDecrease.disabled = !canResizeHeight || heightGu <= nodeGraphModuleHeightLimits.minGu;
     textBoxHeightDecrease.title = nodeGraphTooltipText("actions.textBoxHeightDecrease");
     textBoxHeightIncrease.disabled = !canResizeHeight || heightGu >= nodeGraphModuleHeightLimits.maxGu;
