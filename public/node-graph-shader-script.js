@@ -1463,7 +1463,7 @@ function nodeGraphShaderScriptRects(canvas) {
   const workspaceRect = workspace.getBoundingClientRect();
   const scaleX = canvas.width / Math.max(1, workspaceRect.width);
   const scaleY = canvas.height / Math.max(1, workspaceRect.height);
-  return [...workspace.querySelectorAll(".node-module-scope-window")]
+  return [...workspace.querySelectorAll(".node-module-scope-window, .node-led-face")]
     .filter((scope) => scope.offsetParent !== null)
     .slice(0, nodeGraphShaderScriptMaxScopes)
     .map((scope) => {

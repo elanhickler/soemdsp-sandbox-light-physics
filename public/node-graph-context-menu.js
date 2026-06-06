@@ -700,7 +700,7 @@ function openNodeModuleActionMenu(event) {
 }
 
 function openNodeScopeContextMenu(event) {
-  const contextScope = event.target.closest?.(".node-module-scope-window");
+  const contextScope = event.target.closest?.(".node-module-scope-window, .node-led-face");
   const nodeId = contextScope?.dataset?.node || "";
   if (!nodeId || !nodeGraphPatchNode(nodeId)) {
     return false;
