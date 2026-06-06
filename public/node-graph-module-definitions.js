@@ -566,8 +566,8 @@ const nodeGraphModuleDefinitions = Object.freeze({
       Out: "Digital Out",
     },
     outputLabels: {
-      "Analog Out": "\u223F Analog Out",
-      "Digital Out": "\u25AE Digital Out",
+      "Analog Out": "\u223F",
+      "Digital Out": "\u25AE",
     },
     outputs: ["Digital Out", "Analog Out"],
     parameters: [
