@@ -340,6 +340,8 @@ function configureNodeSceneContextMenu(mode) {
   const graphControls = document.getElementById("nodeSceneGraphControls");
   const graphCursorX = document.getElementById("nodeSceneGraphCursorX");
   const graphNodeIndex = document.getElementById("nodeSceneGraphNodeIndex");
+  const graphPreviousNode = document.getElementById("nodeSceneGraphPreviousNode");
+  const graphNextNode = document.getElementById("nodeSceneGraphNextNode");
   const graphNodeX = document.getElementById("nodeSceneGraphNodeX");
   const graphNodeY = document.getElementById("nodeSceneGraphNodeY");
   const graphNodeContour = document.getElementById("nodeSceneGraphNodeContour");
@@ -532,12 +534,16 @@ function configureNodeSceneContextMenu(mode) {
       syncNodeGraphGraphControls(targetNode.graph);
       graphCursorX.disabled = false;
       graphNodeIndex.disabled = false;
+      graphPreviousNode.disabled = false;
+      graphNextNode.disabled = false;
       graphNodeX.disabled = false;
       graphNodeY.disabled = false;
       graphNodeContour.disabled = false;
       graphNodeShape.disabled = false;
       graphCursorX.title = "Move the vertical graph cursor.";
       graphNodeIndex.title = "Choose the graph node to edit.";
+      graphPreviousNode.title = "Select the previous graph node.";
+      graphNextNode.title = "Select the next graph node.";
       graphNodeX.title = "Set the selected node's x position.";
       graphNodeY.title = "Set the selected node's y value.";
       graphNodeContour.title = "Bend the selected node's outgoing segment.";
@@ -552,6 +558,8 @@ function configureNodeSceneContextMenu(mode) {
       graphNodeShape.value = "rational";
       graphCursorX.disabled = true;
       graphNodeIndex.disabled = true;
+      graphPreviousNode.disabled = true;
+      graphNextNode.disabled = true;
       graphNodeX.disabled = true;
       graphNodeY.disabled = true;
       graphNodeContour.disabled = true;

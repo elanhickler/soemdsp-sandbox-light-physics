@@ -747,6 +747,8 @@ function syncNodeGraphGraphControls(graph, selectedIndex = selectedNodeGraphGrap
   const yInput = document.getElementById("nodeSceneGraphNodeY");
   const contourInput = document.getElementById("nodeSceneGraphNodeContour");
   const shapeInput = document.getElementById("nodeSceneGraphNodeShape");
+  const previousButton = document.getElementById("nodeSceneGraphPreviousNode");
+  const nextButton = document.getElementById("nodeSceneGraphNextNode");
   const removeButton = document.getElementById("nodeSceneGraphRemoveNode");
   if (cursorInput) {
     cursorInput.value = graphData.cursorX.toFixed(3);
@@ -762,6 +764,12 @@ function syncNodeGraphGraphControls(graph, selectedIndex = selectedNodeGraphGrap
   }
   if (shapeInput) {
     shapeInput.value = normalizeNodeGraphGraphShape(node.shape);
+  }
+  if (previousButton) {
+    previousButton.disabled = index <= 0;
+  }
+  if (nextButton) {
+    nextButton.disabled = index >= graphData.nodes.length - 1;
   }
   if (removeButton) {
     removeButton.disabled = graphData.nodes.length <= 2;
@@ -829,6 +837,17 @@ function selectNodeGraphGraphNodeFromContext() {
     return;
   }
   syncNodeGraphGraphControls(sourceNode.graph);
+}
+
+function selectNodeGraphGraphNodeOffsetFromContext(offset) {
+  const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
+  if (!sourceNode || sourceNode.type !== "graph") {
+    return;
+  }
+  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const selectedIndex = selectedNodeGraphGraphIndex(graph);
+  const nextIndex = nodeGraphGraphNodeIndexFromValue(graph, selectedIndex + Number(offset || 0));
+  syncNodeGraphGraphControls(graph, nextIndex);
 }
 
 function setNodeGraphGraphNodeListValueFromContext(event, { record = true } = {}) {
