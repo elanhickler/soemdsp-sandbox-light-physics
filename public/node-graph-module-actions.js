@@ -956,6 +956,45 @@ function transformNodeGraphGraphFromContext(transform) {
   });
 }
 
+async function copyNodeGraphGraphFromContext() {
+  const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
+  if (!sourceNode || sourceNode.type !== "graph") {
+    return;
+  }
+  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const text = serializeNodeGraphGraphClipboard(graph);
+  nodeGraphMvp.graphClipboard = text;
+  try {
+    await copyTextToClipboard(text);
+  } catch (_error) {
+    // Local clipboard remains available when browser clipboard access is blocked.
+  }
+  configureNodeSceneContextMenu("module");
+}
+
+async function pasteNodeGraphGraphFromContext() {
+  const { patch, targetNode } = nodeGraphGraphTargetFromContext();
+  if (!targetNode) {
+    return;
+  }
+  let text = nodeGraphMvp.graphClipboard || "";
+  try {
+    text = await navigator.clipboard?.readText?.() || text;
+  } catch (_error) {
+    // Browser clipboard read may be unavailable; use the local graph clipboard.
+  }
+  const graph = parseNodeGraphGraphClipboard(text);
+  if (!graph) {
+    configureNodeSceneContextMenu("module");
+    return;
+  }
+  nodeGraphMvp.graphClipboard = serializeNodeGraphGraphClipboard(graph);
+  targetNode.graph = graph;
+  commitNodeGraphGraphEdit(patch, targetNode, "graph pasted", {
+    selectedIndex: Math.min(1, graph.nodes.length - 1),
+  });
+}
+
 function nodeGraphCodeblockBuildFunctionBody(codeblock) {
   const context = [
     "const state = __state;",

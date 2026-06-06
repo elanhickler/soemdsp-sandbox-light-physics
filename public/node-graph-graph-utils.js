@@ -83,6 +83,26 @@ function nodeGraphGraphTransformedData(graphValue, transform) {
   return graph;
 }
 
+function serializeNodeGraphGraphClipboard(graphValue) {
+  return JSON.stringify({
+    graph: normalizeNodeGraphGraph(graphValue),
+    type: "soemdsp.graph",
+    version: 1,
+  }, null, 2);
+}
+
+function parseNodeGraphGraphClipboard(text) {
+  try {
+    const payload = JSON.parse(String(text || ""));
+    if (payload?.type !== "soemdsp.graph") {
+      return null;
+    }
+    return normalizeNodeGraphGraph(payload.graph);
+  } catch (_error) {
+    return null;
+  }
+}
+
 function normalizeNodeGraphGraphShape(value) {
   const shape = String(value || "").trim();
   return nodeGraphGraphShapes.includes(shape) ? shape : "rational";
