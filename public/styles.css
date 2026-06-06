@@ -9087,15 +9087,16 @@ button.saved-default,
 }
 
 .node-shader-script-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
 .node-shader-script-heading > div:first-child {
   display: grid;
   gap: 2px;
+  justify-self: start;
 }
 
 .node-shader-script-heading span {
@@ -9116,7 +9117,7 @@ button.saved-default,
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
+  justify-self: center;
 }
 
 .node-shader-script-size-controls button {
@@ -9144,6 +9145,10 @@ button.saved-default,
 .node-shader-script-size-controls button:disabled {
   color: rgba(127, 199, 217, 0.26);
   cursor: default;
+}
+
+.node-shader-script-heading > .panel-close-button {
+  justify-self: end;
 }
 
 .node-shader-script-editor {
