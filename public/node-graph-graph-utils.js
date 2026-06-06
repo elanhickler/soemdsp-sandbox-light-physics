@@ -53,6 +53,36 @@ function nodeGraphGraphPresetData(name) {
   return normalizeNodeGraphGraph(nodeGraphGraphPresets[String(name || "").trim()] || nodeGraphDefaultGraphData);
 }
 
+function nodeGraphGraphTransformedData(graphValue, transform) {
+  const graph = normalizeNodeGraphGraph(graphValue);
+  const type = String(transform || "").trim();
+  if (type === "flipY") {
+    return normalizeNodeGraphGraph({
+      cursorX: graph.cursorX,
+      nodes: graph.nodes.map((node) => ({
+        ...node,
+        y: 1 - node.y,
+      })),
+    });
+  }
+  if (type === "reverseX") {
+    const nodes = graph.nodes.map((node, index) => {
+      const segmentSource = graph.nodes[index + 1] || node;
+      return {
+        c: -normalizeNodeGraphGraphNumber(segmentSource.c, 0, -0.999, 0.999),
+        shape: segmentSource.shape,
+        x: 1 - node.x,
+        y: node.y,
+      };
+    });
+    return normalizeNodeGraphGraph({
+      cursorX: 1 - graph.cursorX,
+      nodes,
+    });
+  }
+  return graph;
+}
+
 function normalizeNodeGraphGraphShape(value) {
   const shape = String(value || "").trim();
   return nodeGraphGraphShapes.includes(shape) ? shape : "rational";

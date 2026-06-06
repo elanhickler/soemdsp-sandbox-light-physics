@@ -102,6 +102,11 @@ function bindNodeGraphSceneMenuEvents() {
         button.dataset.graphRangeMax,
       ));
     });
+  document
+    .querySelectorAll("#nodeSceneGraphTransformControls [data-graph-transform]")
+    .forEach((button) => {
+      button.addEventListener("click", () => transformNodeGraphGraphFromContext(button.dataset.graphTransform));
+    });
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignLeft", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("left"));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignCenter", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("center"));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignRight", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("right"));

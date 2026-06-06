@@ -945,6 +945,17 @@ function setNodeGraphGraphOutputRangeFromContext(minValue, maxValue) {
   configureNodeSceneContextMenu("module");
 }
 
+function transformNodeGraphGraphFromContext(transform) {
+  const { patch, targetNode } = nodeGraphGraphTargetFromContext();
+  if (!targetNode) {
+    return;
+  }
+  targetNode.graph = nodeGraphGraphTransformedData(targetNode.graph, transform);
+  commitNodeGraphGraphEdit(patch, targetNode, `graph transformed: ${transform}`, {
+    selectedIndex: Math.min(1, targetNode.graph.nodes.length - 1),
+  });
+}
+
 function nodeGraphCodeblockBuildFunctionBody(codeblock) {
   const context = [
     "const state = __state;",
