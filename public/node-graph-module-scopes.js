@@ -239,6 +239,14 @@ function nodeGraphModuleScopeShaderSizeRatio(source, dotName, fallback) {
   );
 }
 
+function nodeGraphModuleScopeShaderBlurRatio(source, dotName, fallback = 0) {
+  return clampNodeSliderValue(
+    nodeGraphModuleScopeShaderNumber(source, dotName, "blur", fallback),
+    0,
+    1,
+  );
+}
+
 function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
   const source = nodeGraphModuleScopeShaderSourceForSlot(slot);
   const outerFallback = normalizeNodeGraphModuleScopeDotCoreColor(
@@ -261,6 +269,7 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
       40,
     ),
     centerColor: nodeGraphModuleScopeShaderColor(source, "dot1", centerFallback),
+    centerBlur: nodeGraphModuleScopeShaderBlurRatio(source, "dot1", 0),
     centerSize: nodeGraphModuleScopeShaderSizeRatio(
       source,
       "dot1",
@@ -277,6 +286,7 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
       40,
     ),
     outerColor: nodeGraphModuleScopeShaderColor(source, "dot2", outerFallback),
+    outerBlur: nodeGraphModuleScopeShaderBlurRatio(source, "dot2", 0),
     outerSize: nodeGraphModuleScopeShaderSizeRatio(
       source,
       "dot2",
@@ -3372,9 +3382,11 @@ function nodeGraphModuleScopeGeneratedDotTextureData(
   core1BrightnessValue,
   size = 64,
   core1ColorValue = "#ffffff",
+  core1BlurValue = 0,
   core2SizeValue = nodeGraphMvp?.moduleScopeDotCore2Size,
   core2BrightnessValue = nodeGraphMvp?.moduleScopeDotCore2Brightness,
   core2ColorValue = "#17002f",
+  core2BlurValue = 0,
   lineThicknessValue = nodeGraphMvp?.moduleScopeLineThickness,
 ) {
   const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(core1SizeValue, 3.18);
@@ -3387,6 +3399,8 @@ function nodeGraphModuleScopeGeneratedDotTextureData(
   const core2Color = nodeGraphScopeHexColorToRgb(
     normalizeNodeGraphModuleScopeDotCoreColor(core2ColorValue ?? "#17002f", "#17002f"),
   );
+  const core1Blur = clampNodeSliderValue(Number(core1BlurValue) || 0, 0, 1);
+  const core2Blur = clampNodeSliderValue(Number(core2BlurValue) || 0, 0, 1);
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(lineThicknessValue ?? 2);
   const finalCore1Size = core1Size * lineThickness;
   const finalCore2Size = core2Size * lineThickness;
@@ -3402,8 +3416,10 @@ function nodeGraphModuleScopeGeneratedDotTextureData(
       const dx = ((x - center) / center) * dotDiameterPx * 0.5;
       const dy = ((y - center) / center) * dotDiameterPx * 0.5;
       const distanceSquared = dx * dx + dy * dy;
-      const core1Energy = Math.exp(-distanceSquared * core1Falloff) * core1Brightness;
-      const core2Energy = Math.exp(-distanceSquared * core2Falloff) * core2Brightness;
+      const core1Mask = nodeGraphModuleScopeDotBlurMask(distanceSquared, core1Radius, core1Blur);
+      const core2Mask = nodeGraphModuleScopeDotBlurMask(distanceSquared, core2Radius, core2Blur);
+      const core1Energy = Math.exp(-distanceSquared * core1Falloff) * core1Brightness * core1Mask;
+      const core2Energy = Math.exp(-distanceSquared * core2Falloff) * core2Brightness * core2Mask;
       const energy = clampNodeSliderValue(core1Energy + core2Energy, 0, 1);
       const colorEnergy = Math.max(0.0001, core1Energy + core2Energy);
       const core1Mix = core1Energy / colorEnergy;
@@ -3431,7 +3447,9 @@ function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
   const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
   const core2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp?.moduleScopeDotCore2Color ?? "#17002f", "#17002f");
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
-  const key = `generated:${core1Size.toFixed(3)}:${core1Brightness.toFixed(3)}:${core1Color}:${core2Size.toFixed(3)}:${core2Brightness.toFixed(3)}:${core2Color}:${lineThickness.toFixed(3)}`;
+  const core1Blur = 0;
+  const core2Blur = 0;
+  const key = `generated:${core1Size.toFixed(3)}:${core1Brightness.toFixed(3)}:${core1Color}:${core1Blur.toFixed(3)}:${core2Size.toFixed(3)}:${core2Brightness.toFixed(3)}:${core2Color}:${core2Blur.toFixed(3)}:${lineThickness.toFixed(3)}`;
   if (state.generatedKey === key && state.texture) {
     return state.texture;
   }
@@ -3462,9 +3480,11 @@ function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
       core1Brightness,
       64,
       core1Color,
+      core1Blur,
       core2Size,
       core2Brightness,
       core2Color,
+      core2Blur,
       lineThickness,
     ),
   );
@@ -3511,6 +3531,31 @@ function nodeGraphModuleScopeDotSizeScale() {
   const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4);
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
   return clampNodeSliderValue(Math.max(core1Size, core2Size) * lineThickness, 0.01, 40);
+}
+
+function nodeGraphModuleScopeDotBlurMask(distanceSquared, radius, blurValue = 0) {
+  const radiusValue = Math.max(0.0001, Number(radius) || 0.0001);
+  const blur = clampNodeSliderValue(Number(blurValue) || 0, 0, 1);
+  const normalizedDistance = Math.sqrt(Math.max(0, Number(distanceSquared) || 0)) / radiusValue;
+  if (normalizedDistance >= 1) {
+    return 0;
+  }
+  if (blur <= 0) {
+    return 1;
+  }
+  const crispEdge = Math.max(0.0001, blur * 0.35);
+  const crispStart = 1 - crispEdge;
+  const edgeProgress = clampNodeSliderValue((normalizedDistance - crispStart) / crispEdge, 0, 1);
+  const crisp = 1 - (edgeProgress * edgeProgress * (3 - 2 * edgeProgress));
+  const gaussianSharpness = 2.2 + (1 - blur) * 10;
+  const edgeEnergy = Math.exp(-gaussianSharpness);
+  const gaussian = clampNodeSliderValue(
+    (Math.exp(-gaussianSharpness * normalizedDistance * normalizedDistance) - edgeEnergy) /
+      Math.max(0.0001, 1 - edgeEnergy),
+    0,
+    1,
+  );
+  return crisp * (1 - blur) + gaussian * blur;
 }
 
 function drawNodeGraphModuleScopeBufferWebGl(renderer, rect, buffer, pixelRatio, slot, options = {}) {
@@ -3788,6 +3833,20 @@ function drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, ra
   }
 }
 
+function nodeGraphModuleScopeLightFillStyle(context, centerX, centerY, radius, rgb, alpha, blurValue = 0) {
+  const alphaValue = clampNodeSliderValue(Number(alpha) || 0, 0, 1);
+  const blur = clampNodeSliderValue(Number(blurValue) || 0, 0, 1);
+  if (blur <= 0) {
+    return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alphaValue})`;
+  }
+  const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(0.0001, radius));
+  const middleStop = clampNodeSliderValue(0.08 + (1 - blur) * 0.72, 0.08, 0.8);
+  gradient.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alphaValue})`);
+  gradient.addColorStop(middleStop, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alphaValue})`);
+  gradient.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
+  return gradient;
+}
+
 function nodeGraphModuleScopeEmissiveShaderRgb(rgb, brightness) {
   const values = (rgb || []).map((component) => Math.round(clampNodeSliderValue(component, 0, 255)));
   const maxChannel = Math.max(0, ...values);
@@ -3832,8 +3891,10 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
     .map((component) => Math.round(clampNodeSliderValue(component, 0, 1) * 255));
   const core1Size = lightStyle.centerSize;
   const core1Brightness = lightStyle.centerBrightness;
+  const core1Blur = lightStyle.centerBlur;
   const core2Size = lightStyle.outerSize;
   const core2Brightness = lightStyle.outerBrightness;
+  const core2Blur = lightStyle.outerBlur;
   const availableSize = Math.max(1, Math.min(rect.width, rect.height));
   const outerSizeRatio = clampNodeSliderValue(core2Size, 0, 1);
   const centerSizeRatio = clampNodeSliderValue(core1Size, 0, 1);
@@ -3869,11 +3930,27 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
 
   context.save();
   context.globalCompositeOperation = lightStyle.usesShader ? "source-over" : "lighter";
-  context.fillStyle = `rgba(${visibleOuterRgb[0]}, ${visibleOuterRgb[1]}, ${visibleOuterRgb[2]}, ${lightStyle.usesShader ? Math.max(0.42, outerAlpha) : clampNodeSliderValue(outerAlpha, 0, 0.92)})`;
+  context.fillStyle = nodeGraphModuleScopeLightFillStyle(
+    context,
+    centerX,
+    centerY,
+    radius,
+    visibleOuterRgb,
+    lightStyle.usesShader ? Math.max(0.42, outerAlpha) : clampNodeSliderValue(outerAlpha, 0, 0.92),
+    core2Blur,
+  );
   drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);
   context.fill();
   context.globalCompositeOperation = "lighter";
-  context.fillStyle = `rgba(${visibleCenterRgb[0]}, ${visibleCenterRgb[1]}, ${visibleCenterRgb[2]}, ${centerAlpha})`;
+  context.fillStyle = nodeGraphModuleScopeLightFillStyle(
+    context,
+    centerX,
+    centerY,
+    radius * centerRatio,
+    visibleCenterRgb,
+    centerAlpha,
+    core1Blur,
+  );
   drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius * centerRatio);
   context.fill();
   context.restore();
