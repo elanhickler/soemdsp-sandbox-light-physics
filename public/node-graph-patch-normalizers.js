@@ -49,7 +49,10 @@ function normalizeNodeGraphPatchGrid(grid = {}) {
   };
 }
 
-const nodeGraphScopeShaderDefaultSource = `dot1.color      = #ffffff;
+const nodeGraphScopeShaderDefaultSource = `video.input     = ~;
+
+
+dot1.color      = #ffffff;
 dot1.size       = 0.035;
 dot1.brightness = 4.50;
 
@@ -63,6 +66,16 @@ dot2.brightness = 0.45;
 // Change the word after = to switch modes.
 blend.mode      = laser;`;
 
+function normalizeNodeGraphScopeShaderVideoInput(value = "~") {
+  const text = String(value || "~").trim().toLowerCase();
+  return text === "none" ? "none" : "~";
+}
+
+function parseNodeGraphScopeShaderVideoInput(source = "") {
+  const match = String(source || "").match(/(?:^|\n)\s*video\.input\s*=\s*(~|none)\s*;/i);
+  return normalizeNodeGraphScopeShaderVideoInput(match?.[1] || "~");
+}
+
 function normalizeNodeGraphScopeShader(scopeShader = {}) {
   const source = typeof scopeShader === "string"
     ? scopeShader
@@ -71,11 +84,13 @@ function normalizeNodeGraphScopeShader(scopeShader = {}) {
       : "";
   const language = String(scopeShader?.language || "scope-js").trim().slice(0, 32) || "scope-js";
   const normalizedSource = String(source || "").trim().slice(0, 100000);
+  const normalizedVideoInput = parseNodeGraphScopeShaderVideoInput(normalizedSource);
   return {
     enabled: scopeShader?.enabled !== false,
     kind: "scopeShader",
     language,
     source: normalizedSource || nodeGraphScopeShaderDefaultSource,
+    videoInput: normalizedVideoInput,
   };
 }
 

@@ -590,7 +590,7 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
   const commentIndex = line.indexOf("//");
   const code = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
   const comment = commentIndex >= 0 ? line.slice(commentIndex) : "";
-  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]|blend)\.[a-zA-Z_][\w]*\b|\b(?:laser|led|light|paint|solid)\b|-?\d+(?:\.\d+)?\b|=)/g;
+  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*\b|\b(?:laser|led|light|paint|solid|none)\b|~|-?\d+(?:\.\d+)?\b|=)/g;
   let html = "";
   let lastIndex = 0;
   for (const match of code.matchAll(tokenPattern)) {
@@ -600,9 +600,9 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
       ? "node-shader-token-color"
       : token === "="
         ? "node-shader-token-assignment"
-        : nodeGraphShaderScriptBlendModes.includes(token)
+        : nodeGraphShaderScriptBlendModes.includes(token) || token === "~" || token === "none"
           ? "node-shader-token-mode"
-          : token.startsWith("dot") || token.startsWith("blend")
+          : token.startsWith("dot") || token.startsWith("blend") || token.startsWith("video")
           ? "node-shader-token-property"
           : "node-shader-token-number";
     const tokenStart = lineStart + match.index;
@@ -611,7 +611,7 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
       ? "color"
       : className === "node-shader-token-number"
         ? "number"
-        : className === "node-shader-token-mode"
+        : className === "node-shader-token-mode" && (nodeGraphShaderScriptBlendModes.includes(token))
           ? "mode"
         : "";
     const tokenAttributes = tokenType
@@ -1026,6 +1026,13 @@ function nodeGraphShaderScriptDialogScopeSource() {
   return normalizeNodeGraphScopeShader(node?.scopeShader).source;
 }
 
+function nodeGraphShaderScriptDialogScopeVideoInput() {
+  const source = nodeGraphShaderScriptState.dialogMode === "scope"
+    ? document.getElementById("nodeShaderScriptSource")?.value || nodeGraphShaderScriptDialogScopeSource()
+    : "";
+  return normalizeNodeGraphScopeShader({ source }).videoInput;
+}
+
 function nodeGraphShaderScriptUtilityCameraId(nodeId = nodeGraphShaderScriptState.scopeTargetNodeId) {
   return `scope-shader-${String(nodeId || "target").trim() || "target"}`;
 }
@@ -1046,6 +1053,15 @@ function drawNodeGraphShaderScriptScopePreview() {
     return;
   }
   const node = nodeGraphShaderScriptDialogScopeNode();
+  const videoInput = nodeGraphShaderScriptDialogScopeVideoInput();
+  if (videoInput === "none") {
+    surface.replaceChildren();
+    if (status) {
+      status.textContent = "Video input: none.";
+    }
+    scheduleNodeGraphShaderScriptScopePreview();
+    return;
+  }
   const element = node?.id ? nodeGraphNodeElement(node.id) : null;
   const camera = typeof createNodeGraphUtilityCameraForElement === "function"
     ? createNodeGraphUtilityCameraForElement(nodeGraphShaderScriptUtilityCameraId(node?.id), element, {
