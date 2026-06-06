@@ -34,7 +34,7 @@ const nodeGraphModuleScopeSettingsStorageKey = "soemdsp-sandbox.moduleScopeSetti
 const nodeGraphModuleScopeDefaultSettings = Object.freeze({
   blinkLightShape: "circle",
   brightness: 1,
-  cycles: 2,
+  cycles: 1.7639,
   gain: 1,
   lineThickness: 1.5,
   offset: 0,
@@ -3138,21 +3138,21 @@ function nodeGraphModuleScopeGeneratedDotTextureData(
   core1SizeValue,
   core1BrightnessValue,
   size = 64,
-  core1ColorValue = "#ffffff",
+  core1ColorValue = "#ffa3a8",
   core2SizeValue = nodeGraphMvp?.moduleScopeDotCore2Size,
   core2BrightnessValue = nodeGraphMvp?.moduleScopeDotCore2Brightness,
-  core2ColorValue = "#ff0000",
+  core2ColorValue = "#444444",
   lineThicknessValue = nodeGraphMvp?.moduleScopeLineThickness,
 ) {
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(core1SizeValue, 0.5);
-  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(core1BrightnessValue, 2);
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(core1SizeValue, 3.18);
+  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(core1BrightnessValue, 4.5);
   const core1Color = nodeGraphScopeHexColorToRgb(
-    normalizeNodeGraphModuleScopeDotCoreColor(core1ColorValue ?? "#ffffff", "#ffffff"),
+    normalizeNodeGraphModuleScopeDotCoreColor(core1ColorValue ?? "#ffa3a8", "#ffa3a8"),
   );
   const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(core2SizeValue, 4);
   const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(core2BrightnessValue, 0.45);
   const core2Color = nodeGraphScopeHexColorToRgb(
-    normalizeNodeGraphModuleScopeDotCoreColor(core2ColorValue ?? "#ff0000", "#ff0000"),
+    normalizeNodeGraphModuleScopeDotCoreColor(core2ColorValue ?? "#444444", "#444444"),
   );
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(lineThicknessValue ?? 2);
   const finalCore1Size = core1Size * lineThickness;
@@ -3191,12 +3191,12 @@ function nodeGraphModuleScopeGeneratedDotTextureData(
 
 function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
   const state = nodeGraphModuleScopeState.traceImageTexture;
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 0.5, 0.5);
-  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 2, 2);
-  const core1Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp?.moduleScopeDotCore1Color ?? "#ffffff", "#ffffff");
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
+  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
+  const core1Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp?.moduleScopeDotCore1Color ?? "#ffa3a8", "#ffa3a8");
   const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4);
   const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
-  const core2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp?.moduleScopeDotCore2Color ?? "#ff0000", "#ff0000");
+  const core2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp?.moduleScopeDotCore2Color ?? "#444444", "#444444");
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
   const key = `generated:${core1Size.toFixed(3)}:${core1Brightness.toFixed(3)}:${core1Color}:${core2Size.toFixed(3)}:${core2Brightness.toFixed(3)}:${core2Color}:${lineThickness.toFixed(3)}`;
   if (state.generatedKey === key && state.texture) {
@@ -3274,7 +3274,7 @@ function nodeGraphModuleScopeTraceImageTexture(renderer) {
 }
 
 function nodeGraphModuleScopeDotSizeScale() {
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 0.5, 0.5);
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
   const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4);
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);
   return clampNodeSliderValue(Math.max(core1Size, core2Size) * lineThickness, 0.01, 40);
@@ -3580,8 +3580,8 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
   }
 
   const outerColor = normalizeNodeGraphModuleScopeDotCoreColor(
-    buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? "#ff0000",
-    "#ff0000",
+    buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? "#444444",
+    "#444444",
   );
   const centerColor = normalizeNodeGraphModuleScopeDotCoreColor(
     buffer.nodeGraphScopeLightCenterColor ?? outerColor,
@@ -3591,8 +3591,8 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
     .map((component) => Math.round(clampNodeSliderValue(component, 0, 1) * 255));
   const centerRgb = nodeGraphScopeHexColorToRgb(centerColor)
     .map((component) => Math.round(clampNodeSliderValue(component, 0, 1) * 255));
-  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 0.5, 0.5);
-  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 2, 2);
+  const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore1Size ?? 3.18, 3.18);
+  const core1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
   const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp?.moduleScopeDotCore2Size ?? 4, 4);
   const core2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp?.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp?.moduleScopeLineThickness ?? 2);

@@ -1,5 +1,5 @@
 const nodeUiDevDefaultSettingsUrl = "./public/presets/useruisettings.json";
-const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v5";
+const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v6";
 
 function normalizeNodeUiDevSettings(settings = {}) {
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
@@ -31,16 +31,16 @@ function normalizeNodeUiDevSettings(settings = {}) {
     view.moduleScopeBackgroundColor ?? nodeGraphMvp.moduleScopeBackgroundColor ?? "#000000",
   );
   const moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(
-    view.moduleScopeDotCore1Size ?? view.moduleScopeDotCore ?? nodeGraphMvp.moduleScopeDotCore1Size ?? 0.5,
-    0.5,
+    view.moduleScopeDotCore1Size ?? view.moduleScopeDotCore ?? nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18,
+    3.18,
   );
   const moduleScopeDotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(
-    view.moduleScopeDotCore1Brightness ?? nodeGraphMvp.moduleScopeDotCore1Brightness ?? 2,
-    2,
+    view.moduleScopeDotCore1Brightness ?? nodeGraphMvp.moduleScopeDotCore1Brightness ?? 4.5,
+    4.5,
   );
   const moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(
-    view.moduleScopeDotCore1Color ?? nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffffff",
-    "#ffffff",
+    view.moduleScopeDotCore1Color ?? nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffa3a8",
+    "#ffa3a8",
   );
   const moduleScopeDotCore2Size = normalizeNodeGraphModuleScopeDotCoreSize(
     view.moduleScopeDotCore2Size ?? view.moduleScopeDotGlow ?? nodeGraphMvp.moduleScopeDotCore2Size ?? 4,
@@ -51,8 +51,8 @@ function normalizeNodeUiDevSettings(settings = {}) {
     0.45,
   );
   const moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(
-    view.moduleScopeDotCore2Color ?? nodeGraphMvp.moduleScopeDotCore2Color ?? "#ff0000",
-    "#ff0000",
+    view.moduleScopeDotCore2Color ?? nodeGraphMvp.moduleScopeDotCore2Color ?? "#444444",
+    "#444444",
   );
   const moduleScopeFramesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(
     view.moduleScopeFramesPerSecond ?? nodeGraphMvp.moduleScopeFramesPerSecond ?? 60,
@@ -151,12 +151,12 @@ function readNodeUiDevSettingsFromControls() {
       moduleOscilloscopesVisible: Boolean(nodeGraphMvp.moduleOscilloscopesVisible),
       moduleSlidersVisible: Boolean(nodeGraphMvp.moduleSlidersVisible),
       moduleScopeBackgroundColor: normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor ?? "#000000"),
-      moduleScopeDotCore1Size: normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 0.5, 0.5),
-      moduleScopeDotCore1Brightness: normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 2, 2),
-      moduleScopeDotCore1Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffffff", "#ffffff"),
+      moduleScopeDotCore1Size: normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18, 3.18),
+      moduleScopeDotCore1Brightness: normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 4.5, 4.5),
+      moduleScopeDotCore1Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffa3a8", "#ffa3a8"),
       moduleScopeDotCore2Size: normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore2Size ?? 4, 4),
       moduleScopeDotCore2Brightness: normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore2Brightness ?? 0.45, 0.45),
-      moduleScopeDotCore2Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#ff0000", "#ff0000"),
+      moduleScopeDotCore2Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#444444", "#444444"),
       moduleScopeFramesPerSecond: normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60),
       moduleScopeLineThickness: normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp.moduleScopeLineThickness ?? 2),
       moduleScopeDiscontinuitySkipSamples: normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
@@ -220,12 +220,12 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleOscilloscopesVisible = Boolean(normalized.view.moduleOscilloscopesVisible);
   nodeGraphMvp.moduleSlidersVisible = Boolean(normalized.view.moduleSlidersVisible);
   nodeGraphMvp.moduleScopeBackgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(normalized.view.moduleScopeBackgroundColor);
-  nodeGraphMvp.moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(normalized.view.moduleScopeDotCore1Size, 0.5);
-  nodeGraphMvp.moduleScopeDotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(normalized.view.moduleScopeDotCore1Brightness, 2);
-  nodeGraphMvp.moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore1Color, "#ffffff");
+  nodeGraphMvp.moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(normalized.view.moduleScopeDotCore1Size, 3.18);
+  nodeGraphMvp.moduleScopeDotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(normalized.view.moduleScopeDotCore1Brightness, 4.5);
+  nodeGraphMvp.moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore1Color, "#ffa3a8");
   nodeGraphMvp.moduleScopeDotCore2Size = normalizeNodeGraphModuleScopeDotCoreSize(normalized.view.moduleScopeDotCore2Size, 4);
   nodeGraphMvp.moduleScopeDotCore2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(normalized.view.moduleScopeDotCore2Brightness, 0.45);
-  nodeGraphMvp.moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore2Color, "#ff0000");
+  nodeGraphMvp.moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore2Color, "#444444");
   nodeGraphMvp.moduleScopeFramesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(normalized.view.moduleScopeFramesPerSecond);
   nodeGraphMvp.moduleScopeLineThickness = normalizeNodeGraphModuleScopeLineThickness(normalized.view.moduleScopeLineThickness);
   nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(

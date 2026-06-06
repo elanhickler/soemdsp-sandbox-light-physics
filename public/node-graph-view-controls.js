@@ -200,12 +200,12 @@ function renderNodeGraphModuleScopeDotPreview(
 function renderNodeGraphModuleScopeBrightnessControl() {
   const burn = normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0);
   const backgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor);
-  const dotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 0.5, 0.5);
-  const dotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 2, 2);
-  const dotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffffff", "#ffffff");
+  const dotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18, 3.18);
+  const dotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
+  const dotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffa3a8", "#ffa3a8");
   const dotCore2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore2Size ?? 4, 4);
   const dotCore2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
-  const dotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#ff0000", "#ff0000");
+  const dotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#444444", "#444444");
   const framesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60);
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp.moduleScopeLineThickness ?? 2);
   const discontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
@@ -360,17 +360,17 @@ function refreshNodeGraphModuleScopeGeneratedDot() {
 }
 
 function setNodeGraphModuleScopeDotCore1Size(value) {
-  nodeGraphMvp.moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(value, 0.5);
+  nodeGraphMvp.moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(value, 3.18);
   refreshNodeGraphModuleScopeGeneratedDot();
 }
 
 function setNodeGraphModuleScopeDotCore1Brightness(value) {
-  nodeGraphMvp.moduleScopeDotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(value, 2);
+  nodeGraphMvp.moduleScopeDotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(value, 4.5);
   refreshNodeGraphModuleScopeGeneratedDot();
 }
 
 function setNodeGraphModuleScopeDotCore1Color(value) {
-  nodeGraphMvp.moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(value, "#ffffff");
+  nodeGraphMvp.moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(value, "#ffa3a8");
   refreshNodeGraphModuleScopeGeneratedDot();
 }
 
@@ -385,7 +385,7 @@ function setNodeGraphModuleScopeDotCore2Brightness(value) {
 }
 
 function setNodeGraphModuleScopeDotCore2Color(value) {
-  nodeGraphMvp.moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(value, "#ff0000");
+  nodeGraphMvp.moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(value, "#444444");
   refreshNodeGraphModuleScopeGeneratedDot();
 }
 
