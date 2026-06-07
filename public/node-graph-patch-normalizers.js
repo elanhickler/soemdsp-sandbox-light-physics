@@ -54,6 +54,7 @@ scope.mode      = 1d_full;
 scope.sync      = inherit;
 scope.cycles    = 1.7639;
 scope.zoom      = 1.0;
+scope.length    = 1.0;
 scope.syncSpeed = 1.0;
 dot1.color      = dot1.global.color;
 dot1.size       = 1.0 * dot1.global.size;
@@ -146,12 +147,14 @@ function normalizeNodeGraphScopeShader(scopeShader = {}) {
   const normalizedSync = parseNodeGraphScopeShaderSync(normalizedSource);
   const normalizedCycles = parseNodeGraphScopeShaderNumber(normalizedSource, "cycles", 1.7639, 1, 128);
   const normalizedZoom = parseNodeGraphScopeShaderNumber(normalizedSource, "zoom", 1, 0.01, 50);
+  const normalizedLength = parseNodeGraphScopeShaderNumber(normalizedSource, "length", 1, 0, 1);
   const normalizedSyncSpeed = parseNodeGraphScopeShaderNumber(normalizedSource, "syncSpeed", 1, 0, 50);
   return {
     cycles: normalizedCycles,
     enabled: scopeShader?.enabled !== false,
     kind: "scopeShader",
     language,
+    length: normalizedLength,
     mode: normalizedMode,
     source: normalizedSource || nodeGraphScopeShaderDefaultSource,
     sync: normalizedSync,

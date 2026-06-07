@@ -2642,15 +2642,17 @@ function nodeGraphModuleScopeApplyShaderDisplayMode(slot, buffer) {
   buffer.nodeGraphScopeShaderMode = shader.mode;
   if (shader.mode === "one_value") {
     const value = nodeGraphModuleScopeCurrentBufferSample(buffer);
+    const lineLength = clampNodeSliderValue(Number(shader.length), 0, 1);
     const lineBuffer = new Float32Array([value, value]);
     lineBuffer.nodeGraphScopeAnalyzer = buffer.nodeGraphScopeAnalyzer;
     lineBuffer.nodeGraphScopeCapturedOutput = buffer.nodeGraphScopeCapturedOutput;
     lineBuffer.nodeGraphScopeCurrentSamplePosition = 1;
     lineBuffer.nodeGraphScopeShaderMode = shader.mode;
+    lineBuffer.nodeGraphScopeOneValueLineLength = lineLength;
     lineBuffer.nodeGraphScopeSourceFrequency = buffer.nodeGraphScopeSourceFrequency;
     lineBuffer.nodeGraphScopeSyncBuffer = lineBuffer;
-    lineBuffer.nodeGraphScopeDrawFullWindow = true;
-    lineBuffer.nodeGraphScopeDrawProgress = 1;
+    lineBuffer.nodeGraphScopeDrawFullWindow = false;
+    lineBuffer.nodeGraphScopeDrawProgress = lineLength;
     lineBuffer.nodeGraphScopeDrawStartProgress = 0;
     lineBuffer.nodeGraphScopeDrawWrap = false;
     lineBuffer.nodeGraphScopeHoldPoint = false;
@@ -3683,6 +3685,12 @@ function nodeGraphModuleScopePhosphorFrameReady(slot) {
 }
 
 function nodeGraphModuleScopeBufferProgressRanges(buffer) {
+  if (buffer?.nodeGraphScopeShaderMode === "one_value") {
+    const lineLength = Number.isFinite(Number(buffer.nodeGraphScopeOneValueLineLength))
+      ? clampNodeSliderValue(Number(buffer.nodeGraphScopeOneValueLineLength), 0, 1)
+      : 1;
+    return lineLength > 0 ? [[0, lineLength]] : [];
+  }
   const drawProgress = Number.isFinite(Number(buffer?.nodeGraphScopeDrawProgress))
     ? clampNodeSliderValue(Number(buffer.nodeGraphScopeDrawProgress), 0.002, 1)
     : 1;
@@ -3790,6 +3798,7 @@ function nodeGraphModuleScopeBufferSegmentPoints(buffer, rect, canvas, pixelRati
   if (!spectrumMode) {
     points.nodeGraphScopeRawValues = rawValues;
     points.nodeGraphScopeSkippedPoints = skippedPoints;
+    points.nodeGraphScopeUniformAge = buffer?.nodeGraphScopeShaderMode === "one_value";
   }
   return points;
 }
@@ -3901,7 +3910,7 @@ function nodeGraphModuleScopeBeamVertices(points, canvas) {
     if (lengthPx < 0.001) {
       continue;
     }
-    const segmentProgress = (index / 2) / segmentCount;
+    const segmentProgress = points?.nodeGraphScopeUniformAge === true ? 1 : (index / 2) / segmentCount;
     for (const corner of corners) {
       vertices.push(x1, y1, x2, y2, corner, segmentProgress);
     }
