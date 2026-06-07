@@ -120,6 +120,31 @@ const nodeMetadataScriptSupportedKeys = new Set([
   "wraparound",
 ]);
 
+function nodeMetadataScriptReferenceHtml() {
+  const keys = Array.from(nodeMetadataScriptSupportedKeys).sort();
+  const aliases = Object.entries(nodeMetadataScriptAliases);
+  const keyHtml = keys
+    .map((key) => `<code title="param.name.${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(key)}</code>`)
+    .join("");
+  const aliasHtml = aliases.length
+    ? aliases
+      .map(([alias, key]) => `<code title="${escapeNodeMetadataScriptHtml(alias)} maps to ${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(alias)} -> ${escapeNodeMetadataScriptHtml(key)}</code>`)
+      .join("")
+    : "";
+  return `
+    <span>keys</span>
+    ${keyHtml}
+    ${aliasHtml ? `<span>aliases</span>${aliasHtml}` : ""}`;
+}
+
+function syncNodeMetadataScriptReference() {
+  const reference = document.getElementById("metadataScriptReference");
+  if (!reference) {
+    return;
+  }
+  reference.innerHTML = nodeMetadataScriptReferenceHtml();
+}
+
 function escapeNodeMetadataScriptHtml(value = "") {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -834,6 +859,7 @@ function bindNodeGraphMetadataPopoverEvents() {
     popover.addEventListener("input", handleNodeMetadataEditorInput);
   }
   const scriptSource = document.getElementById("metadataScriptSource");
+  syncNodeMetadataScriptReference();
   if (scriptSource && scriptSource.dataset.metadataScriptSourceBound !== "true") {
     scriptSource.dataset.metadataScriptSourceBound = "true";
     scriptSource.addEventListener("keydown", handleNodeMetadataScriptKeydown);

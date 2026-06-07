@@ -8660,6 +8660,30 @@ audio {
   font-weight: 500;
 }
 
+.metadata-script-reference {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+}
+
+.metadata-script-reference span {
+  color: rgba(127, 199, 217, 0.68);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.metadata-script-reference code {
+  padding: 2px 5px;
+  border: 1px solid rgba(127, 199, 217, 0.16);
+  border-radius: 4px;
+  background: rgba(4, 9, 11, 0.66);
+  color: rgba(205, 214, 216, 0.72);
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 0.62rem;
+}
+
 .metadata-script-editor {
   position: relative;
   min-height: 286px;
