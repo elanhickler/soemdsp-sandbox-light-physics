@@ -451,7 +451,7 @@ function nodeMetadataScriptPreviewItemHtml(assignment, details = "supported") {
     ? `${detail.before} => ${detail.after}`
     : detail.after || assignment.rawValue;
   return `
-    <li class="${state === "unsupported" ? "ignored" : state}">
+    <li class="${state === "unsupported" ? "ignored" : state}" data-line="${escapeNodeMetadataScriptHtml(assignment.line)}">
       <span>${escapeNodeMetadataScriptHtml(stateText)}</span>
       <em>L${escapeNodeMetadataScriptHtml(assignment.line)}</em>
       <strong>${escapeNodeMetadataScriptHtml(assignment.key)}</strong>
@@ -482,8 +482,9 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
       nodeMetadataScriptPreviewItemHtml(assignment, "unsupported")),
   ];
   if (diagnostics.syntaxIgnored.length) {
+    const firstSyntaxLine = diagnostics.syntaxIgnored[0];
     items.push(`
-      <li class="ignored">
+      <li class="ignored" data-line="${escapeNodeMetadataScriptHtml(firstSyntaxLine)}">
         <span>ignored</span>
         <em>L${escapeNodeMetadataScriptHtml(diagnostics.syntaxIgnored.join(","))}</em>
         <strong>syntax</strong>
@@ -507,6 +508,27 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
       </li>`);
   }
   preview.innerHTML = visibleItems.join("");
+}
+
+function focusNodeMetadataScriptLine(lineNumber) {
+  const source = document.getElementById("metadataScriptSource");
+  const line = Math.max(1, Number.parseInt(lineNumber, 10) || 1);
+  if (!source) {
+    return;
+  }
+  const lines = source.value.split("\n");
+  const start = lines.slice(0, line - 1).reduce((offset, text) => offset + text.length + 1, 0);
+  const end = start + (lines[line - 1]?.length || 0);
+  source.focus();
+  source.setSelectionRange(start, end);
+}
+
+function handleNodeMetadataScriptPreviewClick(event) {
+  const row = event.target?.closest?.("[data-line]");
+  if (!row) {
+    return;
+  }
+  focusNodeMetadataScriptLine(row.dataset.line);
 }
 
 function nodeMetadataScriptDiagnosticMessage(source = metadataScriptSourceText()) {
@@ -722,6 +744,11 @@ function bindNodeGraphMetadataPopoverEvents() {
     scriptSource.dataset.metadataScriptSourceBound = "true";
     scriptSource.addEventListener("keydown", handleNodeMetadataScriptKeydown);
     scriptSource.addEventListener("scroll", updateNodeMetadataScriptHighlight);
+  }
+  const scriptPreview = document.getElementById("metadataScriptPreview");
+  if (scriptPreview && scriptPreview.dataset.metadataScriptPreviewBound !== "true") {
+    scriptPreview.dataset.metadataScriptPreviewBound = "true";
+    scriptPreview.addEventListener("click", handleNodeMetadataScriptPreviewClick);
   }
   const closeButton = document.getElementById("metadataPopoverClose");
   if (closeButton && closeButton.dataset.metadataCloseBound !== "true") {

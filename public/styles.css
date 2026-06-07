@@ -8845,6 +8845,10 @@ audio {
   color: rgba(156, 164, 166, 0.82);
 }
 
+.metadata-script-preview li[data-line]:hover {
+  background: rgba(127, 199, 217, 0.08);
+}
+
 .metadata-script-preview li.more {
   opacity: 0.72;
 }
