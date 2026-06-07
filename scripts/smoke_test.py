@@ -7351,6 +7351,7 @@ def require_node_graph_mvp_contract() -> None:
         "function updateNodeMetadataScriptPreview(source = metadataScriptSourceText())",
         "title=\"${escapeNodeMetadataScriptHtml(`${key}: ${value}`)}\"",
         "function focusNodeMetadataScriptLine(lineNumber)",
+        "source.scrollTop = Math.max(0, (line - 2) * lineHeight)",
         "function handleNodeMetadataScriptPreviewClick(event)",
         "metadataScriptPreview",
         "metadataScriptPreviewBound",

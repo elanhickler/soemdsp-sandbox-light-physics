@@ -576,6 +576,9 @@ function focusNodeMetadataScriptLine(lineNumber) {
   const end = start + (lines[line - 1]?.length || 0);
   source.focus();
   source.setSelectionRange(start, end);
+  const lineHeight = Number.parseFloat(window.getComputedStyle(source).lineHeight) || 18;
+  source.scrollTop = Math.max(0, (line - 2) * lineHeight);
+  updateNodeMetadataScriptHighlight();
 }
 
 function handleNodeMetadataScriptPreviewClick(event) {
