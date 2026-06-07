@@ -257,6 +257,34 @@ function formatNodeMetadataScript(slider, metadata = nodeSliderMetadata(slider))
   return rows.join("\n");
 }
 
+function nodeMetadataScriptTemplateForKind(slider, kind) {
+  const normalizedKind = normalizeNodeMetadataKind(kind);
+  const template = nodeMetadataKindTemplates[normalizedKind] || nodeMetadataKindTemplates.decimal;
+  const templateMetadata = {
+    choices: template.choices || [],
+    def: Number.isFinite(Number(template.def)) ? Number(template.def) : 0,
+    displayChoices: Boolean(template.displayChoices),
+    divideChoicesVisibly: Boolean(template.divideChoicesVisibly),
+    kind: normalizedKind,
+    linearSmoothing: template.linearSmoothing !== false,
+    max: Number.isFinite(Number(template.max)) ? Number(template.max) : 1,
+    maxDigits: normalizeNodeGraphMetadataMaxDigits(template.maxDigits, normalizedKind),
+    mid: Number.isFinite(Number(template.mid)) ? Number(template.mid) : 0,
+    min: Number.isFinite(Number(template.min)) ? Number(template.min) : 0,
+    nonlinearSlider: Boolean(template.nonlinearSlider),
+    showSign: Boolean(template.showPlusMinus),
+    step: Number.isFinite(Number(template.step)) ? Number(template.step) : 0,
+    unit: template.unit || "",
+    wraparound: Boolean(template.wraparound),
+  };
+  const metadata = normalizeNodeGraphPatchParameterMetadata(
+    nodeGraphPatchNode(slider?.closest?.(".dsp-node")?.dataset.node)?.type,
+    slider?.dataset?.param,
+    templateMetadata,
+  ) || templateMetadata;
+  return formatNodeMetadataScript(slider, metadata);
+}
+
 function syncNodeMetadataScriptFromFields(options = {}) {
   const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
   if (!slider) {
@@ -578,6 +606,11 @@ function bindNodeGraphMetadataPopoverEvents() {
     scriptRefresh.dataset.metadataScriptRefreshBound = "true";
     scriptRefresh.addEventListener("click", () => syncNodeMetadataScriptFromFields());
   }
+  const scriptKindTemplate = document.getElementById("metadataScriptKindTemplate");
+  if (scriptKindTemplate && scriptKindTemplate.dataset.metadataScriptKindTemplateBound !== "true") {
+    scriptKindTemplate.dataset.metadataScriptKindTemplateBound = "true";
+    scriptKindTemplate.addEventListener("click", insertNodeMetadataScriptKindTemplate);
+  }
   const scriptCopy = document.getElementById("metadataScriptCopy");
   if (scriptCopy && scriptCopy.dataset.metadataScriptCopyBound !== "true") {
     scriptCopy.dataset.metadataScriptCopyBound = "true";
@@ -622,6 +655,22 @@ function handleNodeMetadataScriptKeydown(event) {
     event.preventDefault();
     applyNodeMetadataScriptEditor();
   }
+}
+
+function insertNodeMetadataScriptKindTemplate() {
+  const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
+  if (!slider) {
+    metadataScriptStatus("no parameter", true);
+    return;
+  }
+  if (nodeGraphMvp.metadataScriptDirty && !confirmNodeMetadataScriptDiscard()) {
+    metadataScriptStatus("template canceled", false);
+    return;
+  }
+  const kind = normalizeNodeMetadataKind(document.getElementById("metadataKindValue").value);
+  setMetadataScriptSourceText(nodeMetadataScriptTemplateForKind(slider, kind));
+  syncNodeMetadataScriptDiagnostics();
+  metadataScriptStatus(`template: ${kind}`, false, `Kind template inserted for ${kind}. Save to apply.`);
 }
 
 function bindNodeMetadataScriptBeforeUnload() {
