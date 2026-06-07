@@ -47,9 +47,10 @@
     "help": "Mouse: click to step patch history."
   },
   "script": {
-      "copy": "Copy patch script to clipboard",
-      "download": "Download patch script as a JSON file",
-      "paste": "Paste patch script from clipboard",
+    "apply": "Validate and apply the current patch script",
+    "copy": "Copy patch script to clipboard",
+    "download": "Save patch script as a JSON file on the desktop",
+    "paste": "Paste patch script from clipboard",
     "updateDefault": "Validate current patch script and save it as the default preset",
     "load": "Load patch script",
     "view": "Open the Patch Script utility",

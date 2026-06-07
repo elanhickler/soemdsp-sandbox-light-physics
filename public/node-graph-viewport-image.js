@@ -415,7 +415,6 @@ function setNodeGraphViewportImageButtonStatus(text, options = {}) {
   const buttons = Array.isArray(options.buttons)
     ? options.buttons.filter(Boolean)
     : [
-      document.getElementById("nodeCopyViewportImageButton"),
       document.getElementById("nodeCopyViewportImageOverlayButton"),
     ].filter(Boolean);
   for (const button of buttons) {
@@ -433,7 +432,6 @@ function setNodeGraphViewportImageButtonStatus(text, options = {}) {
 
 async function copyNodeGraphViewportImageToClipboard() {
   const buttons = [
-    document.getElementById("nodeCopyViewportImageButton"),
     document.getElementById("nodeCopyViewportImageOverlayButton"),
   ].filter(Boolean);
   if (!navigator.clipboard?.write || typeof ClipboardItem !== "function") {

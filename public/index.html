@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=buy-license-button-1">
+  <link rel="stylesheet" href="./public/styles.css?v=canvas-game-foundation-1">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -150,17 +150,13 @@
           <button id="nodeVisibilityMenuButton" type="button" aria-pressed="false" aria-haspopup="menu">Visibility</button>
           <button id="nodeGlobalScopeMenuButton" type="button" aria-pressed="false">Oscilloscope Settings</button>
           <a
-            id="nodeBuyLicenseButton"
-            class="node-buy-license-button"
-            href="https://soundemote.io/license?amount=10"
+            id="nodeDonateFiveButton"
+            class="node-donate-five-button"
+            href="https://soundemote.io/donate?amount=10"
             target="_blank"
             rel="noopener"
-            data-license-amount="10"
-            aria-label="Buy a ten dollar Soundemote Sandbox license"><span>Buy License</span><span>$10</span></a>
-          <button
-            id="nodeCopyViewportImageButton"
-            type="button"
-            data-tooltip-key="workspace.copyViewportImage">Copy Viewport Image</button>
+            data-support-amount="10"
+            aria-label="Donate ten dollars to support Soundemote Sandbox"><span>Donate</span><span>$10</span></a>
           <button id="nodeShaderScriptButton" type="button" aria-pressed="false">Shader</button>
         </div>
         <div
@@ -511,6 +507,49 @@
       </div>
 
       <div
+        id="nodeCanvasScriptDialog"
+        class="node-canvas-script-dialog"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="nodeCanvasScriptTitle"
+        hidden>
+        <div class="node-canvas-script-panel">
+          <div class="node-canvas-script-heading">
+            <div>
+              <span>Canvas Module</span>
+              <strong id="nodeCanvasScriptTitle">Canvas Script</strong>
+            </div>
+            <button
+              id="nodeCanvasScriptClose"
+              class="panel-close-button"
+              type="button"
+              aria-label="Close canvas script dialog">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="node-canvas-script-body">
+            <div id="nodeCanvasScriptPreview" class="node-canvas-script-preview" aria-label="Canvas script preview">
+              <div class="node-canvas-script-preview-layers" data-node-canvas-script-layers="true"></div>
+              <strong>1024 x 1024 canvas (2 layers)</strong>
+            </div>
+            <textarea
+              id="nodeCanvasScriptSource"
+              spellcheck="false"
+              aria-label="Canvas script source"></textarea>
+          </div>
+          <div class="node-canvas-script-actions">
+            <button id="nodeCanvasScriptSave" type="button">Save</button>
+            <button id="nodeCanvasScriptCopy" type="button">Copy</button>
+            <button id="nodeCanvasScriptPaste" type="button">Paste</button>
+            <button id="nodeCanvasScriptToDesktop" type="button">To Desktop</button>
+            <button id="nodeCanvasScriptStarter" type="button">Canvas Starter</button>
+            <button id="nodeCanvasScriptSaveDefault" type="button">Save As Default</button>
+            <span id="nodeCanvasScriptStatus" class="pill">ready</span>
+          </div>
+        </div>
+      </div>
+
+      <div
         id="nodeShaderScriptDialog"
         class="node-shader-script-dialog"
         role="dialog"
@@ -705,21 +744,23 @@
           </div>
           <small>Raw patch JSON for load, save, defaults, and recovery.</small>
         </div>
-        <div class="node-script-actions" aria-label="Patch script clipboard actions">
+        <div class="node-script-actions" aria-label="Patch script editor actions">
+          <button
+            id="saveNodeGraphScriptEditorButton"
+            type="button"
+            data-tooltip-key="script.apply">Save</button>
           <button
             id="copyNodeGraphScriptButton"
             type="button"
-            data-tooltip-key="script.copy">Copy Script</button>
+            data-tooltip-key="script.copy">Copy</button>
           <button
             id="downloadNodeGraphScriptButton"
-            class="node-script-icon-button"
             type="button"
-            aria-label="Download patch script"
-            data-tooltip-key="script.download"><span aria-hidden="true">&#x1f4be;</span></button>
+            data-tooltip-key="script.download">To Desktop</button>
           <button
             id="pasteNodeGraphScriptButton"
             type="button"
-            data-tooltip-key="script.paste">Paste Script</button>
+            data-tooltip-key="script.paste">Paste</button>
           <button
             id="updateDefaultPresetButton"
             type="button"
@@ -1913,6 +1954,12 @@
             <button id="nodeSceneImageRefresh" type="button">refresh</button>
           </div>
         </div>
+        <div id="nodeSceneCanvasControls" class="scene-context-text-box-controls" hidden>
+          <span>canvas</span>
+          <div>
+            <button id="nodeSceneCanvasScript" type="button">Canvas Script</button>
+          </div>
+        </div>
         <input
           id="nodeSceneImageFileInput"
           type="file"
@@ -2831,20 +2878,20 @@
   <script src="./public/manifest-view.js?v=manifest-view-refactor-1780360800000"></script>
   <script src="./public/manifest-loader.js?v=manifest-loader-refactor-1780389600000"></script>
   <script src="./public/node-graph-wires.js?v=external-graph-inputs-1780816800000"></script>
-  <script src="./public/node-graph-file-actions.js?v=slider-unit-color-1780307400000"></script>
+  <script src="./public/node-graph-file-actions.js?v=patch-script-editor-actions-1"></script>
   <script src="./public/node-graph-default-buttons.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-cookbook-filter.js?v=filter-curve-zero-cutoffs-1780822200000"></script>
-  <script src="./public/node-graph-module-definitions.js?v=stereo-noise-xy-1"></script>
-  <script src="./public/node-graph-module-store.js?v=draggable-dialog-headings-1"></script>
-  <script src="./public/node-graph-module-sizing.js?v=graph-module-screen-1780812000000"></script>
+  <script src="./public/node-graph-module-definitions.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-module-store.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-module-sizing.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-metadata-kinds.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-parameter-metadata.js?v=codeblock-state-context-1"></script>
   <script src="./public/node-graph-metadata-defaults.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-text-box-utils.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-image-utils.js?v=image-trace-texture-1780644000000"></script>
+  <script src="./public/node-graph-image-utils.js?v=canvas-game-foundation-1"></script>
   <script src="./public/node-graph-graph-utils.js?v=graph2-through-curves-1"></script>
   <script src="./public/node-graph-text-box-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-patch-normalizers.js?v=shader-default-comments-1"></script>
+  <script src="./public/node-graph-patch-normalizers.js?v=canvas-game-foundation-1"></script>
   <script src="./public/node-graph-ui-view.js?v=graph-endpoint-lock-1"></script>
   <script src="./public/node-graph-audio-derivation.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-grid-utils.js?v=half-grid-window-drag-1"></script>
@@ -2864,17 +2911,18 @@
   <script src="./public/node-graph-clap-host.js?v=clap-diagnostics-1"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-node-dragging.js?v=module-whole-grid-pan-half-grid-1"></script>
-  <script src="./public/node-graph-context-menu.js?v=draggable-dialog-headings-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-module-actions.js?v=module-whole-grid-pan-half-grid-1"></script>
-  <script src="./public/node-graph-code-screen.js?v=code-screen-1"></script>
-  <script src="./public/node-graph-module-scopes.js?v=one-value-line-length-1"></script>
+  <script src="./public/node-graph-code-screen.js?v=canvas-game-foundation-1"></script>
+  <script src="./public/node-graph-module-scopes.js?v=scope-padding-1"></script>
   <script src="./public/node-graph-shader-script.js?v=one-value-line-length-1"></script>
+  <script src="./public/node-graph-canvas-script.js?v=canvas-game-foundation-1"></script>
   <script src="./public/node-graph-module-factories.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-module-header-rendering.js?v=tap-tempo-symbol-1"></script>
-  <script src="./public/node-graph-module-rendering.js?v=graph-endpoint-lock-1"></script>
+  <script src="./public/node-graph-module-rendering.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-history.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-visual-utils.js?v=text-light-registry-1780800000000"></script>
-  <script src="./public/node-graph-patch-clone.js?v=graph-endpoint-lock-1"></script>
+  <script src="./public/node-graph-patch-clone.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-slider-metadata.js?v=slider-math-input-1780438200000"></script>
   <script src="./public/node-graph-slider-values.js?v=slider-zoom-geometry-1780615800000"></script>
   <script src="./public/node-graph-slider-dragging.js?v=graph-endpoint-lock-1"></script>
@@ -2918,9 +2966,9 @@
   <script src="./public/node-graph-live-input-status.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-live-evidence.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-live-control-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-default-patch.js?v=default-oversampling-x1-1"></script>
+  <script src="./public/node-graph-default-patch.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-state.js?v=metadata-script-dirty-1"></script>
-  <script src="./public/node-graph-patch-core.js?v=module-whole-grid-pan-half-grid-1"></script>
+  <script src="./public/node-graph-patch-core.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-live-plan-runtime.js?v=graph2-smoothing-3"></script>
   <script src="./public/node-graph-live-parameter-runtime.js?v=clap-tail-source-silence-1"></script>
   <script src="./public/node-graph-oscillator-runtime.js?v=ellipsoid-audio-1"></script>
@@ -2931,9 +2979,9 @@
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-workspace-event-bindings.js?v=constraint-overlay-toggles-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=copy-visual-output-1"></script>
-  <script src="./public/node-graph-header-event-bindings.js?v=draggable-dialog-headings-1"></script>
+  <script src="./public/node-graph-header-event-bindings.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=node-graph-help-event-bindings-refactor-1780369200000"></script>
-  <script src="./public/node-graph-scene-menu-event-bindings.js?v=draggable-dialog-headings-1"></script>
+  <script src="./public/node-graph-scene-menu-event-bindings.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-uidev-event-bindings.js?v=text-light-registry-1780800000000"></script>
   <script src="./public/node-graph-settings-event-bindings.js?v=metadata-popover-bind-1"></script>
   <script src="./public/node-graph-slider-event-bindings.js?v=node-graph-slider-event-bindings-refactor-1780369200000"></script>

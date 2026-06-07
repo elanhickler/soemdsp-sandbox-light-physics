@@ -55,6 +55,7 @@ scope.sync      = inherit;
 scope.cycles    = 1.7639;
 scope.zoom      = 1.0;
 scope.length    = 1.0;
+scope.padding   = 0.04;
 scope.syncSpeed = 1.0;
 dot1.color      = dot1.global.color;
 dot1.size       = 1.0 * dot1.global.size;
@@ -68,6 +69,23 @@ blend.mode      = laser;`;
 
 const nodeGraphScopeShaderVisualOscilloscopeDefaultSource = nodeGraphScopeShaderDefaultSource
   .replace("scope.mode      = 1d_full;", "scope.mode      = x_y;");
+
+const nodeGraphCanvasScriptDefaultSource = `canvas.size(1024, 1024);
+canvas.background = transparent;
+
+layer("A").input   = A;
+layer("A").x       = 0.5;
+layer("A").y       = 0.5;
+layer("A").scale   = 1.0;
+layer("A").opacity = 1.0;
+
+layer("B").input   = B;
+layer("B").x       = 0.5;
+layer("B").y       = 0.5;
+layer("B").scale   = 1.0;
+layer("B").opacity = 0.5;
+
+output = canvas;`;
 
 const nodeGraphScopeShaderModes = Object.freeze(["1d_full", "1d_scan", "x_y", "one_value"]);
 const nodeGraphScopeShaderSyncModes = Object.freeze(["inherit", "on", "off"]);
@@ -148,6 +166,7 @@ function normalizeNodeGraphScopeShader(scopeShader = {}) {
   const normalizedCycles = parseNodeGraphScopeShaderNumber(normalizedSource, "cycles", 1.7639, 1, 128);
   const normalizedZoom = parseNodeGraphScopeShaderNumber(normalizedSource, "zoom", 1, 0.01, 50);
   const normalizedLength = parseNodeGraphScopeShaderNumber(normalizedSource, "length", 1, 0, 1);
+  const normalizedPadding = parseNodeGraphScopeShaderNumber(normalizedSource, "padding", 0.04, 0, 0.45);
   const normalizedSyncSpeed = parseNodeGraphScopeShaderNumber(normalizedSource, "syncSpeed", 1, 0, 50);
   return {
     cycles: normalizedCycles,
@@ -156,11 +175,132 @@ function normalizeNodeGraphScopeShader(scopeShader = {}) {
     language,
     length: normalizedLength,
     mode: normalizedMode,
+    padding: normalizedPadding,
     source: normalizedSource || nodeGraphScopeShaderDefaultSource,
     sync: normalizedSync,
     syncSpeed: normalizedSyncSpeed,
     videoInput: normalizedVideoInput,
     zoom: normalizedZoom,
+  };
+}
+
+function parseNodeGraphCanvasScriptSize(source = "") {
+  const match = String(source || "").match(/(?:^|\n)\s*canvas\.size\s*\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\)\s*;/i);
+  const normalizeDimension = (value) => {
+    const number = Math.round(Number(value));
+    return Number.isFinite(number) ? Math.max(1, Math.min(4096, number)) : 1024;
+  };
+  return {
+    height: normalizeDimension(match?.[2]),
+    width: normalizeDimension(match?.[1]),
+  };
+}
+
+function normalizeNodeGraphCanvasScriptIdentifier(value = "", fallback = "layer") {
+  const text = String(value || "").trim().replace(/[^A-Za-z0-9_.:-]+/g, "-").replace(/^-+|-+$/g, "");
+  return text || fallback;
+}
+
+function normalizeNodeGraphCanvasScriptScalar(value = "", fallback = 0, min = -Infinity, max = Infinity) {
+  const number = Number(value);
+  const safeFallback = Number.isFinite(Number(fallback)) ? Number(fallback) : 0;
+  const safeMin = Number.isFinite(Number(min)) ? Number(min) : -Infinity;
+  const safeMax = Number.isFinite(Number(max)) ? Number(max) : Infinity;
+  return Number.isFinite(number)
+    ? Math.max(safeMin, Math.min(safeMax, number))
+    : safeFallback;
+}
+
+function normalizeNodeGraphCanvasScriptToken(value = "", fallback = "") {
+  const text = String(value || "").trim();
+  return text.replace(/^["']|["']$/g, "") || fallback;
+}
+
+function parseNodeGraphCanvasScriptBackground(source = "") {
+  const match = String(source || "").match(/(?:^|\n)\s*canvas\.background\s*=\s*([^;\n]+)\s*;/i);
+  return normalizeNodeGraphCanvasScriptToken(match?.[1], "transparent").slice(0, 64);
+}
+
+function parseNodeGraphCanvasScriptOutput(source = "") {
+  const match = String(source || "").match(/(?:^|\n)\s*output\s*=\s*([^;\n]+)\s*;/i);
+  return normalizeNodeGraphCanvasScriptToken(match?.[1], "canvas").slice(0, 64);
+}
+
+function parseNodeGraphCanvasScriptLayers(source = "") {
+  const layers = new Map();
+  const ensureLayer = (name) => {
+    const id = normalizeNodeGraphCanvasScriptIdentifier(name, `layer-${layers.size + 1}`);
+    if (!layers.has(id)) {
+      layers.set(id, {
+        id,
+        input: id,
+        opacity: 1,
+        rotation: 0,
+        scale: 1,
+        visible: true,
+        x: 0.5,
+        y: 0.5,
+      });
+    }
+    return layers.get(id);
+  };
+  const pattern = /(?:^|\n)\s*layer\(\s*["']?([^"')]+)["']?\s*\)\.([A-Za-z][A-Za-z0-9_]*)\s*=\s*([^;\n]+)\s*;/g;
+  for (const match of String(source || "").matchAll(pattern)) {
+    const layer = ensureLayer(match[1]);
+    const key = String(match[2] || "").trim();
+    const rawValue = normalizeNodeGraphCanvasScriptToken(match[3]);
+    if (key === "input") {
+      layer.input = normalizeNodeGraphCanvasScriptIdentifier(rawValue, layer.id);
+    } else if (key === "x" || key === "y") {
+      layer[key] = normalizeNodeGraphCanvasScriptScalar(rawValue, layer[key], 0, 1);
+    } else if (key === "opacity") {
+      layer.opacity = normalizeNodeGraphCanvasScriptScalar(rawValue, layer.opacity, 0, 1);
+    } else if (key === "scale") {
+      layer.scale = normalizeNodeGraphCanvasScriptScalar(rawValue, layer.scale, 0, 100);
+    } else if (key === "rotation") {
+      layer.rotation = normalizeNodeGraphCanvasScriptScalar(rawValue, layer.rotation, -360, 360);
+    } else if (key === "visible") {
+      layer.visible = !["false", "0", "off", "hidden"].includes(rawValue.toLowerCase());
+    }
+  }
+  if (!layers.size) {
+    ensureLayer("A");
+    ensureLayer("B");
+  }
+  return Array.from(layers.values()).slice(0, 16);
+}
+
+function parseNodeGraphCanvasScriptModel(source = "") {
+  const normalizedSource = String(source || "").trim() || nodeGraphCanvasScriptDefaultSource;
+  const size = parseNodeGraphCanvasScriptSize(normalizedSource);
+  return {
+    background: parseNodeGraphCanvasScriptBackground(normalizedSource),
+    height: size.height,
+    layers: parseNodeGraphCanvasScriptLayers(normalizedSource),
+    output: parseNodeGraphCanvasScriptOutput(normalizedSource),
+    width: size.width,
+  };
+}
+
+function normalizeNodeGraphCanvasScript(canvasScript = {}) {
+  const source = typeof canvasScript === "string"
+    ? canvasScript
+    : canvasScript && typeof canvasScript === "object"
+      ? canvasScript.source
+      : "";
+  const language = String(canvasScript?.language || "canvas-js").trim().slice(0, 32) || "canvas-js";
+  const normalizedSource = String(source || "").trim().slice(0, 100000);
+  const model = parseNodeGraphCanvasScriptModel(normalizedSource || nodeGraphCanvasScriptDefaultSource);
+  return {
+    background: model.background,
+    enabled: canvasScript?.enabled !== false,
+    height: model.height,
+    kind: "canvasScript",
+    language,
+    layers: model.layers,
+    output: model.output,
+    source: normalizedSource || nodeGraphCanvasScriptDefaultSource,
+    width: model.width,
   };
 }
 

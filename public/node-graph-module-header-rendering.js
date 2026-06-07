@@ -85,6 +85,42 @@ function createNodeGraphHeaderTimingInput(key, label, options = {}) {
   return field;
 }
 
+function createNodeGraphHeaderSpeedPlaceholder() {
+  const field = document.createElement("label");
+  field.className = "node-header-timing-field node-header-speed-placeholder";
+  field.setAttribute("aria-label", "Speed control under construction");
+  field.title = "Under construction";
+
+  const caption = document.createElement("span");
+  caption.textContent = "Speed";
+  field.append(caption);
+
+  const inputWrap = document.createElement("span");
+  inputWrap.className = "node-header-speed-placeholder-value";
+
+  const input = document.createElement("input");
+  input.className = "node-header-timing-input";
+  input.inputMode = "decimal";
+  input.max = "16";
+  input.min = "0";
+  input.readOnly = true;
+  input.step = "0.1";
+  input.type = "number";
+  input.value = "1.0";
+  input.setAttribute("aria-label", "Speed placeholder, under construction");
+  input.addEventListener("keydown", (event) => event.stopPropagation());
+  input.addEventListener("pointerdown", (event) => event.stopPropagation());
+
+  const badge = document.createElement("span");
+  badge.className = "node-header-speed-placeholder-badge";
+  badge.textContent = "WIP";
+  badge.setAttribute("aria-hidden", "true");
+
+  inputWrap.append(input, badge);
+  field.append(inputWrap);
+  return field;
+}
+
 function resetNodeGraphTapTempo(nowMs = 0) {
   nodeGraphTapTempoState.lastTapMs = nowMs;
   nodeGraphTapTempoState.intervals = [];
@@ -135,6 +171,7 @@ function createNodeGraphHeaderTimingWidgets() {
   group.setAttribute("aria-label", "Patch timing");
   group.append(
     createNodeGraphHeaderTimingInput("tempoBpm", "BPM", { max: 320 }),
+    createNodeGraphHeaderSpeedPlaceholder(),
     createNodeGraphHeaderTimingInput("timeSignatureNumerator", "Beats"),
     createNodeGraphHeaderTimingInput("timeSignatureDenominator", "Unit"),
     createNodeGraphTapTempoButton(),

@@ -1,5 +1,6 @@
 function bindNodeGraphHeaderControlEvents() {
   bindNodeGraphShaderScriptEvents();
+  bindNodeGraphCanvasScriptEvents();
   bindNodeGraphCodeScreenEvents();
   renderNodeGraphPatchTimingControls();
   const closeNodeGraphModuleBrowser = () => {
@@ -26,7 +27,6 @@ function bindNodeGraphHeaderControlEvents() {
   document.getElementById("nodeModuleButtonsToggleButton").addEventListener("click", toggleNodeGraphModuleButtonsVisibility);
   document.getElementById("nodeOscilloscopeToggleButton").addEventListener("click", toggleNodeGraphOscilloscopeVisibility);
   document.getElementById("nodeGlobalScopeMenuButton").addEventListener("click", toggleNodeGlobalScopeMenu);
-  document.getElementById("nodeCopyViewportImageButton").addEventListener("click", copyNodeGraphViewportImageToClipboard);
   document
     .getElementById("nodeCopyViewportImageOverlayButton")
     .addEventListener("click", copyNodeGraphViewportImageToClipboard);
@@ -238,6 +238,7 @@ function bindNodeGraphHeaderControlEvents() {
     .getElementById("nodeSettingsScriptViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("script"));
   document.getElementById("nodePatchScript").addEventListener("input", handleNodePatchScriptInput);
+  document.getElementById("saveNodeGraphScriptEditorButton").addEventListener("click", saveNodeGraphScriptEditor);
   document.getElementById("copyNodeGraphScriptButton").addEventListener("click", copyNodeGraphScriptToClipboard);
   document.getElementById("downloadNodeGraphScriptButton").addEventListener("click", saveNodeGraphScript);
   document.getElementById("pasteNodeGraphScriptButton").addEventListener("click", pasteNodeGraphScriptFromClipboard);

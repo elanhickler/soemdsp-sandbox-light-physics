@@ -135,6 +135,15 @@ function nodeGraphModuleRequiredHeightUnitsForUi(type, ui = {}) {
       nodeGraphModuleLayout.fitCushionGu
     );
   }
+  if (nodeGraphModuleDefinitions[type]?.layout === "canvas") {
+    return (
+      nodeGraphModuleHeaderHeightUnits(ui) +
+      nodeGraphModuleLayout.moduleScopeHeightGu * 1.5 +
+      nodeGraphModuleIoSectionHeightGu(type) +
+      nodeGraphModuleLayout.fitCushionGu +
+      nodeGraphModuleLayout.moduleGridInsetGu * 2
+    );
+  }
   if (nodeGraphModuleDefinitions[type]?.layout === "visualScope") {
     return (
       nodeGraphModuleHeaderHeightUnits(ui) +
@@ -194,6 +203,9 @@ function nodeGraphModuleGridHeightUnitsForUi(type, ui = {}) {
     return Math.ceil(nodeGraphModuleRequiredHeightUnitsForUi(type, ui));
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "image") {
+    return Math.ceil(nodeGraphModuleRequiredHeightUnitsForUi(type, ui));
+  }
+  if (nodeGraphModuleDefinitions[type]?.layout === "canvas") {
     return Math.ceil(nodeGraphModuleRequiredHeightUnitsForUi(type, ui));
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "visualScope") {

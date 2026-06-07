@@ -2537,6 +2537,20 @@ function nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer =
   return capturedBuffer;
 }
 
+function nodeGraphModuleScopeShouldPreferOfflineOutputAnalyzer(slot, buffer) {
+  if (slot?.type !== "output" || !buffer?.length) {
+    return false;
+  }
+  const settings = nodeGraphModuleScopeEffectiveSettingForSlot(slot);
+  if (!settings.sync || settings.outputTraceMode === "decay") {
+    return false;
+  }
+  const shader = nodeGraphModuleScopeShaderConfigForSlot(slot);
+  return shader.mode === "1d_full" &&
+    Number.isFinite(Number(buffer.nodeGraphScopePeriodSamples)) &&
+    Number(buffer.nodeGraphScopePeriodSamples) > 0;
+}
+
 function nodeGraphModuleScopeContinuousScanProgress(slot, speed, time) {
   const key = String(slot?.nodeId || "");
   const now = Math.max(0, Number(time) || 0);
@@ -2640,6 +2654,7 @@ function nodeGraphModuleScopeApplyShaderDisplayMode(slot, buffer) {
   }
   const shader = nodeGraphModuleScopeShaderConfigForSlot(slot);
   buffer.nodeGraphScopeShaderMode = shader.mode;
+  buffer.nodeGraphScopeShaderPadding = shader.padding;
   if (shader.mode === "one_value") {
     const value = nodeGraphModuleScopeCurrentBufferSample(buffer);
     const lineLength = clampNodeSliderValue(Number(shader.length), 0, 1);
@@ -2649,6 +2664,7 @@ function nodeGraphModuleScopeApplyShaderDisplayMode(slot, buffer) {
     lineBuffer.nodeGraphScopeCurrentSamplePosition = 1;
     lineBuffer.nodeGraphScopeShaderMode = shader.mode;
     lineBuffer.nodeGraphScopeOneValueLineLength = lineLength;
+    lineBuffer.nodeGraphScopeShaderPadding = shader.padding;
     lineBuffer.nodeGraphScopeSourceFrequency = buffer.nodeGraphScopeSourceFrequency;
     lineBuffer.nodeGraphScopeSyncBuffer = lineBuffer;
     lineBuffer.nodeGraphScopeDrawFullWindow = false;
@@ -2697,9 +2713,11 @@ function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null) {
   } else if (slot?.type === "spiral" || slot?.type === "ellipsoid") {
     buffer = nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, "X", "Y") || capturedBuffer;
   } else if (slot?.type === "output") {
-    buffer = nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer) ||
-      nodeGraphModuleScopeOfflineOutputAnalyzerBuffer(slot) ||
-      capturedBuffer;
+    const offlineAnalyzer = nodeGraphModuleScopeOfflineOutputAnalyzerBuffer(slot);
+    const capturedAnalyzer = nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer);
+    buffer = nodeGraphModuleScopeShouldPreferOfflineOutputAnalyzer(slot, offlineAnalyzer)
+      ? offlineAnalyzer
+      : capturedAnalyzer || offlineAnalyzer || capturedBuffer;
   } else {
     buffer = nodeGraphModuleScopeOfflineOscillatorBuffer(slot) ||
       nodeGraphModuleScopeOfflineAdditiveOscillatorBuffer(slot) ||
@@ -3818,16 +3836,28 @@ function nodeGraphModuleScopeCenteredSquareRect(rect) {
   };
 }
 
-function nodeGraphModuleScopeDrawingRect(rect, buffer = null) {
-  if (buffer?.nodeGraphScopeXy) {
-    return nodeGraphModuleScopeCenteredSquareRect(rect);
-  }
+function nodeGraphModuleScopePaddedRect(rect, padding = 0) {
+  const width = Math.max(1, Number(rect?.width) || 0);
+  const height = Math.max(1, Number(rect?.height) || 0);
+  const safePadding = clampNodeSliderValue(Number(padding) || 0, 0, 0.45);
+  const inset = Math.min(width, height) * safePadding;
   return {
-    height: Math.max(1, Number(rect?.height) || 0),
-    left: Number(rect?.left) || 0,
-    top: Number(rect?.top) || 0,
-    width: Math.max(1, Number(rect?.width) || 0),
+    height: Math.max(1, height - inset * 2),
+    left: (Number(rect?.left) || 0) + inset,
+    top: (Number(rect?.top) || 0) + inset,
+    width: Math.max(1, width - inset * 2),
   };
+}
+
+function nodeGraphModuleScopeDrawingRect(rect, buffer = null, slot = null) {
+  const shaderPadding = Number.isFinite(Number(buffer?.nodeGraphScopeShaderPadding))
+    ? Number(buffer.nodeGraphScopeShaderPadding)
+    : Number(nodeGraphModuleScopeShaderConfigForSlot(slot).padding);
+  const paddedRect = nodeGraphModuleScopePaddedRect(rect, shaderPadding);
+  if (buffer?.nodeGraphScopeXy) {
+    return nodeGraphModuleScopeCenteredSquareRect(paddedRect);
+  }
+  return paddedRect;
 }
 
 function nodeGraphModuleScopeXyPoints(buffer, rect, canvas, pixelRatio, slot) {
@@ -4871,7 +4901,7 @@ function drawNodeGraphModuleScopes() {
         top: rect.top - workspaceRect.top,
         width: rect.width,
       };
-      const drawRect = nodeGraphModuleScopeDrawingRect(fullScopeRect, buffer);
+      const drawRect = nodeGraphModuleScopeDrawingRect(fullScopeRect, buffer, slot);
       const zoomScale = nodeGraphModuleScopeZoomScale();
       return {
         buffer,

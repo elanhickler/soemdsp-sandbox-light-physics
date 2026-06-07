@@ -333,6 +333,42 @@ const nodeGraphCodeScreenHelperRegistry = Object.freeze([
     availability: "script runner",
   },
   {
+    category: "canvas shader",
+    namespace: "canvas",
+    name: "parse",
+    signature: "canvas.parse(source)",
+    description: "Parse a Canvas Script into the normalized layer/compositor model used by canvas modules.",
+    snippet: "debug.inspect(\"canvas model\", canvas.parse(source))",
+    availability: "script runner",
+  },
+  {
+    category: "canvas shader",
+    namespace: "canvas",
+    name: "layers",
+    signature: "canvas.layers(source)",
+    description: "Return the parsed Canvas Script layers as rows for watches, tables, and debugging.",
+    snippet: "watch.table(\"canvas layers\", canvas.layers(source))",
+    availability: "script runner",
+  },
+  {
+    category: "canvas shader",
+    namespace: "canvas",
+    name: "module",
+    signature: "canvas.module(id, source)",
+    description: "Create a plan-only canvas module object with RGBA output and parsed Canvas Script metadata.",
+    snippet: "debug.inspect(\"canvas module\", canvas.module(\"scene\", source))",
+    availability: "script runner",
+  },
+  {
+    category: "canvas shader",
+    namespace: "canvas",
+    name: "markdown",
+    signature: "canvas.markdown(source)",
+    description: "Render a Canvas Script summary as portable Markdown.",
+    snippet: "watch.value(\"canvas docs\", canvas.markdown(source))",
+    availability: "script runner",
+  },
+  {
     category: "metadata parser",
     namespace: "tags",
     name: "parse",
@@ -4841,6 +4877,73 @@ function nodeGraphCodeScreenWorkspaceVisualApi() {
   };
 }
 
+function nodeGraphCodeScreenWorkspaceCanvasApi() {
+  const cloneScript = (script) => ({
+    background: script.background,
+    enabled: script.enabled,
+    height: script.height,
+    kind: script.kind,
+    language: script.language,
+    layers: (script.layers || []).map((layer) => ({ ...layer })),
+    output: script.output,
+    source: script.source,
+    width: script.width,
+  });
+  return {
+    layers(source = "") {
+      return this.parse(source).layers.map((layer, index) => ({
+        ...layer,
+        index,
+        runtime: "canvas script layer",
+      }));
+    },
+    markdown(source = "") {
+      const model = this.parse(source);
+      const lines = [
+        "# Canvas Script",
+        "",
+        `size: ${model.width} x ${model.height}`,
+        `background: ${model.background}`,
+        `output: ${model.output}`,
+        `layers: ${model.layers.length}`,
+        "",
+        "| Layer | Input | X | Y | Scale | Opacity | Rotation | Visible |",
+        "| - | - | - | - | - | - | - | - |",
+        ...model.layers.map((layer) => [
+          layer.id,
+          layer.input,
+          layer.x,
+          layer.y,
+          layer.scale,
+          layer.opacity,
+          layer.rotation,
+          layer.visible ? "yes" : "no",
+        ].join(" | ")),
+      ];
+      return lines.join("\n");
+    },
+    module(id = "canvas", source = "") {
+      const name = String(id || "canvas").trim() || "canvas";
+      const script = this.parse(source);
+      return {
+        canvasScript: script,
+        id: normalizeNodeGraphCodeScreenId(name, "canvas"),
+        inputs: ["A", "B", "X", "Y", "Opacity"],
+        outputs: ["RGBA"],
+        runtime: "plan only",
+        title: name,
+        type: "canvas",
+      };
+    },
+    parse(source = "") {
+      return cloneScript(normalizeNodeGraphCanvasScript({ source }));
+    },
+    starter() {
+      return nodeGraphCanvasScriptDefaultSource;
+    },
+  };
+}
+
 function nodeGraphCodeScreenWorkspaceTagsApi() {
   const parse = (value = "") => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -5905,6 +6008,7 @@ function nodeGraphCodeScreenWorkspaceScriptBuilders() {
   const block = nodeGraphCodeScreenWorkspaceBlockApi();
   const plan = nodeGraphCodeScreenWorkspacePlanApi();
   const audio = nodeGraphCodeScreenWorkspaceAudioApi();
+  const canvas = nodeGraphCodeScreenWorkspaceCanvasApi();
   const circuit = nodeGraphCodeScreenWorkspaceCircuitApi();
   const event = nodeGraphCodeScreenWorkspaceEventApi();
   const game = nodeGraphCodeScreenWorkspaceGameApi(event);
@@ -6509,6 +6613,7 @@ function nodeGraphCodeScreenWorkspaceScriptBuilders() {
     assert,
     audio,
     block,
+    canvas,
     code,
     circuit,
     command,
@@ -6558,7 +6663,7 @@ function nodeGraphCodeScreenWorkspaceScriptBuilders() {
   };
   library.inspect = debug.inspect;
   return {
-    api: { assert, audio, block, circuit, code, command, console: consoleApi, debug, event, exportSample, file, game, help, helpers, inspect: debug.inspect, items, library, log: library.log, module, patch, patchTools, plan, recipe, regex, report, sample, samples, schema, slot, snippets, tags, ui, visual, watch },
+    api: { assert, audio, block, canvas, circuit, code, command, console: consoleApi, debug, event, exportSample, file, game, help, helpers, inspect: debug.inspect, items, library, log: library.log, module, patch, patchTools, plan, recipe, regex, report, sample, samples, schema, slot, snippets, tags, ui, visual, watch },
     inspections,
     logs,
     staged,
@@ -6645,6 +6750,7 @@ function runNodeGraphCodeScreenWorkspaceScriptCode(code, { mode = "script", pers
       "sample",
       "code",
       "block",
+      "canvas",
       "circuit",
       "module",
       "command",
@@ -6682,6 +6788,7 @@ function runNodeGraphCodeScreenWorkspaceScriptCode(code, { mode = "script", pers
       builders.api.sample,
       builders.api.code,
       builders.api.block,
+      builders.api.canvas,
       builders.api.circuit,
       builders.api.module,
       builders.api.command,
@@ -7871,6 +7978,11 @@ function nodeGraphCodeScreenLibraryDemoScript() {
     "const availableRecipes = recipe.list();",
     "const recipeDocs = recipe.markdown();",
     "const envelopePlan = recipe.run(\"envelope\", { attack: 0.02, decay: 0.12, sustain: 0.7, release: 0.35 });",
+    "const canvasSource = canvas.starter();",
+    "const canvasModel = canvas.parse(canvasSource);",
+    "const canvasLayers = canvas.layers(canvasSource);",
+    "const canvasModule = canvas.module(\"scene canvas\", canvasSource);",
+    "const canvasMarkdown = canvas.markdown(canvasSource);",
     "patch.connect(\"lead-amp.Out\", \"lead scope\");",
     "const leadPlanSummary = plan.summary(leadPlan);",
     "const leadPlanValidation = plan.validate(leadPlan);",
@@ -7905,7 +8017,10 @@ function nodeGraphCodeScreenLibraryDemoScript() {
     "const itemSummaryDelta = watch.diff(\"item summary delta\", { total: 0 }, { total: itemSummary.total });",
     "watch.value(\"watched velocity counts\", velocityCounts);",
     "watch.table(\"tagscript file rows\", demoFileList);",
+    "watch.table(\"canvas layers\", canvasLayers);",
     "watch.value(\"tagscript file list\", demoFileMarkdown);",
+    "watch.value(\"canvas module\", canvasModule);",
+    "watch.value(\"canvas markdown\", canvasMarkdown);",
     "const demoVars = watch.vars({ leadPlanSummary, itemSummary, velocityCounts }, \"demo\");",
     "const recipeListAssertion = assert.notEmpty(\"recipe list is available\", availableRecipes);",
     "const envelopeSlotAssertion = assert.equal(\"envelope slot label\", envelopeSlot.slot, \"envelope\");",
@@ -7932,6 +8047,9 @@ function nodeGraphCodeScreenLibraryDemoScript() {
     "  console.test(\"first file note tag\", demoFileList[0].tags.note === \"C3\"),",
     "  console.test(\"items summary counted\", itemSummary.total === 3),",
     "  console.test(\"items filter found lead note\", leadItems.length === 1),",
+    "  console.test(\"canvas starter parsed layers\", canvasLayers.length >= 2),",
+    "  console.test(\"canvas module has RGBA output\", canvasModule.outputs.includes(\"RGBA\")),",
+    "  console.test(\"canvas markdown names size\", canvasMarkdown.includes(\"size: 1024 x 1024\")),",
     "  console.test(\"watch snapshot copied\", leadSnapshot.tags.note === \"C3\"),",
     "  console.test(\"watch diff changed\", itemSummaryDelta.changed === true),",
     "  console.test(\"watch vars returned named values\", demoVars.itemSummary.total === 3 && demoVars.velocityCounts.hard === 1),",

@@ -50,6 +50,7 @@ const nodeGraphNodeLabels = Object.freeze({
   rgbaHsla: "RGBA / HSLA",
   chromaColor: "Chroma Color",
   image: "Image",
+  canvas: "Canvas",
   led: "LED",
   visualOscilloscope: "Oscilloscope",
   badvalMonitor: "BADVAL Monitor",
@@ -1373,8 +1374,22 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   image: {
     layout: "image",
-    outputs: ["Image"],
+    outputAliases: {
+      Image: "RGBA",
+    },
+    outputs: ["RGBA"],
     parameters: [],
+  },
+  canvas: {
+    inputs: ["A", "B", "X", "Y", "Opacity"],
+    layout: "canvas",
+    outputs: ["RGBA"],
+    parameters: [],
+    visualInputs: [
+      { key: "canvasA", label: "A", port: "A" },
+      { key: "canvasB", label: "B", port: "B" },
+    ],
+    visualSink: true,
   },
   led: {
     inputs: ["In"],
@@ -1389,7 +1404,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
   visualOscilloscope: {
     inputs: ["In", "X", "Y"],
     layout: "visualScope",
-    outputs: [],
+    outputs: ["RGBA"],
     parameters: [],
     visualInputs: [
       { key: "visualOscilloscope", label: "In", port: "In" },

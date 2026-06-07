@@ -128,7 +128,7 @@ function createNodeGraphModuleElement(type, node) {
     (port) => !parameterDefinitions.some((parameter) => parameter.key === port),
   );
   const article = document.createElement("article");
-  article.className = `dsp-node${definition.output ? " output-node" : ""}${definition.layout === "textBox" ? " text-box-layout" : ""}${definition.layout === "image" ? " image-node-layout" : ""}${definition.layout === "visualScope" ? " visual-scope-layout" : ""}${definition.layout === "graph" ? " graph-node-layout" : ""}${definition.layout === "filterCurve" ? " filter-curve-layout" : ""}${definition.layout === "sliderWidget" ? " slider-widget-layout" : ""}${definition.layout === "clapPlugin" ? " clap-plugin-layout" : ""}${definition.layout === "led" ? " led-layout" : ""}`;
+  article.className = `dsp-node${definition.output ? " output-node" : ""}${definition.layout === "textBox" ? " text-box-layout" : ""}${definition.layout === "image" ? " image-node-layout" : ""}${definition.layout === "canvas" ? " canvas-node-layout" : ""}${definition.layout === "visualScope" ? " visual-scope-layout" : ""}${definition.layout === "graph" ? " graph-node-layout" : ""}${definition.layout === "filterCurve" ? " filter-curve-layout" : ""}${definition.layout === "sliderWidget" ? " slider-widget-layout" : ""}${definition.layout === "clapPlugin" ? " clap-plugin-layout" : ""}${definition.layout === "led" ? " led-layout" : ""}`;
   article.dataset.node = node;
   article.dataset.nodeType = type;
   article.dataset.portSignature = `${inputPorts.join(",")}=>${outputPorts.join(",")}`;
@@ -159,6 +159,15 @@ function createNodeGraphModuleElement(type, node) {
     const outputColumn = createNodeGraphIoColumn(node, type, outputPorts, "output");
     ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
+  } else if (definition.layout === "canvas") {
+    article.append(createNodeGraphCanvasBody(node));
+    const ioSection = document.createElement("div");
+    ioSection.className = "dsp-node-io-section";
+    const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
+    const outputColumn = createNodeGraphIoColumn(node, type, outputPorts, "output");
+    ioSection.append(inputColumn || document.createElement("div"));
+    ioSection.append(outputColumn || document.createElement("div"));
+    article.append(ioSection);
   } else if (definition.layout === "visualScope") {
     const scopeSection = createNodeGraphModuleScopeSection(node, type);
     scopeSection.classList.add("node-module-square-scope-window");
@@ -168,8 +177,9 @@ function createNodeGraphModuleElement(type, node) {
     const ioSection = document.createElement("div");
     ioSection.className = "dsp-node-io-section";
     const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
+    const outputColumn = createNodeGraphIoColumn(node, type, outputPorts, "output");
     ioSection.append(inputColumn || document.createElement("div"));
-    ioSection.append(document.createElement("div"));
+    ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
   } else if (definition.layout === "graph") {
     const graphSection = document.createElement("div");

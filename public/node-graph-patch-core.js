@@ -150,6 +150,9 @@ function validateNodeGraphPatch(patch) {
     if (type === "codeblock") {
       normalizedNode.codeblock = normalizeNodeGraphCodeblock(node.codeblock);
     }
+    if (type === "canvas") {
+      normalizedNode.canvasScript = normalizeNodeGraphCanvasScript(node.canvasScript);
+    }
     if (Object.hasOwn(node, "scopeShader")) {
       normalizedNode.scopeShader = normalizeNodeGraphScopeShader(node.scopeShader);
     }

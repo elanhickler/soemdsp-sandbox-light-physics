@@ -358,6 +358,8 @@ function configureNodeSceneContextMenu(mode) {
   const imageLoad = document.getElementById("nodeSceneImageLoad");
   const imageSave = document.getElementById("nodeSceneImageSave");
   const imageRefresh = document.getElementById("nodeSceneImageRefresh");
+  const canvasControls = document.getElementById("nodeSceneCanvasControls");
+  const canvasScript = document.getElementById("nodeSceneCanvasScript");
   const ledControls = document.getElementById("nodeSceneLedControls");
   const ledColor = document.getElementById("nodeSceneLedColor");
   const textBoxControls = document.getElementById("nodeSceneTextBoxControls");
@@ -422,6 +424,7 @@ function configureNodeSceneContextMenu(mode) {
   toggleButtonsButton.hidden = !moduleMode;
   toggleTitleButton.hidden = !moduleMode;
   imageControls.hidden = !(moduleMode && targetNode?.type === "image");
+  canvasControls.hidden = !(moduleMode && targetNode?.type === "canvas");
   ledControls.hidden = !(moduleMode && targetNode?.type === "led");
   textBoxControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   textBoxHorizontalAlignControls.hidden = !(moduleMode && targetNode?.type === "textBox");
@@ -506,6 +509,10 @@ function configureNodeSceneContextMenu(mode) {
       imageLoad.title = "Load an image into this patch-local image node.";
       imageSave.title = imageLayout.dataUrl ? "Save this image node's current image." : "Load an image before saving.";
       imageRefresh.title = "Refresh image preview and trace texture.";
+    }
+    if (targetNode?.type === "canvas") {
+      canvasScript.disabled = false;
+      canvasScript.title = "Open this canvas module's layer and compositor script.";
     }
     if (targetNode?.type === "led") {
       const led = normalizeNodeGraphLedLayout(targetNode.led);
@@ -641,6 +648,7 @@ function configureNodeSceneContextMenu(mode) {
     imageLoad.disabled = true;
     imageSave.disabled = true;
     imageRefresh.disabled = true;
+    canvasScript.disabled = true;
     ledColor.disabled = true;
     ledColor.value = nodeGraphLedDefaultColor;
   } else {
@@ -696,6 +704,7 @@ function configureNodeSceneContextMenu(mode) {
     imageLoad.disabled = true;
     imageSave.disabled = true;
     imageRefresh.disabled = true;
+    canvasScript.disabled = true;
     ledColor.disabled = true;
     ledColor.value = nodeGraphLedDefaultColor;
   }

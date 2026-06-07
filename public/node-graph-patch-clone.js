@@ -180,6 +180,9 @@ function cloneNodeGraphPatch(patch) {
         ...(node.type === "codeblock"
           ? { codeblock: normalizeNodeGraphCodeblock(node.codeblock) }
           : {}),
+        ...(node.type === "canvas"
+          ? { canvasScript: normalizeNodeGraphCanvasScript(node.canvasScript) }
+          : {}),
         ...(Object.hasOwn(node, "scopeShader")
           ? { scopeShader: normalizeNodeGraphScopeShader(node.scopeShader) }
           : {}),

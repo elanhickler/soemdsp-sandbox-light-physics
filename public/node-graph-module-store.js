@@ -85,6 +85,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "rgbaHsla",
   "chromaColor",
   "image",
+  "canvas",
   "led",
   "visualOscilloscope",
   "parabol",
@@ -725,6 +726,11 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     category: "Visual",
     description: "Patch-local image asset node. Route it into Screen Visuals Trace Image to texture phosphor trace dots.",
     notes: ["load image", "save image", "trace texture"],
+  },
+  canvas: {
+    category: "Visual",
+    description: "Layered RGBA compositor for images, scopes, shader passes, transforms, and future game-engine surfaces.",
+    notes: ["layer compositor", "RGBA output", "shader script"],
   },
   led: {
     category: "Visual",
