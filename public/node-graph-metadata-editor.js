@@ -763,6 +763,7 @@ this line is intentionally invalid
     nodeMetadataScriptAssignmentInsertion("param.a.min = 0;", "param.a.max = 1;", 16) === "\nparam.a.max = 1;",
     nodeMetadataScriptAssignmentInsertion("param.a.min = 0;\n", "param.a.max = 1;", 17) === "param.a.max = 1;",
     nodeMetadataScriptAssignmentInsertion("param.a.min = 0;param.a.def = 0.5;", "param.a.max = 1;", 16) === "\nparam.a.max = 1;\n",
+    nodeMetadataScriptAssignmentInsertion("param.a.min = 0;\r\n", "param.a.max = 1;", 17) === "param.a.max = 1;",
   ];
   return {
     assignments: parsed.assignments,
@@ -1006,9 +1007,15 @@ function nodeMetadataScriptAssignmentInsertion(value, text, start, end = start) 
   const source = String(value || "");
   const insertStart = Math.max(0, Math.min(source.length, Number(start) || 0));
   const insertEnd = Math.max(insertStart, Math.min(source.length, Number(end) || insertStart));
-  const prefix = insertStart > 0 && source[insertStart - 1] !== "\n" ? "\n" : "";
-  const suffix = insertEnd < source.length && source[insertEnd] !== "\n" ? "\n" : "";
+  const before = source[insertStart - 1] || "";
+  const after = source[insertEnd] || "";
+  const prefix = insertStart > 0 && !nodeMetadataScriptIsLineBreak(before) ? "\n" : "";
+  const suffix = insertEnd < source.length && !nodeMetadataScriptIsLineBreak(after) ? "\n" : "";
   return `${prefix}${text}${suffix}`;
+}
+
+function nodeMetadataScriptIsLineBreak(character) {
+  return character === "\n" || character === "\r";
 }
 
 function insertNodeMetadataScriptAssignment(text) {
