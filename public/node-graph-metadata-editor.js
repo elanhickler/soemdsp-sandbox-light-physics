@@ -391,6 +391,13 @@ function nodeMetadataScriptPreviewValueFingerprint(value) {
   return String(value ?? "").trim();
 }
 
+function nodeMetadataScriptPreviewValueText(value, key = "") {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => String(entry || "").trim()).filter(Boolean).join(", ")}]`;
+  }
+  return nodeMetadataScriptValue(value, key);
+}
+
 function nodeMetadataScriptPreviewState(assignment, draftMetadata) {
   if (!draftMetadata || !nodeMetadataScriptSupportedKeys.has(assignment.key)) {
     return "supported";
@@ -410,7 +417,44 @@ function nodeMetadataScriptPreviewState(assignment, draftMetadata) {
   }
 }
 
-function nodeMetadataScriptPreviewItemHtml(assignment, state = "supported") {
+function nodeMetadataScriptPreviewDetails(assignment, draftMetadata) {
+  if (!draftMetadata || !nodeMetadataScriptSupportedKeys.has(assignment.key)) {
+    return {
+      after: assignment.rawValue,
+      before: "",
+      state: "supported",
+    };
+  }
+  try {
+    const beforeValue = draftMetadata[assignment.key];
+    const parsedValue = parseNodeMetadataScriptValue(
+      assignment.rawValue,
+      assignment.key,
+      draftMetadata,
+    );
+    draftMetadata[assignment.key] = parsedValue;
+    const before = nodeMetadataScriptPreviewValueText(beforeValue, assignment.key);
+    const after = nodeMetadataScriptPreviewValueText(parsedValue, assignment.key);
+    return {
+      after,
+      before,
+      state: nodeMetadataScriptPreviewValueFingerprint(beforeValue) ===
+        nodeMetadataScriptPreviewValueFingerprint(parsedValue)
+        ? "same"
+        : "changed",
+    };
+  } catch {
+    return {
+      after: assignment.rawValue,
+      before: "",
+      state: "supported",
+    };
+  }
+}
+
+function nodeMetadataScriptPreviewItemHtml(assignment, details = "supported") {
+  const detail = typeof details === "string" ? { state: details } : details;
+  const state = detail.state || "supported";
   const stateText = state === "unsupported"
     ? "ignored"
     : state === "same"
@@ -418,12 +462,15 @@ function nodeMetadataScriptPreviewItemHtml(assignment, state = "supported") {
       : state === "changed"
         ? "change"
         : "will set";
+  const valueText = state === "changed" && detail.before
+    ? `${detail.before} => ${detail.after}`
+    : detail.after || assignment.rawValue;
   return `
     <li class="${state === "unsupported" ? "ignored" : state}">
       <span>${escapeNodeMetadataScriptHtml(stateText)}</span>
       <em>L${escapeNodeMetadataScriptHtml(assignment.line)}</em>
       <strong>${escapeNodeMetadataScriptHtml(assignment.key)}</strong>
-      <code>${escapeNodeMetadataScriptHtml(assignment.rawValue)}</code>
+      <code>${escapeNodeMetadataScriptHtml(valueText)}</code>
     </li>`;
 }
 
@@ -444,7 +491,7 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
     ...diagnostics.supported.map((assignment) =>
       nodeMetadataScriptPreviewItemHtml(
         assignment,
-        nodeMetadataScriptPreviewState(assignment, draftMetadata),
+        nodeMetadataScriptPreviewDetails(assignment, draftMetadata),
       )),
     ...diagnostics.unsupported.map((assignment) =>
       nodeMetadataScriptPreviewItemHtml(assignment, "unsupported")),
@@ -533,6 +580,8 @@ this line is intentionally invalid
     nodeMetadataScriptDiagnosticMessage("param.frequency.unknown = 1;").error === true,
     nodeMetadataScriptPreviewState({ key: "def", rawValue: "440" }, samePreviewDraft) === "same",
     nodeMetadataScriptPreviewState({ key: "def", rawValue: "441" }, changedPreviewDraft) === "changed",
+    nodeMetadataScriptPreviewDetails({ key: "def", rawValue: "441" }, { def: 440, kind: "decimal" }).after === "441",
+    nodeMetadataScriptPreviewDetails({ key: "def", rawValue: "441" }, { def: 440, kind: "decimal" }).before === "440",
     nodeMetadataScriptTemplateForKind(fakeSlider, "waveform").includes("param.waveform.choices = [Saw, Square, Triangle, Sine, Noise];"),
     nodeMetadataScriptTemplateForKind(fakeSlider, "waveform").includes("param.waveform.displayChoices = true;"),
   ];
