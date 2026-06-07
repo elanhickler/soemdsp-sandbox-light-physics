@@ -469,6 +469,7 @@ function bindNodeGraphMetadataPopoverEvents() {
   const scriptSource = document.getElementById("metadataScriptSource");
   if (scriptSource && scriptSource.dataset.metadataScriptSourceBound !== "true") {
     scriptSource.dataset.metadataScriptSourceBound = "true";
+    scriptSource.addEventListener("keydown", handleNodeMetadataScriptKeydown);
     scriptSource.addEventListener("scroll", updateNodeMetadataScriptHighlight);
   }
   const closeButton = document.getElementById("metadataPopoverClose");
@@ -520,6 +521,35 @@ function bindNodeGraphMetadataPopoverEvents() {
   if (scriptToDesktop && scriptToDesktop.dataset.metadataScriptDesktopBound !== "true") {
     scriptToDesktop.dataset.metadataScriptDesktopBound = "true";
     scriptToDesktop.addEventListener("click", exportNodeMetadataScriptToDesktop);
+  }
+}
+
+function insertNodeMetadataScriptText(text) {
+  const source = document.getElementById("metadataScriptSource");
+  if (!source) {
+    return;
+  }
+  const start = source.selectionStart ?? source.value.length;
+  const end = source.selectionEnd ?? start;
+  source.setRangeText(text, start, end, "end");
+  updateNodeMetadataScriptHighlight();
+  setNodeMetadataScriptDirty(true, "unsaved", false);
+}
+
+function handleNodeMetadataScriptKeydown(event) {
+  const source = event.currentTarget;
+  if (!source || source.id !== "metadataScriptSource") {
+    return;
+  }
+  const commandKey = event.ctrlKey || event.metaKey;
+  if (event.key === "Tab") {
+    event.preventDefault();
+    insertNodeMetadataScriptText("  ");
+    return;
+  }
+  if (commandKey && (event.key.toLowerCase() === "s" || event.key === "Enter")) {
+    event.preventDefault();
+    applyNodeMetadataScriptEditor();
   }
 }
 
