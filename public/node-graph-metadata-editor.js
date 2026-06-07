@@ -172,6 +172,11 @@ function setNodeMetadataScriptDirty(dirty, message = "", error = false) {
   }
 }
 
+function confirmNodeMetadataScriptDiscard() {
+  return !nodeGraphMvp.metadataScriptDirty ||
+    window.confirm("Discard unsaved metadata script changes?");
+}
+
 function nodeMetadataScriptParamKey(slider) {
   return String(slider?.dataset?.param || "parameter")
     .trim()
@@ -371,6 +376,9 @@ function openNodeMetadataPopover(event, readout) {
   if (!slider) {
     return;
   }
+  if (nodeGraphMvp.metadataEditorTarget !== slider.id && !confirmNodeMetadataScriptDiscard()) {
+    return;
+  }
 
   nodeGraphMvp.metadataEditorTarget = slider.id;
   fillNodeMetadataPopover(slider);
@@ -383,10 +391,7 @@ function openNodeMetadataPopover(event, readout) {
 }
 
 function closeNodeMetadataPopover() {
-  if (
-    nodeGraphMvp.metadataScriptDirty &&
-    !window.confirm("Discard unsaved metadata script changes?")
-  ) {
+  if (!confirmNodeMetadataScriptDiscard()) {
     return;
   }
   const popover = document.getElementById("nodeParameterMetadataPopover");
@@ -455,6 +460,20 @@ function bindNodeGraphMetadataPopoverEvents() {
     scriptToDesktop.dataset.metadataScriptDesktopBound = "true";
     scriptToDesktop.addEventListener("click", exportNodeMetadataScriptToDesktop);
   }
+}
+
+function bindNodeMetadataScriptBeforeUnload() {
+  if (window.nodeMetadataScriptBeforeUnloadBound === true) {
+    return;
+  }
+  window.nodeMetadataScriptBeforeUnloadBound = true;
+  window.addEventListener("beforeunload", (event) => {
+    if (!nodeGraphMvp.metadataScriptDirty) {
+      return;
+    }
+    event.preventDefault();
+    event.returnValue = "";
+  });
 }
 
 function readNodeMetadataEditorValues(slider) {
@@ -627,3 +646,4 @@ function handleNodeMetadataEditorInput(event) {
 }
 
 bindNodeGraphMetadataPopoverEvents();
+bindNodeMetadataScriptBeforeUnload();
