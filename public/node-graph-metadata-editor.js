@@ -124,11 +124,11 @@ function nodeMetadataScriptReferenceHtml() {
   const keys = Array.from(nodeMetadataScriptSupportedKeys).sort();
   const aliases = Object.entries(nodeMetadataScriptAliases);
   const keyHtml = keys
-    .map((key) => `<code title="param.name.${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(key)}</code>`)
+    .map((key) => `<code data-key="${escapeNodeMetadataScriptHtml(key)}" title="Insert param.name.${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(key)}</code>`)
     .join("");
   const aliasHtml = aliases.length
     ? aliases
-      .map(([alias, key]) => `<code title="${escapeNodeMetadataScriptHtml(alias)} maps to ${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(alias)} -> ${escapeNodeMetadataScriptHtml(key)}</code>`)
+      .map(([alias, key]) => `<code data-key="${escapeNodeMetadataScriptHtml(alias)}" title="Insert ${escapeNodeMetadataScriptHtml(alias)}, alias for ${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(alias)} -> ${escapeNodeMetadataScriptHtml(key)}</code>`)
       .join("")
     : "";
   return `
@@ -143,6 +143,31 @@ function syncNodeMetadataScriptReference() {
     return;
   }
   reference.innerHTML = nodeMetadataScriptReferenceHtml();
+}
+
+function nodeMetadataScriptPlaceholderValue(key) {
+  const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
+  const metadata = slider ? nodeSliderMetadata(slider) : {};
+  return nodeMetadataScriptValue(metadata[nodeMetadataScriptKeyFromPath(key)], key);
+}
+
+function insertNodeMetadataScriptKey(key) {
+  const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
+  if (!slider) {
+    metadataScriptStatus("no parameter", true);
+    return;
+  }
+  const paramKey = nodeMetadataScriptParamKey(slider);
+  const value = nodeMetadataScriptPlaceholderValue(key);
+  insertNodeMetadataScriptText(`param.${paramKey}.${key} = ${value};`);
+}
+
+function handleNodeMetadataScriptReferenceClick(event) {
+  const key = event.target?.closest?.("[data-key]")?.dataset?.key;
+  if (!key) {
+    return;
+  }
+  insertNodeMetadataScriptKey(key);
 }
 
 function escapeNodeMetadataScriptHtml(value = "") {
@@ -860,6 +885,11 @@ function bindNodeGraphMetadataPopoverEvents() {
   }
   const scriptSource = document.getElementById("metadataScriptSource");
   syncNodeMetadataScriptReference();
+  const scriptReference = document.getElementById("metadataScriptReference");
+  if (scriptReference && scriptReference.dataset.metadataScriptReferenceBound !== "true") {
+    scriptReference.dataset.metadataScriptReferenceBound = "true";
+    scriptReference.addEventListener("click", handleNodeMetadataScriptReferenceClick);
+  }
   if (scriptSource && scriptSource.dataset.metadataScriptSourceBound !== "true") {
     scriptSource.dataset.metadataScriptSourceBound = "true";
     scriptSource.addEventListener("keydown", handleNodeMetadataScriptKeydown);

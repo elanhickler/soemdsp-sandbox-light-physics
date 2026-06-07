@@ -8684,6 +8684,11 @@ audio {
   font-size: 0.62rem;
 }
 
+.metadata-script-reference code:hover {
+  border-color: rgba(127, 199, 217, 0.34);
+  color: rgba(220, 232, 234, 0.86);
+}
+
 .metadata-script-editor {
   position: relative;
   min-height: 286px;
