@@ -480,6 +480,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       type !== "keyboardController" &&
       type !== "led" &&
       type !== "linearEnvelope" &&
+      type !== "lorenzAttractor" &&
       type !== "midiNotePitch" &&
       type !== "midiOut" &&
       type !== "moduleGroup" &&
@@ -514,6 +515,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       type === "clock" ||
       type === "fractalBrownianNoise" ||
       type === "keyboardController" ||
+      type === "lorenzAttractor" ||
       type === "midiOut" ||
       type === "noiseGenerator" ||
       type === "additiveOsc" ||

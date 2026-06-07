@@ -54,6 +54,7 @@ function nextNodeGraphTypeCounts(nodes = nodeGraphMvp.patch.nodes) {
     highpass: counts.highpass || 0,
     ladderFilter: counts.ladderFilter || 0,
     linearEnvelope: counts.linearEnvelope || 0,
+    lorenzAttractor: counts.lorenzAttractor || 0,
     lowpass: counts.lowpass || 0,
     moduleGroup: counts.moduleGroup || 0,
     noise: counts.noise || 0,

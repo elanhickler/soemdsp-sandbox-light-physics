@@ -380,8 +380,8 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   lorenzAttractor: {
     category: "Chaos",
     description: "Classic butterfly attractor motion for turbulent curls and folding trajectories.",
-    label: "LorenzAttractor",
-    notes: ["butterfly attractor", "3D chaos", "planned attractor"],
+    label: "Lorenz Attractor",
+    notes: ["butterfly attractor", "3D chaos", "X/Y/Z motion"],
   },
   rosslerAttractor: {
     category: "Chaos",

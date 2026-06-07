@@ -92,7 +92,10 @@ const nodeGraphScopeShaderSyncModes = Object.freeze(["inherit", "on", "off"]);
 
 function nodeGraphScopeShaderDefaultSourceForType(type) {
   const moduleType = String(type || "");
-  return moduleType === "visualOscilloscope" || moduleType === "spiral" || moduleType === "ellipsoid"
+  return moduleType === "visualOscilloscope" ||
+      moduleType === "spiral" ||
+      moduleType === "ellipsoid" ||
+      moduleType === "lorenzAttractor"
     ? nodeGraphScopeShaderVisualOscilloscopeDefaultSource
     : nodeGraphScopeShaderDefaultSource;
 }

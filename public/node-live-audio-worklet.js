@@ -59,6 +59,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.highpassStates = new Map();
     this.ladderFilterStates = new Map();
     this.linearEnvelopeStates = new Map();
+    this.lorenzAttractorStates = new Map();
     this.lowpassStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.noiseSampleHoldStates = new Map();
@@ -273,6 +274,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.highpassStates = new Map();
     this.ladderFilterStates = new Map();
     this.linearEnvelopeStates = new Map();
+    this.lorenzAttractorStates = new Map();
     this.lowpassStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.noiseSampleHoldStates = new Map();
@@ -468,6 +470,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "spiral" && !this.spiralStates.has(id)) {
         this.spiralStates.set(id, this.createSpiralState());
       }
+      if (node?.type === "lorenzAttractor" && !this.lorenzAttractorStates.has(id)) {
+        this.lorenzAttractorStates.set(id, this.createLorenzAttractorState());
+      }
       if (node?.type === "highpass" && !this.highpassStates.has(id)) {
         this.highpassStates.set(id, this.createHighpassState());
       }
@@ -609,6 +614,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     for (const id of [...this.spiralStates.keys()]) {
       if (!ids.has(id)) {
         this.spiralStates.delete(id);
+      }
+    }
+    for (const id of [...this.lorenzAttractorStates.keys()]) {
+      if (!ids.has(id)) {
+        this.lorenzAttractorStates.delete(id);
       }
     }
     for (const id of [...this.highpassStates.keys()]) {
@@ -2389,6 +2399,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.slewLimiterStates = new Map();
     runtime.smoothers = new Map();
     runtime.spiralStates = new Map();
+    runtime.lorenzAttractorStates = new Map();
     runtime.stepSequencerStates = new Map();
     runtime.triggerCounterStates = new Map();
     runtime.triggerDividerStates = new Map();
@@ -2432,6 +2443,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.noiseSeeds.set(`${id}:right`, this.stableSeed(`${id}:right`));
       }
       if (node?.type === "spiral") this.spiralStates.set(id, this.createSpiralState());
+      if (node?.type === "lorenzAttractor") this.lorenzAttractorStates.set(id, this.createLorenzAttractorState());
       if (node?.type === "highpass") this.highpassStates.set(id, this.createHighpassState());
       if (node?.type === "lowpass") this.lowpassStates.set(id, this.createLowpassState());
       if (node?.type === "bandpass") this.bandpassStates.set(id, this.createBandpassState());
@@ -3642,6 +3654,67 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     };
   }
 
+  createLorenzAttractorState() {
+    return {
+      resetWasHigh: false,
+      x: 0.1,
+      y: 0,
+      z: 0,
+    };
+  }
+
+  resetLorenzAttractorState(state) {
+    state.x = 0.1;
+    state.y = 0;
+    state.z = 0;
+  }
+
+  lorenzAttractorSample(options = {}) {
+    const state = options.state || this.createLorenzAttractorState();
+    const resetHigh = Number(options.reset) > 0.5;
+    if (resetHigh && !state.resetWasHigh) {
+      this.resetLorenzAttractorState(state);
+    }
+    state.resetWasHigh = resetHigh;
+    const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+    const speed = Math.max(0, Number(options.speed) || 0);
+    const sigma = Math.max(0, Number(options.sigma) || 10);
+    const rho = Number.isFinite(Number(options.rho)) ? Number(options.rho) : 28;
+    const beta = Math.max(0, Number(options.beta) || 8 / 3);
+    const dt = Math.min(0.004, (0.75 * speed) / sampleRateValue);
+    const steps = Math.max(1, Math.min(8, Math.ceil(dt / 0.0007)));
+    const stepDt = steps > 0 ? dt / steps : 0;
+    for (let index = 0; index < steps; index += 1) {
+      const dx = sigma * (state.y - state.x);
+      const dy = state.x * (rho - state.z) - state.y;
+      const dz = state.x * state.y - beta * state.z;
+      state.x += dx * stepDt;
+      state.y += dy * stepDt;
+      state.z += dz * stepDt;
+      if (!Number.isFinite(state.x) || !Number.isFinite(state.y) || !Number.isFinite(state.z)) {
+        this.resetLorenzAttractorState(state);
+        break;
+      }
+    }
+    const rotate = (Number(options.rotate) || 0) * Math.PI * 2;
+    const cosRotate = Math.cos(rotate);
+    const sinRotate = Math.sin(rotate);
+    const normalizedX = state.x / 24;
+    const normalizedY = state.y / 32;
+    const normalizedZ = (state.z - 25) / 30;
+    const depth = this.clampValue(Number(options.zDepth) || 0, 0, 1);
+    const depthScale = 1 + normalizedZ * depth * 0.35;
+    const scale = Math.max(0, Number(options.scale) || 1) * depthScale;
+    const x = (normalizedX * cosRotate - normalizedY * sinRotate) * scale;
+    const y = (normalizedX * sinRotate + normalizedY * cosRotate) * scale;
+    const z = normalizedZ * scale;
+    return {
+      x: this.clampValue(x, -1, 1),
+      y: this.clampValue(y, -1, 1),
+      z: this.clampValue(z, -1, 1),
+    };
+  }
+
   spiralWrap01(value) {
     return value - Math.floor(value);
   }
@@ -4235,6 +4308,35 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           X: spiral.x * level,
           Y: spiral.y * level,
           Z: spiral.z * level,
+        };
+      } else if (node?.type === "lorenzAttractor") {
+        const state = this.lorenzAttractorStates.get(nodeId) || this.createLorenzAttractorState();
+        this.lorenzAttractorStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(
+          node,
+          key,
+          fallback,
+          frame,
+          frames,
+          frameValues,
+        );
+        const lorenz = this.lorenzAttractorSample({
+          beta: read("beta", 8 / 3),
+          reset: mixInput(nodeId, "Reset"),
+          rho: read("rho", 28),
+          rotate: read("rotate", 0),
+          sampleRate: safeRate,
+          scale: read("scale", 1),
+          sigma: read("sigma", 10),
+          speed: read("speed", 1),
+          state,
+          zDepth: read("zDepth", 0.4),
+        });
+        const level = read("level", 1);
+        value = {
+          X: lorenz.x * level,
+          Y: lorenz.y * level,
+          Z: lorenz.z * level,
         };
       } else if (node?.type === "midiOut") {
         const hasMidiInput = this.inputConnections.has(this.inputKey(nodeId, "MIDI Number"));

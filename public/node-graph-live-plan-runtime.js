@@ -228,6 +228,7 @@ function createNodeGraphLiveRuntime(plan) {
   const highpassStates = new Map();
   const ladderFilterStates = new Map();
   const linearEnvelopeStates = new Map();
+  const lorenzAttractorStates = new Map();
   const lowpassStates = new Map();
   const moduleGroupRuntimes = new Map();
   const noiseGeneratorStates = new Map();
@@ -262,6 +263,9 @@ function createNodeGraphLiveRuntime(plan) {
     }
     if (node.type === "spiral") {
       spiralStates.set(node.id, createJerobeamSpiralState());
+    }
+    if (node.type === "lorenzAttractor") {
+      lorenzAttractorStates.set(node.id, createNodeGraphLorenzAttractorState());
     }
     if (node.type === "highpass") {
       highpassStates.set(node.id, createNodeGraphHighpassState());
@@ -365,6 +369,7 @@ function createNodeGraphLiveRuntime(plan) {
     graphLfoStates,
     ladderFilterStates,
     linearEnvelopeStates,
+    lorenzAttractorStates,
     meterCounter: 0,
     meterClipCount: 0,
     meterPeak: 0,
@@ -464,6 +469,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   if (!runtime.linearEnvelopeStates) {
     runtime.linearEnvelopeStates = new Map();
   }
+  if (!runtime.lorenzAttractorStates) {
+    runtime.lorenzAttractorStates = new Map();
+  }
   if (!runtime.bandpassStates) {
     runtime.bandpassStates = new Map();
   }
@@ -554,6 +562,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     }
     if (node.type === "spiral" && !runtime.spiralStates.has(node.id)) {
       runtime.spiralStates.set(node.id, createJerobeamSpiralState());
+    }
+    if (node.type === "lorenzAttractor" && !runtime.lorenzAttractorStates.has(node.id)) {
+      runtime.lorenzAttractorStates.set(node.id, createNodeGraphLorenzAttractorState());
     }
     if (node.type === "highpass" && !runtime.highpassStates.has(node.id)) {
       runtime.highpassStates.set(node.id, createNodeGraphHighpassState());
@@ -702,6 +713,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.spiralStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.spiralStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.lorenzAttractorStates.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.lorenzAttractorStates.delete(id);
     }
   }
   for (const id of [...runtime.highpassStates.keys()]) {

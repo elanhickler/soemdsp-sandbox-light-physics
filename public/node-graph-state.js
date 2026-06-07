@@ -165,6 +165,7 @@ const nodeGraphMvp = {
     image: 0,
     ladderFilter: 0,
     linearEnvelope: 0,
+    lorenzAttractor: 0,
     lowpass: 0,
     midiNotePitch: 0,
     midiOut: 0,
