@@ -8689,6 +8689,19 @@ audio {
   color: rgba(220, 232, 234, 0.86);
 }
 
+.metadata-script-reference code:focus-visible {
+  outline: none;
+  border-color: rgba(214, 163, 95, 0.54);
+  box-shadow: 0 0 0 1px rgba(214, 163, 95, 0.24);
+  color: rgba(244, 213, 166, 0.92);
+}
+
+.metadata-script-reference .metadata-script-reference-kind {
+  border-color: rgba(210, 188, 235, 0.18);
+  background: rgba(20, 10, 31, 0.58);
+  color: rgba(210, 188, 235, 0.76);
+}
+
 .metadata-script-editor {
   position: relative;
   min-height: 286px;

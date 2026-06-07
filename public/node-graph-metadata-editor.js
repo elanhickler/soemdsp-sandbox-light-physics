@@ -131,14 +131,14 @@ function nodeMetadataScriptReferenceHtml() {
   const kinds = Object.entries(kindTemplates)
     .sort(([left], [right]) => left.localeCompare(right));
   const keyHtml = keys
-    .map((key) => `<code data-key="${escapeNodeMetadataScriptHtml(key)}" title="Insert param.name.${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(key)}</code>`)
+    .map((key) => `<code class="metadata-script-reference-key" data-key="${escapeNodeMetadataScriptHtml(key)}" role="button" tabindex="0" aria-label="Insert metadata key ${escapeNodeMetadataScriptHtml(key)}" title="Insert param.name.${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(key)}</code>`)
     .join("");
   const kindHtml = kinds
-    .map(([kind, template]) => `<code data-kind="${escapeNodeMetadataScriptHtml(kind)}" title="Insert kind ${escapeNodeMetadataScriptHtml(kind)}">${escapeNodeMetadataScriptHtml(template.label || kind)}</code>`)
+    .map(([kind, template]) => `<code class="metadata-script-reference-kind" data-kind="${escapeNodeMetadataScriptHtml(kind)}" role="button" tabindex="0" aria-label="Insert metadata kind ${escapeNodeMetadataScriptHtml(kind)}" title="Insert kind ${escapeNodeMetadataScriptHtml(kind)}">${escapeNodeMetadataScriptHtml(template.label || kind)}</code>`)
     .join("");
   const aliasHtml = aliases.length
     ? aliases
-      .map(([alias, key]) => `<code data-key="${escapeNodeMetadataScriptHtml(alias)}" title="Insert ${escapeNodeMetadataScriptHtml(alias)}, alias for ${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(alias)} -> ${escapeNodeMetadataScriptHtml(key)}</code>`)
+      .map(([alias, key]) => `<code class="metadata-script-reference-key" data-key="${escapeNodeMetadataScriptHtml(alias)}" role="button" tabindex="0" aria-label="Insert metadata alias ${escapeNodeMetadataScriptHtml(alias)}" title="Insert ${escapeNodeMetadataScriptHtml(alias)}, alias for ${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(alias)} -> ${escapeNodeMetadataScriptHtml(key)}</code>`)
       .join("")
     : "";
   return `
@@ -188,6 +188,22 @@ function handleNodeMetadataScriptReferenceClick(event) {
   if (!target) {
     return;
   }
+  insertNodeMetadataScriptReferenceTarget(target);
+}
+
+function handleNodeMetadataScriptReferenceKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+  const target = event.target?.closest?.("[data-key], [data-kind]");
+  if (!target) {
+    return;
+  }
+  event.preventDefault();
+  insertNodeMetadataScriptReferenceTarget(target);
+}
+
+function insertNodeMetadataScriptReferenceTarget(target) {
   if (target.dataset.key) {
     insertNodeMetadataScriptKey(target.dataset.key);
   } else if (target.dataset.kind) {
@@ -918,6 +934,7 @@ function bindNodeGraphMetadataPopoverEvents() {
   if (scriptReference && scriptReference.dataset.metadataScriptReferenceBound !== "true") {
     scriptReference.dataset.metadataScriptReferenceBound = "true";
     scriptReference.addEventListener("click", handleNodeMetadataScriptReferenceClick);
+    scriptReference.addEventListener("keydown", handleNodeMetadataScriptReferenceKeydown);
   }
   if (scriptSource && scriptSource.dataset.metadataScriptSourceBound !== "true") {
     scriptSource.dataset.metadataScriptSourceBound = "true";
