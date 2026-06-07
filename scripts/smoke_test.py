@@ -6744,6 +6744,7 @@ def require_node_graph_mvp_contract() -> None:
         "const nodeMetadataKindAliases",
         "function normalizeNodeMetadataKind(kind)",
         "function applyNodeMetadataKindTemplates(templates)",
+        "typeof syncNodeMetadataScriptReference === \"function\"",
         "async function loadNodeMetadataKindTemplates()",
         'fetch("/api/node-metadata-kinds"',
         "function normalizeNodeGraphPatchInfo(info = {})",
