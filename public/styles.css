@@ -8695,6 +8695,16 @@ audio {
   pointer-events: none;
 }
 
+.metadata-script-line {
+  display: inline-block;
+  min-width: 100%;
+}
+
+.metadata-script-line-ignored {
+  background: rgba(255, 105, 105, 0.1);
+  box-shadow: inset 2px 0 rgba(255, 105, 105, 0.34);
+}
+
 .metadata-script-panel textarea {
   position: relative;
   display: block;

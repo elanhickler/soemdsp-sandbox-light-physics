@@ -163,7 +163,15 @@ function updateNodeMetadataScriptHighlight() {
   if (!source || !highlight) {
     return;
   }
-  highlight.innerHTML = (source.value || "").split("\n").map(colorizeNodeMetadataScriptLine).join("\n") || "&nbsp;";
+  const text = source.value || "";
+  const ignoredLines = new Set(analyzeNodeMetadataScriptSource(text).ignored);
+  highlight.innerHTML = text.split("\n").map((line, index) => {
+    const lineNumber = index + 1;
+    const lineClass = ignoredLines.has(lineNumber)
+      ? "metadata-script-line metadata-script-line-ignored"
+      : "metadata-script-line";
+    return `<span class="${lineClass}">${colorizeNodeMetadataScriptLine(line) || " "}</span>`;
+  }).join("\n") || "&nbsp;";
   highlight.scrollTop = source.scrollTop;
   highlight.scrollLeft = source.scrollLeft;
 }
