@@ -80,12 +80,13 @@ function endNodeMetadataPopoverDrag(event) {
   nodeGraphMvp.metadataDragging = null;
 }
 
-function metadataScriptStatus(message, error = false) {
+function metadataScriptStatus(message, error = false, detail = "") {
   const status = document.getElementById("metadataScriptStatus");
   if (!status) {
     return;
   }
   status.textContent = message;
+  status.title = detail || message;
   status.classList.toggle("error", Boolean(error));
   status.classList.toggle("dirty", Boolean(nodeGraphMvp.metadataScriptDirty));
 }
@@ -185,7 +186,7 @@ function setMetadataScriptSourceText(text) {
   updateNodeMetadataScriptHighlight();
 }
 
-function setNodeMetadataScriptDirty(dirty, message = "", error = false) {
+function setNodeMetadataScriptDirty(dirty, message = "", error = false, detail = "") {
   nodeGraphMvp.metadataScriptDirty = Boolean(dirty);
   const popover = document.getElementById("nodeParameterMetadataPopover");
   if (popover) {
@@ -196,7 +197,7 @@ function setNodeMetadataScriptDirty(dirty, message = "", error = false) {
     saveButton.classList.toggle("armed", Boolean(dirty));
   }
   if (message) {
-    metadataScriptStatus(message, error);
+    metadataScriptStatus(message, error, detail);
   } else {
     metadataScriptStatus(dirty ? "unsaved" : "saved", false);
   }
@@ -337,6 +338,7 @@ function analyzeNodeMetadataScriptSource(source) {
     assignmentCount: parsed.assignments.length,
     ignored,
     ok: ignored.length === 0,
+    syntaxIgnored: parsed.ignored,
     supported,
     supportedCount: supported.length,
     unsupported,
@@ -352,7 +354,15 @@ function nodeMetadataScriptDiagnosticMessage(source = metadataScriptSourceText()
     return { error: false, message: "unsaved: empty script" };
   }
   if (diagnostics.ignored.length) {
+    const syntaxDetail = diagnostics.syntaxIgnored.length
+      ? `syntax lines ${diagnostics.syntaxIgnored.join(", ")}`
+      : "";
+    const unsupportedDetail = diagnostics.unsupported.length
+      ? `unsupported ${diagnostics.unsupported.map((assignment) => `line ${assignment.line}: ${assignment.path}`).join("; ")}`
+      : "";
+    const detail = [syntaxDetail, unsupportedDetail].filter(Boolean).join(" | ");
     return {
+      detail,
       error: true,
       message: `unsaved: ${settingsText}; ignored lines ${diagnostics.ignored.join(", ")}`,
     };
@@ -362,7 +372,7 @@ function nodeMetadataScriptDiagnosticMessage(source = metadataScriptSourceText()
 
 function syncNodeMetadataScriptDiagnostics() {
   const diagnostics = nodeMetadataScriptDiagnosticMessage();
-  setNodeMetadataScriptDirty(true, diagnostics.message, diagnostics.error);
+  setNodeMetadataScriptDirty(true, diagnostics.message, diagnostics.error, diagnostics.detail);
 }
 
 function runNodeMetadataScriptParserSelfTest() {
