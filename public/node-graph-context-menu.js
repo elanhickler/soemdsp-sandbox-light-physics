@@ -181,6 +181,72 @@ function endNodeSceneContextMenuDrag(event) {
   nodeGraphMvp.moduleActionDragging = null;
 }
 
+function nodeGraphHomeContextModuleEntries() {
+  const storeEntries = typeof nodeGraphModuleStoreEntries === "function"
+    ? nodeGraphModuleStoreEntries().filter((entry) => entry.homeVisible && entry.implemented)
+    : [];
+  if (storeEntries.length) {
+    return storeEntries
+      .slice()
+      .sort((a, b) => `${a.category || ""}${a.label || ""}`.localeCompare(`${b.category || ""}${b.label || ""}`));
+  }
+
+  const seen = new Set();
+  return (nodeGraphMvp.patch?.nodes || [])
+    .filter((node) => {
+      if (!node?.type || seen.has(node.type) || !Object.hasOwn(nodeGraphModuleDefinitions, node.type)) {
+        return false;
+      }
+      if (["moduleHome", "moduleShop", "output"].includes(node.type)) {
+        return false;
+      }
+      seen.add(node.type);
+      return true;
+    })
+    .map((node) => {
+      const catalog = typeof nodeGraphModuleStoreCatalog === "object" ? nodeGraphModuleStoreCatalog[node.type] || {} : {};
+      return {
+        category: catalog.category || "Patch",
+        description: catalog.description || "Module already living in this patch.",
+        implemented: true,
+        label: catalog.label || nodeGraphNodeLabels[node.type] || node.type,
+        type: node.type,
+      };
+    })
+    .sort((a, b) => `${a.category || ""}${a.label || ""}`.localeCompare(`${b.category || ""}${b.label || ""}`));
+}
+
+function renderNodeSceneHomeModuleList(container) {
+  if (!container) {
+    return;
+  }
+  const entries = nodeGraphHomeContextModuleEntries();
+  container.replaceChildren();
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "scene-context-home-empty";
+    empty.textContent = "No modules in Home yet.";
+    container.append(empty);
+    return;
+  }
+
+  for (const entry of entries) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "scene-context-home-module-button";
+    button.dataset.contextModule = entry.type;
+    button.title = entry.description || `Add ${entry.label}.`;
+    button.addEventListener("click", addNodeGraphModuleFromContext);
+
+    const label = document.createElement("strong");
+    label.textContent = entry.label;
+    const meta = document.createElement("span");
+    meta.textContent = entry.category || "Module";
+    button.append(label, meta);
+    container.append(button);
+  }
+}
+
 function beginNodeScopeContextMenuDrag(event) {
   if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
     return;
@@ -372,8 +438,11 @@ function configureNodeSceneContextMenu(mode) {
   const textBoxVerticalAlignControls = document.getElementById("nodeSceneTextBoxVerticalAlignControls");
   const textBoxVerticalAlign = document.getElementById("nodeSceneTextBoxVerticalAlign");
   const textBoxVerticalAlignValue = document.getElementById("nodeSceneTextBoxVerticalAlignValue");
+  const homeModules = document.getElementById("nodeSceneHomeModules");
+  const homeModuleList = document.getElementById("nodeSceneHomeModuleList");
   const moduleMode = mode === "module";
   const wireMode = mode === "wire";
+  const homeMode = mode === "home";
   menu.dataset.mode = mode;
   const targetNodeId = moduleMode ? nodeGraphModuleActionTargetNodeId() : null;
   if (targetNodeId) {
@@ -401,8 +470,8 @@ function configureNodeSceneContextMenu(mode) {
   const titleHidden = targetNodeUi.titleHidden;
   const textBoxLayout = normalizeNodeGraphTextBoxLayout(targetNode?.layout);
   const textBoxMode = textBoxLayout.textMode;
-  title.textContent = wireMode ? "WIRE ACTIONS" : "ACTIONS";
-  menu.setAttribute("aria-label", wireMode ? "Wire actions" : "Module actions");
+  title.textContent = wireMode ? "WIRE ACTIONS" : homeMode ? "HOME MODULES" : "ACTIONS";
+  menu.setAttribute("aria-label", wireMode ? "Wire actions" : homeMode ? "Home modules" : "Module actions");
   copyButton.hidden = !moduleMode;
   addToGroupButton.hidden = !moduleMode;
   const targetIsGraphType = nodeGraphModuleIsGraphType(targetNode?.type);
@@ -411,6 +480,12 @@ function configureNodeSceneContextMenu(mode) {
   }
   deleteButton.hidden = !(moduleMode || wireMode);
   selectedModule.hidden = !(moduleMode || wireMode);
+  if (homeModules) {
+    homeModules.hidden = !homeMode;
+    if (homeMode) {
+      renderNodeSceneHomeModuleList(homeModuleList);
+    }
+  }
   wireTypeControl.hidden = !wireMode;
   aliasControl.hidden = !moduleMode;
   widthControls.hidden = !moduleMode;
@@ -805,7 +880,16 @@ function openNodeSceneContextMenu(event) {
     return;
   }
 
-  nodeGraphMvp.sceneContextPoint = null;
+  event.preventDefault();
+  event.stopPropagation();
+  nodeGraphMvp.sceneContextPoint = nodeGraphClientPoint(event);
   nodeGraphMvp.sceneContextTargetNode = null;
   nodeGraphMvp.sceneContextTargetWire = null;
+  clearNodeGraphSelection();
+  configureNodeSceneContextMenu("home");
+  positionNodeSceneContextMenu(
+    document.getElementById("nodeSceneContextMenu"),
+    event.clientX,
+    event.clientY,
+  );
 }

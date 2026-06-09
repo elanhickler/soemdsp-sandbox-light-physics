@@ -27,7 +27,16 @@ function renderNodeGraphVisibilityMenuButton() {
     nodeGraphMvp.sliderAmountVisible ? 0 : 1,
     nodeGraphMvp.sliderPositionVisible ? 0 : 1,
   ].reduce((total, value) => total + value, 0);
-  button.textContent = hiddenCount ? `Visibility (${hiddenCount} hidden)` : "Visibility";
+  button.replaceChildren();
+  const label = document.createElement("span");
+  label.textContent = "Visibility";
+  button.append(label);
+  if (hiddenCount) {
+    const hidden = document.createElement("span");
+    hidden.className = "node-toolbar-subline";
+    hidden.textContent = `(${hiddenCount} hidden)`;
+    button.append(hidden);
+  }
   button.setAttribute("aria-pressed", String(Boolean(menu && !menu.hidden)));
   button.removeAttribute("title");
 }
@@ -109,6 +118,11 @@ function renderNodeGraphModuleVisibilityToggles() {
 function normalizeNodeGraphModuleScopeBurn(value) {
   const number = Number(value);
   return Number.isFinite(number) ? clampNodeSliderValue(number, 0, 1) : 0.5;
+}
+
+function normalizeNodeGraphModuleScopeDecay(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? clampNodeSliderValue(number, 0, 1) : 0.78;
 }
 
 function normalizeNodeGraphModuleScopeLineThickness(value) {
@@ -204,6 +218,7 @@ function renderNodeGraphModuleScopeDotPreview(
 
 function renderNodeGraphModuleScopeBrightnessControl() {
   const burn = normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0);
+  const decay = normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0.78);
   const backgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor);
   const dotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18, 3.18);
   const dotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
@@ -219,6 +234,7 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const overdrawPoints = normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp.moduleScopeOverdrawPoints ?? 1);
   const overdrawFade = normalizeNodeGraphModuleScopeOverdrawFade(nodeGraphMvp.moduleScopeOverdrawFade ?? 0.5);
   nodeGraphMvp.moduleScopeBurn = burn;
+  nodeGraphMvp.moduleScopeDecay = decay;
   nodeGraphMvp.moduleScopeBackgroundColor = backgroundColor;
   nodeGraphMvp.moduleScopeDotCore1Size = dotCore1Size;
   nodeGraphMvp.moduleScopeDotCore1Brightness = dotCore1Brightness;
@@ -232,6 +248,7 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   nodeGraphMvp.moduleScopeOverdrawPoints = overdrawPoints;
   nodeGraphMvp.moduleScopeOverdrawFade = overdrawFade;
   const burnInput = document.getElementById("nodeMasterScopeBurn");
+  const decayInput = document.getElementById("nodeMasterScopeDecay");
   const backgroundInput = document.getElementById("nodeMasterScopeBackgroundColor");
   const dotCore1SizeInput = document.getElementById("nodeMasterScopeDotCore1Size");
   const dotCore1BrightnessInput = document.getElementById("nodeMasterScopeDotCore1Brightness");
@@ -246,6 +263,9 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const overdrawFadeInput = document.getElementById("nodeMasterScopeOverdrawFade");
   if (burnInput && document.activeElement !== burnInput) {
     burnInput.value = burn.toFixed(2);
+  }
+  if (decayInput && document.activeElement !== decayInput) {
+    decayInput.value = decay.toFixed(2);
   }
   if (backgroundInput && document.activeElement !== backgroundInput) {
     backgroundInput.value = backgroundColor;
@@ -361,6 +381,18 @@ function setNodeGraphModuleScopeBurn(value) {
 
 function handleNodeGraphModuleScopeBurnInput(event) {
   setNodeGraphModuleScopeBurn(event.currentTarget.value);
+}
+
+function setNodeGraphModuleScopeDecay(value) {
+  nodeGraphMvp.moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(value);
+  renderNodeGraphModuleScopeBrightnessControl();
+  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
+    scheduleNodeGraphModuleScopeDraw();
+  }
+}
+
+function handleNodeGraphModuleScopeDecayInput(event) {
+  setNodeGraphModuleScopeDecay(event.currentTarget.value);
 }
 
 function setNodeGraphModuleScopeFramesPerSecond(value) {
@@ -542,8 +574,22 @@ function setNodeGraphVisibilityMenuOpen(open) {
   const menu = document.getElementById("nodeVisibilityMenu");
   if (menu) {
     menu.hidden = !open;
+    if (open) {
+      positionNodeGraphVisibilityMenuNearButton(menu);
+    }
   }
   renderNodeGraphVisibilityMenuButton();
+}
+
+function positionNodeGraphVisibilityMenuNearButton(menu = document.getElementById("nodeVisibilityMenu")) {
+  const button = document.getElementById("nodeVisibilityMenuButton");
+  if (!menu || !button) {
+    return;
+  }
+  const rect = button.getBoundingClientRect();
+  menu.hidden = false;
+  const menuRect = menu.getBoundingClientRect();
+  positionNodeGraphVisibilityMenu(menu, rect.right - menuRect.width, rect.bottom + 8);
 }
 
 function positionNodeGraphVisibilityMenu(menu, x, y) {
@@ -639,10 +685,8 @@ function renderNodeGraphVideoViewToggle() {
     panel.hidden = !visible;
   }
   if (button) {
-    button.innerHTML = visible
-      ? "<span>Hide</span><span>Camera View</span>"
-      : "<span>Show</span><span>Camera View</span>";
-    button.setAttribute("aria-label", visible ? "Hide Camera View" : "Show Camera View");
+    button.innerHTML = "<span>Camera</span>";
+    button.setAttribute("aria-label", "Camera");
     button.setAttribute("aria-pressed", visible ? "true" : "false");
     button.removeAttribute("title");
   }
@@ -1643,19 +1687,19 @@ function setNodeGraphViewMode(mode) {
   renderNodeGraphVideoViewToggle();
   document.getElementById("nodeSettingsViewButton").classList.toggle("active", settingsMode);
   document.getElementById("nodeModularViewButton").classList.toggle("active", modularMode && !modularOnlyMode);
-  document.getElementById("nodeModuleShopButton").classList.toggle("active", shopMode);
+  document.getElementById("nodeModuleShopButton")?.classList.toggle("active", shopMode);
   document.getElementById("nodeModularOnlyViewButton").classList.toggle("active", modularOnlyMode);
-  document.getElementById("nodeMappingViewButton").classList.toggle("active", mappingMode);
+  document.getElementById("nodeMappingViewButton")?.classList.toggle("active", mappingMode);
   document.getElementById("nodeCodeScreenViewButton").classList.toggle("active", codeMode);
-  document.getElementById("nodeUiViewButton").classList.toggle("active", uiMode);
+  document.getElementById("nodeUiViewButton")?.classList.toggle("active", uiMode);
   document.getElementById("nodeSettingsScriptViewButton").classList.toggle("active", scriptMode);
   document.getElementById("nodeSettingsViewButton").setAttribute("aria-pressed", String(settingsMode));
   document.getElementById("nodeModularViewButton").setAttribute("aria-pressed", String(modularMode && !modularOnlyMode));
-  document.getElementById("nodeModuleShopButton").setAttribute("aria-pressed", String(shopMode));
+  document.getElementById("nodeModuleShopButton")?.setAttribute("aria-pressed", String(shopMode));
   document.getElementById("nodeModularOnlyViewButton").setAttribute("aria-pressed", String(modularOnlyMode));
-  document.getElementById("nodeMappingViewButton").setAttribute("aria-pressed", String(mappingMode));
+  document.getElementById("nodeMappingViewButton")?.setAttribute("aria-pressed", String(mappingMode));
   document.getElementById("nodeCodeScreenViewButton").setAttribute("aria-pressed", String(codeMode));
-  document.getElementById("nodeUiViewButton").setAttribute("aria-pressed", String(uiMode));
+  document.getElementById("nodeUiViewButton")?.setAttribute("aria-pressed", String(uiMode));
   document.getElementById("nodeSettingsScriptViewButton").setAttribute("aria-pressed", String(scriptMode));
   if (scriptMode) {
     syncNodeGraphScriptView();

@@ -63,11 +63,45 @@ function nodeGraphManualTracePathOptions(wire, from, to) {
 }
 
 function nodeGraphWireEndpointsAreRenderable(wire) {
+  const surface = nodeGraphZoomSurface();
+  const portElementIsRenderable = (element) => {
+    if (!element) {
+      return false;
+    }
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
   return Boolean(
+    surface &&
     nodeGraphMvp.activeNodes.has(wire.sourceNode) &&
     nodeGraphMvp.activeNodes.has(wire.destinationNode) &&
     nodeGraphPatchNodeIsVisible(wire.sourceNode) &&
-    nodeGraphPatchNodeIsVisible(wire.destinationNode),
+    nodeGraphPatchNodeIsVisible(wire.destinationNode) &&
+    portElementIsRenderable(surface.querySelector(nodeGraphPortSelector(wire.sourceNode, wire.sourcePort, "output"))),
+  );
+}
+
+function nodeGraphSignalWireDestinationIsRenderable(wire) {
+  const surface = nodeGraphZoomSurface();
+  return Boolean(
+    nodeGraphWireEndpointsAreRenderable(wire) &&
+    surface?.querySelector(nodeGraphPortSelector(wire.destinationNode, wire.destinationPort, "input")),
+  );
+}
+
+function nodeGraphModulationWireDestinationIsRenderable(wire) {
+  const surface = nodeGraphZoomSurface();
+  return Boolean(
+    nodeGraphWireEndpointsAreRenderable(wire) &&
+    surface?.querySelector(nodeGraphModulationPortSelector(wire.destinationNode, wire.destinationParam)),
+  );
+}
+
+function nodeGraphGraphWireDestinationIsRenderable(wire) {
+  const surface = nodeGraphZoomSurface();
+  return Boolean(
+    nodeGraphWireEndpointsAreRenderable(wire) &&
+    surface?.querySelector(nodeGraphGraphInputPortSelector(wire.destinationNode, wire.destinationGraphInput)),
   );
 }
 
@@ -101,7 +135,7 @@ function markNodeGraphWireEndpointsConnected(wire, destinationIo = "input") {
 }
 
 function nodeGraphDrawSignalWire(svg, connection, index, context) {
-  if (!nodeGraphWireEndpointsAreRenderable(connection)) {
+  if (!nodeGraphSignalWireDestinationIsRenderable(connection)) {
     return;
   }
   const from = nodeGraphPortCenter(connection.sourceNode, connection.sourcePort, "output");
@@ -142,7 +176,7 @@ function nodeGraphDrawSignalWire(svg, connection, index, context) {
 }
 
 function nodeGraphDrawModulationWire(svg, modulation, index, context) {
-  if (!nodeGraphWireEndpointsAreRenderable(modulation)) {
+  if (!nodeGraphModulationWireDestinationIsRenderable(modulation)) {
     return;
   }
   const from = nodeGraphPortCenter(modulation.sourceNode, modulation.sourcePort, "output");
@@ -186,7 +220,7 @@ function nodeGraphDrawModulationWire(svg, modulation, index, context) {
 }
 
 function nodeGraphDrawGraphWire(svg, connection, index, context) {
-  if (!nodeGraphWireEndpointsAreRenderable(connection)) {
+  if (!nodeGraphGraphWireDestinationIsRenderable(connection)) {
     return;
   }
   const from = nodeGraphPortCenter(connection.sourceNode, connection.sourcePort, "output");
@@ -322,6 +356,18 @@ function drawNodeGraphWires() {
 
   renderNodeGraphSelection();
   scheduleNodeGraphModuleScopeDraw();
+}
+
+function scheduleNodeGraphWireRedrawAfterLayout() {
+  if (nodeGraphMvp.wireRedrawFrame) {
+    return;
+  }
+  nodeGraphMvp.wireRedrawFrame = window.requestAnimationFrame(() => {
+    nodeGraphMvp.wireRedrawFrame = window.requestAnimationFrame(() => {
+      nodeGraphMvp.wireRedrawFrame = 0;
+      drawNodeGraphWires();
+    });
+  });
 }
 
 function renderNodeGraphConnectionList() {

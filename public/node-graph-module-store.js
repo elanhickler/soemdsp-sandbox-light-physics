@@ -49,9 +49,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "midiNotePitch",
   "midiController",
   "keyboardController",
-  "moduleGoods",
   "moduleShop",
-  "moduleServices",
   "macroControls",
   "pitchModWheel",
   "xyPad",
@@ -326,7 +324,7 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   clock: {
     category: "Clock",
     description: "Timer pulse source. Emits a steady gate for triggering samplers, sequencers, and motion events.",
-    notes: ["rate control", "duty cycle", "trigger source"],
+    notes: ["rate and phase control", "duty cycle", "reset input"],
   },
   clockDivider: {
     category: "Clock",
@@ -531,18 +529,6 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "Patch-local button that opens the module browser.",
     label: "Shop",
     notes: ["module browser", "patch control", "shop"],
-  },
-  moduleGoods: {
-    category: "Controllers",
-    description: "Placeholder shelf for future goods inside the modular world.",
-    label: "Goods",
-    notes: ["placeholder", "goods", "catalog"],
-  },
-  moduleServices: {
-    category: "Controllers",
-    description: "Placeholder shelf for future services inside the modular world.",
-    label: "Services",
-    notes: ["placeholder", "services", "workbench"],
   },
   macroControls: {
     category: "Controllers",

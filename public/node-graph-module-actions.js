@@ -1,12 +1,5 @@
 function defaultNodeGraphModuleGridPoint(type) {
   const count = nodeGraphMvp.nodeTypeCounts[type] || 1;
-  const originNode = nodeGraphMvp.patch.nodes.find((node) => node.id === "canvas-origin");
-  if (originNode) {
-    return {
-      gx: originNode.gx + nodeGraphPatchNodeGridWidthUnits(originNode) + 1 + count * 2,
-      gy: originNode.gy + count * 2,
-    };
-  }
   return {
     gx: 3 + count * 2,
     gy: 3 + count * 2,

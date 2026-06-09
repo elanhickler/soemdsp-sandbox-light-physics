@@ -677,8 +677,12 @@ function setNodeGraphScopeNumberInputValue(input, value) {
     : nodeGraphScopeNumberInputSnapValue(input, value).toString();
   if (input.dataset.globalScopeInput === "burn") {
     setNodeGraphModuleScopeBurn(input.value);
+  } else if (input.dataset.globalScopeInput === "decay") {
+    setNodeGraphModuleScopeDecay(input.value);
   } else if (input.dataset.globalScopeInput === "framesPerSecond") {
     setNodeGraphModuleScopeFramesPerSecond(input.value);
+  } else if (input.dataset.timingField) {
+    updateNodeGraphPatchTimingFromHeader(input);
   } else if (input.dataset.globalScopeInput === "lineThickness") {
     setNodeGraphModuleScopeLineThickness(input.value);
   } else if (input.dataset.globalScopeInput === "dotCore1Size") {
@@ -698,6 +702,13 @@ function setNodeGraphScopeNumberInputValue(input, value) {
   } else {
     handleNodeGraphSceneScopeNumericInput({ currentTarget: input });
   }
+}
+
+function nodeGraphScopeNumberDragInputFromTarget(target) {
+  if (target instanceof HTMLInputElement) {
+    return target;
+  }
+  return target?.querySelector?.("input[data-global-scope-number-drag='true']") || null;
 }
 
 function bindNodeGraphModuleScopeWindowEvents(scopeElement) {
@@ -772,8 +783,12 @@ function beginNodeGraphScopeNumberDrag(event) {
   if (event.button > 0 || event.detail > 1) {
     return;
   }
-  const input = event.currentTarget;
+  const input = nodeGraphScopeNumberDragInputFromTarget(event.currentTarget);
+  if (!input) {
+    return;
+  }
   nodeGraphMvp.scopeNumberDragging = {
+    captureTarget: event.currentTarget,
     input,
     pointerId: event.pointerId ?? null,
     scale: nodeGraphScopeNumberDragScale(input, event),
@@ -782,8 +797,9 @@ function beginNodeGraphScopeNumberDrag(event) {
     startY: event.clientY,
   };
   input.classList.add("value-dragging");
+  input.closest(".node-header-timing-field")?.classList.add("value-dragging");
   input.readOnly = true;
-  input.setPointerCapture?.(event.pointerId);
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
   event.preventDefault();
   event.stopPropagation();
 }
@@ -814,16 +830,21 @@ function endNodeGraphScopeNumberDrag(event) {
     return;
   }
   drag.input.classList.remove("value-dragging");
+  drag.input.closest(".node-header-timing-field")?.classList.remove("value-dragging");
   drag.input.readOnly = false;
-  if (event.pointerId !== undefined && drag.input.hasPointerCapture?.(event.pointerId)) {
-    drag.input.releasePointerCapture(event.pointerId);
+  const captureTarget = drag.captureTarget || drag.input;
+  if (event.pointerId !== undefined && captureTarget.hasPointerCapture?.(event.pointerId)) {
+    captureTarget.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.scopeNumberDragging = null;
   event.preventDefault();
 }
 
 function beginNodeGraphScopeNumberEdit(event) {
-  const input = event.currentTarget;
+  const input = nodeGraphScopeNumberDragInputFromTarget(event.currentTarget);
+  if (!input) {
+    return;
+  }
   input.readOnly = false;
   input.focus();
   input.select();
@@ -4481,6 +4502,16 @@ function nodeGraphModuleScopePixelPoints(points, canvas) {
   return pixelPoints;
 }
 
+function appendNodeGraphModuleScopeVertices(target, source) {
+  if (!Array.isArray(target) || !source?.length) {
+    return target;
+  }
+  for (let index = 0; index < source.length; index += 1) {
+    target.push(source[index]);
+  }
+  return target;
+}
+
 function nodeGraphModuleScopeBeamVertices(points, canvas) {
   const pixelPoints = nodeGraphModuleScopePixelPoints(points, canvas);
   const vertices = [];
@@ -4540,7 +4571,7 @@ function nodeGraphModuleScopeXyBeamVertices(points, canvas, sparkSizePx = 2) {
   for (let index = 0; index + 1 < pixelPoints.length; index += 2) {
     const x = pixelPoints[index];
     const y = pixelPoints[index + 1];
-    vertices.push(...nodeGraphModuleScopeBeamVertices([
+    appendNodeGraphModuleScopeVertices(vertices, nodeGraphModuleScopeBeamVertices([
       (((x - radius) / canvas.width) * 2) - 1,
       1 - ((y / canvas.height) * 2),
       (((x + radius) / canvas.width) * 2) - 1,
@@ -4575,13 +4606,13 @@ function nodeGraphModuleScopeBufferDotVertices(buffer, rect, canvas, pixelRatio,
   const vertices = [];
   const xyPoints = nodeGraphModuleScopeXyPoints(buffer, rect, canvas, pixelRatio, slot);
   if (xyPoints.length >= 2) {
-    vertices.push(...nodeGraphModuleScopeDotVertices(xyPoints, canvas, 0.72, 1));
+    appendNodeGraphModuleScopeVertices(vertices, nodeGraphModuleScopeDotVertices(xyPoints, canvas, 0.72, 1));
     return vertices;
   }
   for (const [start, end] of nodeGraphModuleScopeBufferProgressRanges(buffer)) {
     const points = nodeGraphModuleScopeBufferSegmentPoints(buffer, rect, canvas, pixelRatio, slot, start, end, options);
     if (points.length >= 2) {
-      vertices.push(...nodeGraphModuleScopeDotVertices(points, canvas, start, end));
+      appendNodeGraphModuleScopeVertices(vertices, nodeGraphModuleScopeDotVertices(points, canvas, start, end));
     }
   }
   return vertices;
@@ -4631,8 +4662,11 @@ function nodeGraphModuleScopeSpectrumBarVertices(buffer, rect, canvas, options =
 
 function nodeGraphModuleScopeBurnDecaySettings(settings) {
   const masterBurn = typeof normalizeNodeGraphModuleScopeBurn === "function"
-    ? normalizeNodeGraphModuleScopeBurn(nodeGraphMvp?.moduleScopeBurn ?? 0.5)
-    : 0.5;
+    ? normalizeNodeGraphModuleScopeBurn(nodeGraphMvp?.moduleScopeBurn ?? 0.85)
+    : 0.85;
+  const decayAmount = typeof normalizeNodeGraphModuleScopeDecay === "function"
+    ? normalizeNodeGraphModuleScopeDecay(nodeGraphMvp?.moduleScopeDecay ?? 0.78)
+    : 0.78;
   const burn = clampNodeSliderValue((Number(settings?.screenBurn) || 0) * masterBurn, 0, 1);
   if (burn <= 0) {
     return {
@@ -4641,9 +4675,9 @@ function nodeGraphModuleScopeBurnDecaySettings(settings) {
       slow: 0,
     };
   }
-  const fast = 0.72 + burn * 0.2;
-  const slow = 0.86 + burn * 0.12;
-  const floor = 0.006 + (1 - burn) * 0.035;
+  const fast = 0.88 - decayAmount * 0.42 + burn * 0.12;
+  const slow = 0.91 + burn * 0.08;
+  const floor = 0.0012 + (1 - burn) * 0.018 + decayAmount * 0.002;
   return {
     fast,
     floor,
@@ -4670,8 +4704,8 @@ function nodeGraphModuleScopeTraceLineThickness(slot, settings) {
 
 function nodeGraphModuleScopeTraceBurn(settings) {
   const masterBurn = typeof normalizeNodeGraphModuleScopeBurn === "function"
-    ? normalizeNodeGraphModuleScopeBurn(nodeGraphMvp?.moduleScopeBurn ?? 0.5)
-    : 0.5;
+    ? normalizeNodeGraphModuleScopeBurn(nodeGraphMvp?.moduleScopeBurn ?? 0.85)
+    : 0.85;
   return clampNodeSliderValue((Number(settings?.screenBurn) || 0) * masterBurn, 0, 1);
 }
 
@@ -4969,7 +5003,7 @@ function drawNodeGraphModuleScopeBufferWebGl(renderer, rect, buffer, pixelRatio,
   const xyPoints = nodeGraphModuleScopeXyPoints(buffer, rect, canvas, pixelRatio, slot);
   if (xyPoints.length >= 4) {
     pointCount += xyPoints.length / 2;
-    vertices.push(...nodeGraphModuleScopeBeamVertices(xyPoints, canvas));
+    appendNodeGraphModuleScopeVertices(vertices, nodeGraphModuleScopeBeamVertices(xyPoints, canvas));
   } else {
     for (const [start, end] of nodeGraphModuleScopeBufferProgressRanges(buffer)) {
       const points = nodeGraphModuleScopeBufferSegmentPoints(
@@ -4984,7 +5018,7 @@ function drawNodeGraphModuleScopeBufferWebGl(renderer, rect, buffer, pixelRatio,
       );
       if (points.length >= 4) {
         pointCount += points.length / 2;
-        vertices.push(...nodeGraphModuleScopeBeamVertices(points, canvas));
+        appendNodeGraphModuleScopeVertices(vertices, nodeGraphModuleScopeBeamVertices(points, canvas));
       }
     }
   }
@@ -5156,8 +5190,8 @@ function drawNodeGraphModuleScopePhosphorFade(renderer, settings = nodeGraphModu
     return null;
   }
   const masterBurn = typeof normalizeNodeGraphModuleScopeBurn === "function"
-    ? normalizeNodeGraphModuleScopeBurn(nodeGraphMvp?.moduleScopeBurn ?? 0.5)
-    : 0.5;
+    ? normalizeNodeGraphModuleScopeBurn(nodeGraphMvp?.moduleScopeBurn ?? 0.85)
+    : 0.85;
   const read = renderer.phosphorTargets[renderer.phosphorReadIndex];
   const writeIndex = 1 - renderer.phosphorReadIndex;
   const write = renderer.phosphorTargets[writeIndex];
@@ -5310,6 +5344,45 @@ function clearNodeGraphModuleScopeLocalFallback(slot) {
   }
 }
 
+function nodeGraphModuleScopeDecaySmoothstep(edge0, edge1, value) {
+  const range = Math.max(0.0001, edge1 - edge0);
+  const t = clampNodeSliderValue((value - edge0) / range, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function applyNodeGraphModuleScopeCanvasPhosphorDecay(context, canvas, settings) {
+  const decay = nodeGraphModuleScopeBurnDecaySettings(settings);
+  if (!canvas?.width || !canvas?.height || !context) {
+    return;
+  }
+  if (decay.fast <= 0 || decay.slow <= 0) {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  try {
+    const image = context.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = image.data;
+    const floor = clampNodeSliderValue(Number(decay.floor) || 0, 0, 1) * 255;
+    const fast = clampNodeSliderValue(Number(decay.fast) || 0, 0, 1);
+    const slow = clampNodeSliderValue(Number(decay.slow) || 0, 0, 1);
+    for (let index = 0; index + 3 < pixels.length; index += 4) {
+      const energy = Math.max(pixels[index], pixels[index + 1], pixels[index + 2]) / 255;
+      const bright = nodeGraphModuleScopeDecaySmoothstep(0.12, 0.86, energy);
+      const factor = slow + (fast - slow) * bright;
+      const red = Math.max(0, pixels[index] * factor - floor);
+      const green = Math.max(0, pixels[index + 1] * factor - floor);
+      const blue = Math.max(0, pixels[index + 2] * factor - floor);
+      pixels[index] = red;
+      pixels[index + 1] = green;
+      pixels[index + 2] = blue;
+      pixels[index + 3] = Math.max(red, green, blue);
+    }
+    context.putImageData(image, 0, 0);
+  } catch {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
 function nodeGraphModuleScopeFallbackBufferView(buffer, limit = 384) {
   if (!buffer || buffer.nodeGraphScopeShaderMode === "one_value") {
     return buffer;
@@ -5332,7 +5405,7 @@ function nodeGraphModuleScopeFallbackBufferView(buffer, limit = 384) {
 }
 
 function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
-  const { buffer, drawRect, screenRect, slot, visibleDrawRect, visibleProgressRange } = screenItem || {};
+  const { buffer, drawRect, screenRect, settings, slot, visibleDrawRect, visibleProgressRange } = screenItem || {};
   if (slot?.type !== "visualOscilloscope" || !buffer || !drawRect || !screenRect) {
     clearNodeGraphModuleScopeLocalFallback(slot);
     return;
@@ -5346,7 +5419,7 @@ function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
     return;
   }
   const fallbackBuffer = nodeGraphModuleScopeFallbackBufferView(buffer);
-  context.clearRect(0, 0, canvas.width, canvas.height);
+  applyNodeGraphModuleScopeCanvasPhosphorDecay(context, canvas, settings);
   const localScaleX = screenRect.width > 0
     ? canvas.clientWidth / screenRect.width
     : 1;

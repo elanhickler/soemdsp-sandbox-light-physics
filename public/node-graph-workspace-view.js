@@ -8,8 +8,50 @@ function applyNodeGraphPan() {
   workspace.style.setProperty("--node-graph-pan-y", `${pan.y}px`);
   workspace.dataset.panX = String(Math.round(pan.x));
   workspace.dataset.panY = String(Math.round(pan.y));
+  syncNodeGraphOriginMarker();
+  syncNodeGraphWorldPositionReadout();
   updateNodeGraphGridHeatmap();
   drawNodeGraphWires();
+  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
+    scheduleNodeGraphModuleScopeDraw();
+  }
+}
+
+function syncNodeGraphOriginMarker() {
+  const marker = document.getElementById("nodeGraphOriginMarker");
+  if (!marker) {
+    return;
+  }
+  marker.classList.toggle("node-graph-origin-marker", true);
+  if (typeof nodeGraphApplyTooltip === "function") {
+    nodeGraphApplyTooltip(marker, "workspace.origin");
+  } else {
+    marker.title = "World origin: X 0, Y 0";
+  }
+}
+
+function nodeGraphWorldPositionLabel(value) {
+  const rounded = Math.round(value);
+  return Object.is(rounded, -0) ? "0" : String(rounded);
+}
+
+function syncNodeGraphWorldPositionReadout() {
+  const readout = document.getElementById("nodeWorldPositionReadout");
+  if (!readout) {
+    return;
+  }
+  const pan = nodeGraphMvp.pan || { x: 0, y: 0 };
+  const zoom = Math.max(0.0001, nodeGraphZoom());
+  const worldX = -((Number(pan.x) || 0) / zoom) / nodeGraphGridWidth();
+  const worldY = -((Number(pan.y) || 0) / zoom) / nodeGraphGridHeight();
+  readout.replaceChildren(
+    Object.assign(document.createElement("span"), { textContent: `X ${nodeGraphWorldPositionLabel(worldX)}` }),
+    Object.assign(document.createElement("span"), { textContent: `Y ${nodeGraphWorldPositionLabel(worldY)}` }),
+  );
+  readout.setAttribute(
+    "aria-label",
+    `World position X ${nodeGraphWorldPositionLabel(worldX)}, Y ${nodeGraphWorldPositionLabel(worldY)}`,
+  );
 }
 
 function setNodeGraphPan(x, y) {

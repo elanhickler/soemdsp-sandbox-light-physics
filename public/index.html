@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=scope-gpu-metrics-1">
+  <link rel="stylesheet" href="./public/styles.css?v=module-browser-context-menu-1">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -66,11 +66,9 @@
             aria-label="Patch settings"
             aria-pressed="false">&#9881;</button>
           <button
-            id="nodeModuleShopButton"
-            class="node-module-shop-button"
+            id="nodeUserUiSettingsButton"
             type="button"
-            hidden
-            aria-pressed="false"><span>Module</span><span>Browser</span></button>
+            aria-pressed="false"><span>UI</span><span>Settings</span></button>
           <span class="node-modular-view-button-group" role="group" aria-label="Modular view mode">
             <button
               id="nodeModularViewButton"
@@ -83,15 +81,6 @@
               aria-pressed="false"><span>Modular</span><span>Only</span></button>
           </span>
           <button id="nodeGlobalScopeMenuButton" type="button" aria-pressed="false"><span>Oscilloscope</span><span>Settings</span></button>
-          <button
-            id="nodeUiViewButton"
-            type="button"
-            aria-pressed="false"><span>UI</span><span>View</span></button>
-          <button
-            id="nodeVideoViewButton"
-            type="button"
-            aria-label="Camera"
-            aria-pressed="false"><span>Camera</span></button>
           <span id="nodeWorldPositionReadout" class="node-world-position-readout" aria-label="World position" aria-live="polite">
             <span>X 0</span>
             <span>Y 0</span>
@@ -109,12 +98,8 @@
         <div class="node-history-controls" role="group" aria-label="Node graph history">
           <button id="nodeUndoButton" type="button" disabled>Undo</button>
           <button id="nodeRedoButton" type="button" disabled>Redo</button>
-          <button
-            id="nodeUserUiSettingsButton"
-            type="button"
-            aria-pressed="false"><span>UI</span><span>Settings</span></button>
+          <button id="nodeShaderScriptButton" type="button" aria-label="Post Processing" aria-pressed="false"><span>Post</span><span>Processing</span></button>
           <span id="nodePatchTimingControls" class="node-patch-timing-controls" aria-label="Patch timing"></span>
-          <button id="nodeVisibilityMenuButton" type="button" aria-pressed="false" aria-haspopup="menu">Visibility</button>
           <a
             id="nodeDonateFiveButton"
             class="node-donate-five-button"
@@ -123,7 +108,15 @@
             rel="noopener"
             data-support-amount="10"
             aria-label="Donate ten dollars to support Soundemote Sandbox"><span>Donate$10</span></a>
-          <button id="nodeShaderScriptButton" type="button" aria-pressed="false">Shader</button>
+          <a
+            id="nodeDownloadFiftyButton"
+            class="node-download-fifty-button"
+            href="https://soundemote.io/donate?amount=50"
+            target="_blank"
+            rel="noopener"
+            data-support-amount="50"
+            aria-label="Download for fifty dollars. Donation refund available."><span>Download$50</span><span class="node-toolbar-subline">(donation refund available)</span></a>
+          <button id="nodeVisibilityMenuButton" type="button" aria-pressed="false" aria-haspopup="menu">Visibility</button>
         </div>
         <div
           id="nodeVisibilityMenu"
@@ -152,25 +145,41 @@
       <div class="node-help-stack">
         <div id="nodeInteractionHelp" class="node-interaction-help" role="status" aria-live="polite"></div>
         <div class="node-constraint-color-guide" aria-label="Resource constraint color guide">
-          <label class="node-constraint-chip" data-constraint="cpu" data-tooltip-key="constraints.cpu">
-            <input id="nodeConstraintCpuToggle" type="checkbox" data-constraint-toggle="cpu">
-            <strong>CPU</strong>
-            <span>constrained</span>
-          </label>
-          <label class="node-constraint-chip" data-constraint="ram" data-tooltip-key="constraints.ram">
-            <input id="nodeConstraintRamToggle" type="checkbox" data-constraint-toggle="ram">
-            <strong>RAM</strong>
-            <span>constrained</span>
-          </label>
-          <label class="node-constraint-chip" data-constraint="gpu" data-tooltip-key="constraints.gpu">
-            <input id="nodeConstraintGpuToggle" type="checkbox" data-constraint-toggle="gpu">
-            <strong>GPU</strong>
-            <span>constrained</span>
-          </label>
-          <span id="nodeScopeGpuMetrics" class="node-scope-gpu-metrics" aria-live="polite">
-            <span>scope fps <strong data-scope-gpu-metric="fps">--</strong></span>
-            <span>points <strong data-scope-gpu-metric="points">--</strong></span>
-            <span class="node-scope-gpu-debug" data-scope-gpu-debug="summary">debug --</span>
+          <span class="node-constraint-stack" data-constraint-stack="cpu">
+            <label class="node-constraint-chip" data-constraint="cpu" data-tooltip-key="constraints.cpu">
+              <input id="nodeConstraintCpuToggle" type="checkbox" data-constraint-toggle="cpu">
+              <strong>CPU</strong>
+              <span>constrained</span>
+            </label>
+            <span id="nodeScopeCpuMetrics" class="node-constraint-metrics node-scope-cpu-metrics" aria-live="polite">
+              <span>main fps <strong data-scope-cpu-metric="fps">--.-</strong></span>
+              <span>lag <strong data-scope-cpu-metric="lag">--.-</strong>ms</span>
+              <span class="node-scope-resource-debug" data-scope-cpu-debug="summary">cpu debug --</span>
+            </span>
+          </span>
+          <span class="node-constraint-stack" data-constraint-stack="ram">
+            <label class="node-constraint-chip" data-constraint="ram" data-tooltip-key="constraints.ram">
+              <input id="nodeConstraintRamToggle" type="checkbox" data-constraint-toggle="ram">
+              <strong>RAM</strong>
+              <span>constrained</span>
+            </label>
+            <span id="nodeScopeRamMetrics" class="node-constraint-metrics node-scope-ram-metrics" aria-live="polite">
+              <span>heap <strong data-scope-ram-metric="used">----</strong>mb</span>
+              <span>limit <strong data-scope-ram-metric="limit">----</strong>mb</span>
+              <span class="node-scope-resource-debug" data-scope-ram-debug="summary">ram debug --</span>
+            </span>
+          </span>
+          <span class="node-constraint-stack" data-constraint-stack="gpu">
+            <label class="node-constraint-chip" data-constraint="gpu" data-tooltip-key="constraints.gpu">
+              <input id="nodeConstraintGpuToggle" type="checkbox" data-constraint-toggle="gpu">
+              <strong>GPU</strong>
+              <span>constrained</span>
+            </label>
+            <span id="nodeScopeGpuMetrics" class="node-constraint-metrics node-scope-gpu-metrics" aria-live="polite">
+              <span>scope fps <strong data-scope-gpu-metric="fps">--</strong></span>
+              <span>points <strong data-scope-gpu-metric="points">--</strong></span>
+              <span class="node-scope-resource-debug node-scope-gpu-debug" data-scope-gpu-debug="summary">debug --</span>
+            </span>
           </span>
         </div>
       </div>
@@ -187,7 +196,12 @@
           data-tooltip-key="workspace.backToFull">&larr;</button>
         <div id="nodeGridHeatmap" class="node-grid-heatmap" aria-hidden="true"></div>
         <div id="nodeGraphZoomSurface" class="node-graph-zoom-surface">
-          <div id="nodeGraphOriginMarker" class="node-graph-origin-marker" aria-hidden="true" title="Grid origin: X 0, Y 0"></div>
+          <div
+            id="nodeGraphOriginMarker"
+            class="node-graph-origin-marker"
+            aria-hidden="true"
+            data-tooltip-key="workspace.origin"
+            title="World origin: X 0, Y 0"></div>
           <svg
             id="nodeWireSvg"
             class="node-wire-svg"
@@ -427,6 +441,12 @@
               <button id="nodeShaderScriptTextSizeDecrease" type="button" aria-label="Decrease shader editor text size">-</button>
               <button id="nodeShaderScriptTextSizeIncrease" type="button" aria-label="Increase shader editor text size">+</button>
               <button id="nodeShaderScriptSyntaxColorsButton" type="button" aria-expanded="false">Colors</button>
+              <span class="node-shader-script-quick-actions" aria-label="Shader script quick actions">
+                <button id="nodeShaderScriptApply" type="button">Apply</button>
+                <button id="nodeShaderScriptCopy" type="button">Copy</button>
+                <button id="nodeShaderScriptPaste" type="button">Paste</button>
+                <button id="nodeShaderScriptToDesktop" type="button">To Desktop</button>
+              </span>
             </div>
             <button
               id="nodeShaderScriptClose"
@@ -492,17 +512,6 @@
             </label>
           </div>
           <div class="node-shader-script-actions">
-            <button id="nodeShaderScriptApply" type="button">Apply</button>
-            <button id="nodeShaderScriptCopy" type="button">Copy</button>
-            <button id="nodeShaderScriptPaste" type="button">Paste</button>
-            <button id="nodeShaderScriptToDesktop" type="button">To Desktop</button>
-            <button id="nodeShaderScriptDefault" type="button">Ghost Phosphor</button>
-            <button id="nodeShaderScriptSaveDefault" type="button" hidden>Save As Default</button>
-            <button id="nodeShaderScriptGreenPreset" type="button">Green Tube</button>
-            <button id="nodeShaderScriptAmberPreset" type="button">Amber Tube</button>
-            <button id="nodeShaderScriptCoolWhitePreset" type="button">Cool White</button>
-            <button id="nodeShaderScriptRgbPixelPreset" type="button">RGB Pixels</button>
-            <button id="nodeShaderScriptRedPreset" type="button">Darkroom Red</button>
             <button id="nodeShaderScriptEnable" type="button" aria-pressed="false">Disabled</button>
             <span id="nodeShaderScriptStatus" class="pill">ready</span>
           </div>
@@ -725,16 +734,16 @@
             <button
               id="loadNodeGraphScriptButton"
               type="button"
-              data-tooltip-key="script.load"><span>Load</span><span>Patch Script</span></button>
+              data-tooltip-key="script.load"><span>Load</span><span>Patch</span></button>
             <button
               id="nodeSettingsScriptViewButton"
               type="button"
               aria-pressed="false"
-              data-tooltip-key="script.view"><span>View</span><span>Code</span></button>
+              data-tooltip-key="script.view"><span>View</span><span>Script</span></button>
             <button
               id="nodeSettingsSaveScriptButton"
               type="button"
-              data-tooltip-key="script.save"><span>Save</span><span>Patch Script</span></button>
+              data-tooltip-key="script.save"><span>Save</span><span>Patch</span></button>
             <button
               id="updateDefaultPresetButton"
               type="button"
@@ -1624,6 +1633,15 @@
           <span>selected</span>
           <strong>none</strong>
         </div>
+        <div id="nodeSceneHomeModules" class="scene-context-home-modules" hidden>
+          <button id="nodeSceneOpenModuleBrowser" class="scene-context-module-browser-button" type="button">
+            Module Browser
+          </button>
+          <div
+            id="nodeSceneHomeModuleList"
+            class="scene-context-home-module-list"
+            aria-label="Modules in Home"></div>
+        </div>
         <button id="nodeSceneAddToGroup" type="button" role="menuitem" hidden>
           <span>Add to group</span>
         </button>
@@ -2122,10 +2140,10 @@
               value="http://127.0.0.1:47991"
               aria-label="CLAP host URL">
           </label>
-          <button id="nodeClapHostConnectButton" type="button">Connect Local Host</button>
-          <button id="nodeClapHostPluginsButton" type="button" disabled>Refresh Plugins</button>
-          <button id="nodeClapHostDiagnosticsButton" type="button">Diagnostics</button>
-          <button id="nodeClapHostCommandButton" type="button">Copy Host Command</button>
+          <button id="nodeClapHostConnectButton" class="node-under-construction-control" type="button" disabled aria-disabled="true">Connect Local Host</button>
+          <button id="nodeClapHostPluginsButton" class="node-under-construction-control" type="button" disabled aria-disabled="true">Refresh Plugins</button>
+          <button id="nodeClapHostDiagnosticsButton" class="node-under-construction-control" type="button" disabled aria-disabled="true">Diagnostics</button>
+          <button id="nodeClapHostCommandButton" class="node-under-construction-control" type="button" disabled aria-disabled="true">Copy Host Command</button>
         </section>
         <div class="node-live-controls" aria-label="Live Audio">
           <span id="nodeLiveInputStatus" class="pill">input off</span>
@@ -2304,17 +2322,6 @@
               id="nodeVisualOutputResolutionValue"
               class="pill node-visual-output-resolution"
               aria-label="Visual export output resolution">1024 x 427</span>
-            <span class="node-render-export-buttons" aria-label="Rendered export actions">
-              <button id="nodeRenderWavButton" type="button" disabled>Render wav</button>
-              <button id="nodeRenderMp4Button" type="button" disabled>Render mp4</button>
-              <button id="nodeRenderOggButton" type="button" disabled>Render ogg</button>
-              <button id="nodeRenderFlacButton" type="button" disabled>Render flac</button>
-              <button id="nodeRenderMp4AltButton" type="button" disabled>Render mp4</button>
-              <button id="nodeRenderMp4VideoOnlyButton" type="button" disabled>Render mp4 (video only)</button>
-            </span>
-            <button id="nodeExportVisualVideoButton" type="button" disabled>Export WebM</button>
-            <button id="nodeSaveVisualOutputButton" type="button" disabled>Save PNG</button>
-            <button id="nodeCopyVisualOutputButton" type="button" disabled>Copy Image</button>
           </div>
           <canvas
             id="nodeVisualOutputCanvas"
@@ -2774,22 +2781,22 @@
   <script src="./public/node-graph-settings-text-fit.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-preset.js?v=default-visible-nodes-1"></script>
   <script src="./public/node-graph-script-status.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-view-controls.js?v=camera-button-label-1"></script>
+  <script src="./public/node-graph-view-controls.js?v=module-browser-context-menu-1"></script>
   <script src="./public/node-graph-workspace-geometry.js?v=module-whole-grid-pan-half-grid-1"></script>
-  <script src="./public/node-graph-workspace-zoom.js?v=scope-redraw-on-zoom-2"></script>
+  <script src="./public/node-graph-workspace-zoom.js?v=log-zoom-feel-1"></script>
   <script src="./public/node-graph-workspace-view.js?v=module-origin-independent-1"></script>
   <script src="./public/node-graph-camera-view.js?v=utility-camera-feed-1780810000000"></script>
-  <script src="./public/node-graph-clap-host.js?v=clap-under-construction-1"></script>
+  <script src="./public/node-graph-clap-host.js?v=clap-under-construction-2"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-node-dragging.js?v=module-whole-grid-pan-half-grid-1"></script>
-  <script src="./public/node-graph-context-menu.js?v=shop-module-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=home-context-menu-1"></script>
   <script src="./public/node-graph-module-actions.js?v=module-origin-independent-1"></script>
   <script src="./public/node-graph-code-screen.js?v=canvas-ratio-language-2"></script>
   <script src="./public/node-graph-module-scopes.js?v=scope-debug-freeze-3"></script>
-  <script src="./public/node-graph-shader-script.js?v=one-value-line-length-1"></script>
+  <script src="./public/node-graph-shader-script.js?v=post-processing-brightness-contrast-1"></script>
   <script src="./public/node-graph-canvas-script.js?v=canvas-hex-colors-1"></script>
   <script src="./public/node-graph-module-factories.js?v=oscilloscope-mono-label-1"></script>
-  <script src="./public/node-graph-module-header-rendering.js?v=scope-burn-fps-header-1"></script>
+  <script src="./public/node-graph-module-header-rendering.js?v=scope-controls-lower-row-1"></script>
   <script src="./public/node-graph-module-rendering.js?v=speaker-protection-1"></script>
   <script src="./public/node-graph-history.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-visual-utils.js?v=text-light-registry-1780800000000"></script>
@@ -2851,9 +2858,9 @@
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-workspace-event-bindings.js?v=canvas-origin-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=copy-visual-output-1"></script>
-  <script src="./public/node-graph-header-event-bindings.js?v=scope-burn-fps-header-1"></script>
+  <script src="./public/node-graph-header-event-bindings.js?v=module-browser-context-menu-1"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=node-graph-help-event-bindings-refactor-1780369200000"></script>
-  <script src="./public/node-graph-scene-menu-event-bindings.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-scene-menu-event-bindings.js?v=module-browser-context-menu-1"></script>
   <script src="./public/node-graph-uidev-event-bindings.js?v=text-light-registry-1780800000000"></script>
   <script src="./public/node-graph-settings-event-bindings.js?v=metadata-popover-bind-1"></script>
   <script src="./public/node-graph-slider-event-bindings.js?v=node-graph-slider-event-bindings-refactor-1780369200000"></script>

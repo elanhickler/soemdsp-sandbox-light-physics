@@ -2,6 +2,7 @@ const nodeGraphClapHostDefaultPort = 47991;
 const nodeGraphClapHostName = "Soundemote WebUI CLAP Host";
 const nodeGraphClapEditorRequestTimeoutMs = 12000;
 const nodeGraphClapHostStorageKey = "nodeGraphClapHostBaseUrl";
+const nodeGraphClapHostUnderConstruction = true;
 
 const nodeGraphClapHostState = {
   status: "disconnected",
@@ -63,6 +64,35 @@ function syncNodeGraphClapHostUrlInput() {
   if (input) {
     input.value = nodeGraphClapHostState.baseUrl;
   }
+}
+
+function markNodeGraphClapHostButtonUnderConstruction(button) {
+  if (!button) {
+    return;
+  }
+  button.classList.add("node-under-construction-control");
+  button.disabled = true;
+  button.setAttribute("aria-disabled", "true");
+}
+
+function markNodeGraphClapHostButtonsUnderConstruction(buttons) {
+  for (const button of buttons || []) {
+    markNodeGraphClapHostButtonUnderConstruction(button);
+  }
+}
+
+function createNodeGraphClapPluginActionButton(label, datasetKey, nodeId, handler) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "node-secondary-button";
+  button.textContent = label;
+  button.dataset[datasetKey] = nodeId;
+  if (nodeGraphClapHostUnderConstruction) {
+    markNodeGraphClapHostButtonUnderConstruction(button);
+  } else {
+    button.addEventListener("click", () => handler(nodeId));
+  }
+  return button;
 }
 
 function applyNodeGraphClapHostBaseUrlFromInput(options = {}) {
@@ -196,7 +226,23 @@ function setNodeGraphClapHostStatus(status, detail = "") {
   const connectButton = document.getElementById("nodeClapHostConnectButton");
   const pluginsButton = document.getElementById("nodeClapHostPluginsButton");
   const diagnosticsButton = document.getElementById("nodeClapHostDiagnosticsButton");
+  const commandButton = document.getElementById("nodeClapHostCommandButton");
   if (!statusElement || !detailElement || !connectButton) return;
+
+  if (nodeGraphClapHostUnderConstruction) {
+    statusElement.classList.add("warn");
+    statusElement.classList.remove("error");
+    statusElement.textContent = "CLAP Host: Under Construction";
+    detailElement.textContent = detail || "local companion UI is being built here under the render controls";
+    markNodeGraphClapHostButtonsUnderConstruction([
+      connectButton,
+      pluginsButton,
+      diagnosticsButton,
+      commandButton,
+    ]);
+    syncNodeGraphClapPluginElements();
+    return;
+  }
 
   statusElement.classList.toggle("warn", status !== "connected");
   statusElement.classList.toggle("error", status === "error");
@@ -232,8 +278,8 @@ function setNodeGraphClapHostStatus(status, detail = "") {
     syncNodeGraphClapPluginElements();
     return;
   }
-  statusElement.textContent = "CLAP Host: Disconnected";
-  detailElement.textContent = detail || "run the local companion, then connect";
+  statusElement.textContent = "CLAP Host: Under Construction";
+  detailElement.textContent = detail || "local companion UI is being built here under the render controls";
   syncNodeGraphClapPluginElements();
 }
 
@@ -813,54 +859,54 @@ function createNodeGraphClapPluginBody(nodeId) {
 
   const actions = document.createElement("div");
   actions.className = "node-clap-plugin-actions";
-  const createButton = document.createElement("button");
-  createButton.type = "button";
-  createButton.className = "node-secondary-button";
-  createButton.textContent = "Create Instance";
-  createButton.dataset.clapPluginCreate = nodeId;
-  createButton.addEventListener("click", () => createNodeGraphClapPluginInstance(nodeId));
-  const deleteButton = document.createElement("button");
-  deleteButton.type = "button";
-  deleteButton.className = "node-secondary-button";
-  deleteButton.textContent = "Delete Instance";
-  deleteButton.dataset.clapPluginDelete = nodeId;
-  deleteButton.addEventListener("click", () => deleteNodeGraphClapPluginInstance(nodeId));
-  const refreshButton = document.createElement("button");
-  refreshButton.type = "button";
-  refreshButton.className = "node-secondary-button";
-  refreshButton.textContent = "Refresh Params";
-  refreshButton.dataset.clapPluginRefreshParams = nodeId;
-  refreshButton.addEventListener("click", () => refreshNodeGraphClapPluginParameters(nodeId));
-  const resetSafetyButton = document.createElement("button");
-  resetSafetyButton.type = "button";
-  resetSafetyButton.className = "node-secondary-button";
-  resetSafetyButton.textContent = "Reset Safety";
-  resetSafetyButton.dataset.clapPluginResetSafety = nodeId;
-  resetSafetyButton.addEventListener("click", () => resetNodeGraphClapPluginSafety(nodeId));
-  const editorButton = document.createElement("button");
-  editorButton.type = "button";
-  editorButton.className = "node-secondary-button";
-  editorButton.textContent = "Open Editor";
-  editorButton.dataset.clapPluginOpenEditor = nodeId;
-  editorButton.addEventListener("click", () => openNodeGraphClapPluginEditor(nodeId));
-  const closeEditorButton = document.createElement("button");
-  closeEditorButton.type = "button";
-  closeEditorButton.className = "node-secondary-button";
-  closeEditorButton.textContent = "Close Editor";
-  closeEditorButton.dataset.clapPluginCloseEditor = nodeId;
-  closeEditorButton.addEventListener("click", () => closeNodeGraphClapPluginEditor(nodeId));
-  const saveStateButton = document.createElement("button");
-  saveStateButton.type = "button";
-  saveStateButton.className = "node-secondary-button";
-  saveStateButton.textContent = "Save State";
-  saveStateButton.dataset.clapPluginSaveState = nodeId;
-  saveStateButton.addEventListener("click", () => saveNodeGraphClapPluginState(nodeId));
-  const restoreStateButton = document.createElement("button");
-  restoreStateButton.type = "button";
-  restoreStateButton.className = "node-secondary-button";
-  restoreStateButton.textContent = "Restore State";
-  restoreStateButton.dataset.clapPluginRestoreState = nodeId;
-  restoreStateButton.addEventListener("click", () => restoreNodeGraphClapPluginState(nodeId));
+  const createButton = createNodeGraphClapPluginActionButton(
+    "Create Instance",
+    "clapPluginCreate",
+    nodeId,
+    createNodeGraphClapPluginInstance,
+  );
+  const deleteButton = createNodeGraphClapPluginActionButton(
+    "Delete Instance",
+    "clapPluginDelete",
+    nodeId,
+    deleteNodeGraphClapPluginInstance,
+  );
+  const refreshButton = createNodeGraphClapPluginActionButton(
+    "Refresh Params",
+    "clapPluginRefreshParams",
+    nodeId,
+    refreshNodeGraphClapPluginParameters,
+  );
+  const resetSafetyButton = createNodeGraphClapPluginActionButton(
+    "Reset Safety",
+    "clapPluginResetSafety",
+    nodeId,
+    resetNodeGraphClapPluginSafety,
+  );
+  const editorButton = createNodeGraphClapPluginActionButton(
+    "Open Editor",
+    "clapPluginOpenEditor",
+    nodeId,
+    openNodeGraphClapPluginEditor,
+  );
+  const closeEditorButton = createNodeGraphClapPluginActionButton(
+    "Close Editor",
+    "clapPluginCloseEditor",
+    nodeId,
+    closeNodeGraphClapPluginEditor,
+  );
+  const saveStateButton = createNodeGraphClapPluginActionButton(
+    "Save State",
+    "clapPluginSaveState",
+    nodeId,
+    saveNodeGraphClapPluginState,
+  );
+  const restoreStateButton = createNodeGraphClapPluginActionButton(
+    "Restore State",
+    "clapPluginRestoreState",
+    nodeId,
+    restoreNodeGraphClapPluginState,
+  );
   actions.append(
     createButton,
     deleteButton,
@@ -885,6 +931,70 @@ function syncNodeGraphClapPluginElement(element, patchNode) {
   const body = element?.querySelector?.(".node-clap-plugin-body");
   if (body) {
     syncNodeGraphClapPluginBody(body, patchNode);
+  }
+}
+
+function syncNodeGraphClapPluginActionButtons(buttons, binding, staleInstance) {
+  const buttonList = [
+    buttons?.createButton,
+    buttons?.deleteButton,
+    buttons?.refreshButton,
+    buttons?.resetSafetyButton,
+    buttons?.editorButton,
+    buttons?.closeEditorButton,
+    buttons?.saveStateButton,
+    buttons?.restoreStateButton,
+  ];
+  if (nodeGraphClapHostUnderConstruction) {
+    markNodeGraphClapHostButtonsUnderConstruction(buttonList);
+    return;
+  }
+  if (buttons?.createButton) {
+    buttons.createButton.disabled = nodeGraphClapHostState.status !== "connected" ||
+      !binding.path ||
+      !binding.clapId ||
+      Boolean(binding.instanceId);
+  }
+  if (buttons?.deleteButton) {
+    buttons.deleteButton.textContent = staleInstance ? "Forget Instance" : "Delete Instance";
+    buttons.deleteButton.disabled = nodeGraphClapHostState.status !== "connected" || !binding.instanceId;
+  }
+  if (buttons?.refreshButton) {
+    buttons.refreshButton.disabled = nodeGraphClapHostState.status !== "connected" ||
+      !binding.instanceId ||
+      staleInstance;
+  }
+  if (buttons?.resetSafetyButton) {
+    buttons.resetSafetyButton.disabled = nodeGraphClapHostState.status !== "connected" ||
+      !binding.instanceId ||
+      staleInstance;
+  }
+  const editor = nodeGraphClapInstanceEditor(binding.instanceId);
+  if (buttons?.editorButton) {
+    buttons.editorButton.disabled = nodeGraphClapHostState.status !== "connected" ||
+      !binding.instanceId ||
+      staleInstance ||
+      !editor.canOpen;
+  }
+  if (buttons?.closeEditorButton) {
+    buttons.closeEditorButton.disabled = nodeGraphClapHostState.status !== "connected" ||
+      !binding.instanceId ||
+      staleInstance ||
+      editor.open !== true;
+  }
+  const state = nodeGraphClapInstanceState(binding.instanceId);
+  if (buttons?.saveStateButton) {
+    buttons.saveStateButton.disabled = nodeGraphClapHostState.status !== "connected" ||
+      !binding.instanceId ||
+      staleInstance ||
+      !state.supported;
+  }
+  if (buttons?.restoreStateButton) {
+    buttons.restoreStateButton.disabled = nodeGraphClapHostState.status !== "connected" ||
+      !binding.instanceId ||
+      staleInstance ||
+      !state.supported ||
+      !binding.stateBase64;
   }
 }
 
@@ -960,48 +1070,16 @@ function syncNodeGraphClapPluginBody(body, patchNode) {
       }
     }
   }
-  if (createButton) {
-    createButton.disabled = nodeGraphClapHostState.status !== "connected" || !binding.path || !binding.clapId || Boolean(binding.instanceId);
-  }
-  if (deleteButton) {
-    deleteButton.textContent = staleInstance ? "Forget Instance" : "Delete Instance";
-    deleteButton.disabled = nodeGraphClapHostState.status !== "connected" || !binding.instanceId;
-  }
-  if (refreshButton) {
-    refreshButton.disabled = nodeGraphClapHostState.status !== "connected" || !binding.instanceId || staleInstance;
-  }
-  if (resetSafetyButton) {
-    resetSafetyButton.disabled = nodeGraphClapHostState.status !== "connected" || !binding.instanceId || staleInstance;
-  }
-  if (editorButton) {
-    const editor = nodeGraphClapInstanceEditor(binding.instanceId);
-    editorButton.disabled = nodeGraphClapHostState.status !== "connected" ||
-      !binding.instanceId ||
-      staleInstance ||
-      !editor.canOpen;
-  }
-  if (closeEditorButton) {
-    const editor = nodeGraphClapInstanceEditor(binding.instanceId);
-    closeEditorButton.disabled = nodeGraphClapHostState.status !== "connected" ||
-      !binding.instanceId ||
-      staleInstance ||
-      editor.open !== true;
-  }
-  if (saveStateButton) {
-    const state = nodeGraphClapInstanceState(binding.instanceId);
-    saveStateButton.disabled = nodeGraphClapHostState.status !== "connected" ||
-      !binding.instanceId ||
-      staleInstance ||
-      !state.supported;
-  }
-  if (restoreStateButton) {
-    const state = nodeGraphClapInstanceState(binding.instanceId);
-    restoreStateButton.disabled = nodeGraphClapHostState.status !== "connected" ||
-      !binding.instanceId ||
-      staleInstance ||
-      !state.supported ||
-      !binding.stateBase64;
-  }
+  syncNodeGraphClapPluginActionButtons({
+    createButton,
+    deleteButton,
+    refreshButton,
+    resetSafetyButton,
+    editorButton,
+    closeEditorButton,
+    saveStateButton,
+    restoreStateButton,
+  }, binding, staleInstance);
   if (paramList) {
     paramList.replaceChildren();
     if (!binding.instanceId) {
@@ -1484,6 +1562,16 @@ function bindNodeGraphClapHostControls() {
   const hostUrlInput = document.getElementById("nodeClapHostUrl");
   nodeGraphClapHostState.baseUrl = loadNodeGraphClapHostBaseUrl();
   syncNodeGraphClapHostUrlInput();
+  if (nodeGraphClapHostUnderConstruction) {
+    markNodeGraphClapHostButtonsUnderConstruction([
+      connectButton,
+      pluginsButton,
+      diagnosticsButton,
+      commandButton,
+    ]);
+    setNodeGraphClapHostStatus("disconnected");
+    return;
+  }
   connectButton?.addEventListener("click", () => {
     connectNodeGraphClapHost();
   });

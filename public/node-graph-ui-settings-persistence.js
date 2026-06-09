@@ -30,6 +30,12 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeBackgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(
     view.moduleScopeBackgroundColor ?? nodeGraphMvp.moduleScopeBackgroundColor ?? "#000000",
   );
+  const moduleScopeBurn = normalizeNodeGraphModuleScopeBurn(
+    view.moduleScopeBurn ?? nodeGraphMvp.moduleScopeBurn ?? 0.85,
+  );
+  const moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(
+    view.moduleScopeDecay ?? nodeGraphMvp.moduleScopeDecay ?? 0.78,
+  );
   const moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(
     view.moduleScopeDotCore1Size ?? view.moduleScopeDotCore ?? nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18,
     3.18,
@@ -102,6 +108,8 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleOscilloscopesVisible,
       moduleSlidersVisible,
       moduleScopeBackgroundColor,
+      moduleScopeBurn,
+      moduleScopeDecay,
       moduleScopeDotCore1Size,
       moduleScopeDotCore1Brightness,
       moduleScopeDotCore1Color,
@@ -155,6 +163,8 @@ function readNodeUiDevSettingsFromControls() {
       moduleOscilloscopesVisible: Boolean(nodeGraphMvp.moduleOscilloscopesVisible),
       moduleSlidersVisible: Boolean(nodeGraphMvp.moduleSlidersVisible),
       moduleScopeBackgroundColor: normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor ?? "#000000"),
+      moduleScopeBurn: normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0.85),
+      moduleScopeDecay: normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0.78),
       moduleScopeDotCore1Size: normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18, 3.18),
       moduleScopeDotCore1Brightness: normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 4.5, 4.5),
       moduleScopeDotCore1Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffffff", "#ffffff"),
@@ -225,6 +235,8 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleOscilloscopesVisible = Boolean(normalized.view.moduleOscilloscopesVisible);
   nodeGraphMvp.moduleSlidersVisible = Boolean(normalized.view.moduleSlidersVisible);
   nodeGraphMvp.moduleScopeBackgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(normalized.view.moduleScopeBackgroundColor);
+  nodeGraphMvp.moduleScopeBurn = normalizeNodeGraphModuleScopeBurn(normalized.view.moduleScopeBurn);
+  nodeGraphMvp.moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(normalized.view.moduleScopeDecay);
   nodeGraphMvp.moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(normalized.view.moduleScopeDotCore1Size, 3.18);
   nodeGraphMvp.moduleScopeDotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(normalized.view.moduleScopeDotCore1Brightness, 4.5);
   nodeGraphMvp.moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore1Color, "#ffffff");

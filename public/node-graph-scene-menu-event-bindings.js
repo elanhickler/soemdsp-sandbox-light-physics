@@ -20,6 +20,8 @@ function bindNodeGraphSceneMenuEvents() {
       button.addEventListener("click", () => setSelectedNodeGraphWireType(button.dataset.wireType));
     });
   bindNodeGraphSceneElementEvent("nodeSceneCopyModule", "click", copyNodeGraphModuleFromContext);
+  bindNodeGraphSceneElementEvent("nodeSceneOpenModuleBrowser", "click", () =>
+    openNodeGraphModuleShop(nodeGraphMvp.sceneContextPoint));
   bindNodeGraphSceneElementEvent("nodeSceneAddToGroup", "click", saveNodeGraphSelectionAsModuleGroup);
   bindNodeGraphSceneElementEvent("nodeSceneAddToUi", "click", addNodeGraphModuleToUiFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneWidthDecrease", "click", () => adjustNodeGraphModuleWidthFromContext(-1));

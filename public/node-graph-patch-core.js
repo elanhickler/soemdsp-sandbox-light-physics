@@ -170,18 +170,6 @@ function validateNodeGraphPatch(patch) {
     }
     return normalizedNode;
   });
-  if (!nodes.some((node) => node.id === "canvas-origin")) {
-    const originNode = createNodeGraphPatchNode("canvas", {
-      alias: "Origin",
-      gx: 1,
-      gy: 1,
-      heightGu: 8,
-      id: "canvas-origin",
-      widthGu: 9,
-    });
-    ids.add("canvas-origin");
-    nodes.unshift(originNode);
-  }
   if (!nodes.some((node) => node.id === "home")) {
     let homeId = "home";
     let suffix = 2;
@@ -196,7 +184,7 @@ function validateNodeGraphPatch(patch) {
       widthGu: 5,
     });
     ids.add(homeId);
-    nodes.splice(nodes.some((node) => node.id === "canvas-origin") ? 1 : 0, 0, homeNode);
+    nodes.splice(0, 0, homeNode);
   }
   if (!nodes.some((node) => node.type === "moduleShop")) {
     let shopId = "shop";
@@ -214,38 +202,6 @@ function validateNodeGraphPatch(patch) {
     });
     ids.add(shopId);
     nodes.unshift(shopNode);
-  }
-  if (!nodes.some((node) => node.id === "goods")) {
-    let goodsId = "goods";
-    let suffix = 2;
-    while (ids.has(goodsId)) {
-      goodsId = `goods-${suffix}`;
-      suffix += 1;
-    }
-    const goodsNode = createNodeGraphPatchNode("moduleGoods", {
-      gx: 7,
-      gy: 10,
-      id: goodsId,
-      widthGu: 5,
-    });
-    ids.add(goodsId);
-    nodes.splice(nodes.some((node) => node.id === "home") ? 2 : 0, 0, goodsNode);
-  }
-  if (!nodes.some((node) => node.id === "services")) {
-    let servicesId = "services";
-    let suffix = 2;
-    while (ids.has(servicesId)) {
-      servicesId = `services-${suffix}`;
-      suffix += 1;
-    }
-    const servicesNode = createNodeGraphPatchNode("moduleServices", {
-      gx: 7,
-      gy: 15,
-      id: servicesId,
-      widthGu: 5,
-    });
-    ids.add(servicesId);
-    nodes.splice(nodes.some((node) => node.id === "goods") ? 3 : 0, 0, servicesNode);
   }
 
   const uiItems = normalizeNodeGraphPatchUiItems(patch.uiItems, { nodeIds: ids });
@@ -565,6 +521,9 @@ function applyNodeGraphPatchToDom() {
   if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
     scheduleNodeGraphModuleScopeDraw();
   }
+  if (typeof scheduleNodeGraphWireRedrawAfterLayout === "function") {
+    scheduleNodeGraphWireRedrawAfterLayout();
+  }
 }
 
 function commitNodeGraphPatch(patch, options = {}) {
@@ -594,6 +553,9 @@ function commitNodeGraphPatch(patch, options = {}) {
   }
   if (options.markPending !== false) {
     markNodeGraphRenderPending();
+  }
+  if (typeof scheduleNodeGraphWireRedrawAfterLayout === "function") {
+    scheduleNodeGraphWireRedrawAfterLayout();
   }
   scheduleNodeGraphLivePlanSync();
 }

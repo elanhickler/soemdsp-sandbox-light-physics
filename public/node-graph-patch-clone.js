@@ -108,9 +108,13 @@ function normalizeNodeGraphClapPluginBinding(clap = {}) {
 }
 
 function nodeGraphDefaultNodeTitle(type, id) {
-  return id === type
-    ? nodeGraphNodeLabels[type]
-    : `${nodeGraphNodeLabels[type]} ${String(id).split("-").at(-1)}`;
+  const label = nodeGraphNodeLabels[type] || String(type || "");
+  const idText = String(id || "").trim();
+  const suffix = idText.split("-").at(-1) || "";
+  if (id === type || idText.toLowerCase() === label.toLowerCase() || suffix.toLowerCase() === label.toLowerCase()) {
+    return label;
+  }
+  return `${label} ${suffix}`;
 }
 
 function nodeGraphPatchNodeTitle(node) {

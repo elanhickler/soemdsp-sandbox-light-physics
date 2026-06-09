@@ -6,7 +6,8 @@ function createNodeGraphPort(node, type, port, io) {
   button.dataset.port = port;
   button.dataset.io = io;
   button.dataset.alias = nodeGraphLabel(node, port);
-  const label = `${nodeGraphNodeLabels[type]} ${io} port ${port}`;
+  const portLabel = nodeGraphPortDisplayLabel(type, port, io);
+  const label = `${nodeGraphNodeLabels[type]} ${io} port ${portLabel}`;
   button.setAttribute("aria-label", label);
   return button;
 }
@@ -32,13 +33,14 @@ function createNodeGraphIoColumn(node, type, ports, io) {
     row.dataset.port = port;
     row.dataset.io = io;
     row.dataset.alias = nodeGraphLabel(node, port);
+    const portLabel = nodeGraphPortDisplayLabel(type, port, io);
     row.setAttribute(
       "aria-label",
-      `${nodeGraphNodeLabels[type]} ${io} port ${port} interaction area`,
+      `${nodeGraphNodeLabels[type]} ${io} port ${portLabel} interaction area`,
     );
     const label = document.createElement("span");
     label.className = "node-io-label";
-    label.textContent = nodeGraphPortDisplayLabel(type, port, io);
+    label.textContent = portLabel;
     if (io === "input") {
       row.append(createNodeGraphPort(node, type, port, io), label);
     } else {
@@ -189,19 +191,6 @@ function createNodeGraphModuleHomeBody(node) {
   button.setAttribute("aria-label", "Open user module collection");
   button.textContent = "Open Home";
   body.append(title, button);
-  return body;
-}
-
-function createNodeGraphModulePlaceholderBody(node, label, note) {
-  const body = document.createElement("div");
-  body.className = "node-module-placeholder-body";
-  const title = document.createElement("div");
-  title.className = "node-module-placeholder-title";
-  title.textContent = label;
-  const detail = document.createElement("div");
-  detail.className = "node-module-placeholder-detail";
-  detail.textContent = note;
-  body.append(title, detail);
   return body;
 }
 

@@ -2985,17 +2985,21 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return (body + sheen) * snapEnvelope * level;
   }
 
-  clockSample(state, rate, duty, level, rateHz = sampleRate) {
+  clockSample(state, reset, phaseOffset, rate, duty, level, rateHz = sampleRate) {
+    const safeReset = this.safeFilterNumber(reset, null);
+    const safePhaseOffset = this.wrapValue(this.safeFilterNumber(phaseOffset, null), 0, 1);
     const safeRate = Math.max(0, this.safeFilterNumber(rate, null));
     const safeDuty = this.clampValue(this.safeFilterNumber(duty, null), 0, 1);
     const safeLevel = this.safeFilterNumber(level, null);
-    const phase = this.wrapValue(Number(state.phase) || 0, 0, 1);
+    const resetActive = safeReset > 0;
+    const rawPhase = resetActive ? 0 : this.wrapValue(Number(state.phase) || 0, 0, 1);
+    const phase = this.wrapValue(rawPhase + safePhaseOffset, 0, 1);
     const digital = phase < safeDuty ? safeLevel : 0;
     const analog = this.clockAnalogWhipSample(phase, safeLevel);
-    const nextPhase = this.wrapValue(phase + safeRate / Math.max(1, rateHz), 0, 1);
-    const pulse = safeRate > 0 && (!state.hasStarted || nextPhase < phase) ? safeLevel : 0;
-    state.hasStarted = true;
-    state.phase = nextPhase;
+    const nextRawPhase = this.wrapValue(rawPhase + safeRate / Math.max(1, rateHz), 0, 1);
+    const pulse = safeRate > 0 && !resetActive && (!state.hasStarted || nextRawPhase < rawPhase) ? safeLevel : 0;
+    state.hasStarted = !resetActive;
+    state.phase = resetActive ? 0 : nextRawPhase;
     return {
       "Analog Out": analog,
       "Digital Out": digital,
@@ -4321,6 +4325,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.clockStates.set(nodeId, state);
         value = this.clockSample(
           state,
+          mixInput(nodeId, "Reset"),
+          this.readEffectiveParameter(node, "phase", 0, frame, frames, frameValues),
           this.readEffectiveParameter(node, "rate", 2, frame, frames, frameValues),
           this.readEffectiveParameter(node, "duty", 0.5, frame, frames, frameValues),
           this.readEffectiveParameter(node, "level", 1, frame, frames, frameValues),

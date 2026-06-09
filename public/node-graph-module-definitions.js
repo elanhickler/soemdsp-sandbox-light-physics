@@ -6,9 +6,7 @@ const nodeGraphNodeLabels = Object.freeze({
   groupInput: "Group Input",
   groupOutput: "Group Output",
   moduleGroup: "Module Group",
-  moduleGoods: "Goods",
   moduleHome: "Home",
-  moduleServices: "Services",
   moduleShop: "Shop",
   osc: "Osc",
   fbPolyBlepOsc: "F/B PolyBLEP Osc",
@@ -141,12 +139,6 @@ const nodeGraphModuleDefinitions = Object.freeze({
     outputs: [],
     parameters: [],
   },
-  moduleGoods: {
-    layout: "modulePlaceholder",
-    inputs: [],
-    outputs: [],
-    parameters: [],
-  },
   moduleShop: {
     layout: "moduleShop",
     inputs: [],
@@ -155,12 +147,6 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   moduleHome: {
     layout: "moduleHome",
-    inputs: [],
-    outputs: [],
-    parameters: [],
-  },
-  moduleServices: {
-    layout: "modulePlaceholder",
     inputs: [],
     outputs: [],
     parameters: [],
@@ -674,6 +660,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   clock: {
+    inputs: ["Reset"],
     outputAliases: {
       Out: "Digital Out",
     },
@@ -694,6 +681,19 @@ const nodeGraphModuleDefinitions = Object.freeze({
         min: "0",
         step: "any",
         unit: "Hz",
+      },
+      {
+        defaultValue: "0",
+        key: "phase",
+        kind: "phase",
+        label: "Phase",
+        max: "1",
+        mid: "0.5",
+        min: "0",
+        nonlinearSlider: false,
+        step: "any",
+        unit: "cycle",
+        wraparound: true,
       },
       {
         defaultValue: "0.5",
@@ -1500,12 +1500,14 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   visualOscilloscope: {
     bufferedInputs: ["In", "X", "Y"],
+    inputAliases: { Mono: "In" },
+    inputLabels: { In: "Mono" },
     inputs: ["In", "X", "Y"],
     layout: "visualScope",
     outputs: ["RGBA"],
     parameters: [],
     visualInputs: [
-      { key: "visualOscilloscope", label: "In", port: "In" },
+      { key: "visualOscilloscope", label: "Mono", port: "In" },
       { key: "visualOscilloscopeX", label: "X", port: "X" },
       { key: "visualOscilloscopeY", label: "Y", port: "Y" },
     ],

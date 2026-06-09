@@ -60,11 +60,23 @@ function bindNodeGraphHeaderTimingWidgets(root = document) {
     });
     input.addEventListener("pointerdown", (event) => event.stopPropagation());
   }
+  for (const field of root.querySelectorAll(".node-header-timing-field[data-header-number-drag='true']")) {
+    if (field.dataset.headerNumberDragBound === "true") {
+      continue;
+    }
+    field.dataset.headerNumberDragBound = "true";
+    field.addEventListener("dblclick", beginNodeGraphScopeNumberEdit, true);
+    field.addEventListener("pointerdown", beginNodeGraphScopeNumberDrag, true);
+  }
 }
 
 function createNodeGraphHeaderTimingInput(key, label, options = {}) {
   const field = document.createElement("label");
   field.className = "node-header-timing-field";
+  if (options.row) {
+    field.dataset.timingRow = options.row;
+  }
+  field.dataset.headerNumberDrag = "true";
   field.setAttribute("aria-label", label);
 
   const caption = document.createElement("span");
@@ -96,6 +108,7 @@ function createNodeGraphHeaderTimingInput(key, label, options = {}) {
 
   const input = document.createElement("input");
   input.className = "node-header-timing-input";
+  input.dataset.globalScopeNumberDrag = "true";
   input.dataset.timingField = key;
   input.inputMode = "numeric";
   input.min = String(options.min ?? 1);
@@ -110,9 +123,10 @@ function createNodeGraphHeaderTimingInput(key, label, options = {}) {
 
 function createNodeGraphHeaderSpeedPlaceholder() {
   const field = document.createElement("label");
-  field.className = "node-header-timing-field node-header-speed-placeholder";
+  field.className = "node-header-timing-field node-header-speed-placeholder node-under-construction-control";
   field.setAttribute("aria-label", "Speed control under construction");
-  field.title = "Under construction";
+  field.dataset.timingRow = "lower";
+  field.dataset.tooltipKey = "timing.speedUnderConstruction";
 
   const caption = document.createElement("span");
   caption.textContent = "Speed";
@@ -131,16 +145,44 @@ function createNodeGraphHeaderSpeedPlaceholder() {
   input.type = "number";
   input.value = "1.0";
   input.setAttribute("aria-label", "Speed placeholder, under construction");
+  input.dataset.tooltipKey = "timing.speedUnderConstruction";
   input.addEventListener("keydown", (event) => event.stopPropagation());
   input.addEventListener("pointerdown", (event) => event.stopPropagation());
 
-  const badge = document.createElement("span");
-  badge.className = "node-header-speed-placeholder-badge";
-  badge.textContent = "WIP";
-  badge.setAttribute("aria-hidden", "true");
-
-  inputWrap.append(input, badge);
+  inputWrap.append(input);
   field.append(inputWrap);
+  return field;
+}
+
+function createNodeGraphHeaderScopeInput(id, label, value, options = {}) {
+  const field = document.createElement("label");
+  field.className = "node-header-timing-field node-header-scope-field";
+  if (options.row) {
+    field.dataset.timingRow = options.row;
+  }
+  field.dataset.headerNumberDrag = "true";
+  field.setAttribute("aria-label", options.ariaLabel || label);
+
+  const caption = document.createElement("span");
+  caption.className = "node-header-timing-caption";
+  caption.textContent = label;
+  field.append(caption);
+
+  const input = document.createElement("input");
+  input.id = id;
+  input.className = "node-header-timing-input";
+  input.dataset.globalScopeInput = options.scopeInput || "";
+  input.dataset.globalScopeNumberDrag = "true";
+  input.inputMode = options.inputMode || "decimal";
+  input.min = String(options.min ?? 0);
+  input.max = String(options.max ?? 1);
+  input.step = String(options.step ?? 0.01);
+  input.type = "number";
+  input.value = String(value);
+  input.addEventListener("keydown", (event) => event.stopPropagation());
+  input.addEventListener("pointerdown", (event) => event.stopPropagation());
+  field.append(input);
+
   return field;
 }
 
@@ -182,9 +224,49 @@ function createNodeGraphHeaderTimingWidgets() {
   group.setAttribute("aria-label", "Patch timing");
   group.append(
     createNodeGraphHeaderTimingInput("tempoBpm", "BPM", { max: 320 }),
-    createNodeGraphHeaderSpeedPlaceholder(),
     createNodeGraphHeaderTimingInput("timeSignatureNumerator", "Beats"),
     createNodeGraphHeaderTimingInput("timeSignatureDenominator", "Unit"),
+    createNodeGraphHeaderScopeInput(
+      "nodeMasterScopeBurn",
+      "Burn",
+      normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0.85).toFixed(2),
+      {
+        ariaLabel: "Oscilloscope screen burn",
+        max: 1,
+        min: 0,
+        row: "lower",
+        scopeInput: "burn",
+        step: 0.01,
+      },
+    ),
+    createNodeGraphHeaderScopeInput(
+      "nodeMasterScopeDecay",
+      "Decay",
+      normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0.78).toFixed(2),
+      {
+        ariaLabel: "Oscilloscope initial phosphor decay",
+        max: 1,
+        min: 0,
+        row: "lower",
+        scopeInput: "decay",
+        step: 0.01,
+      },
+    ),
+    createNodeGraphHeaderScopeInput(
+      "nodeMasterScopeFps",
+      "FPS",
+      normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60),
+      {
+        ariaLabel: "Oscilloscope frames per second",
+        inputMode: "numeric",
+        max: 240,
+        min: 1,
+        row: "lower",
+        scopeInput: "framesPerSecond",
+        step: 1,
+      },
+    ),
+    createNodeGraphHeaderSpeedPlaceholder(),
   );
   return group;
 }

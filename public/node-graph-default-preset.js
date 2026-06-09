@@ -24,7 +24,9 @@ function nodeGraphDefaultPresetPatchIsUsable(patch) {
   if (!patch || !Array.isArray(patch.nodes)) {
     return false;
   }
-  return patch.nodes.some((node) => node?.id === "output" && node?.type === "output");
+  const hasOutput = patch.nodes.some((node) => node?.id === "output" && node?.type === "output");
+  const visibleNodeCount = patch.nodes.filter((node) => nodeGraphModuleShouldBeVisible(node)).length;
+  return hasOutput && visibleNodeCount > 1;
 }
 
 function nodeGraphLocalDefaultPresetAllowed() {

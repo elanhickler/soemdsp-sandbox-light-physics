@@ -136,7 +136,7 @@ function createNodeGraphModuleElement(type, node) {
   );
   const layout = nodeGraphPatchNodeLayout(patchNode);
   const article = document.createElement("article");
-  article.className = `dsp-node${definition.output ? " output-node" : ""}${layout === "textBox" ? " text-box-layout" : ""}${layout === "image" ? " image-node-layout" : ""}${definition.layout === "canvas" ? " canvas-node-layout" : ""}${layout === "visualScope" ? " visual-scope-layout" : ""}${layout === "graph" ? " graph-node-layout" : ""}${layout === "filterCurve" ? " filter-curve-layout" : ""}${layout === "sliderWidget" ? " slider-widget-layout" : ""}${layout === "moduleShop" ? " module-shop-layout" : ""}${layout === "moduleHome" ? " module-home-layout" : ""}${layout === "modulePlaceholder" ? " module-placeholder-layout" : ""}${layout === "keyboardController" ? " keyboard-controller-layout" : ""}${layout === "macroControls" ? " macro-controls-layout" : ""}${layout === "pitchModWheel" ? " pitch-mod-wheel-layout" : ""}${layout === "speakerProtection" ? " speaker-protection-layout" : ""}${layout === "clapPlugin" ? " clap-plugin-layout" : ""}${layout === "led" ? " led-layout" : ""}`;
+  article.className = `dsp-node${definition.output ? " output-node" : ""}${layout === "textBox" ? " text-box-layout" : ""}${layout === "image" ? " image-node-layout" : ""}${definition.layout === "canvas" ? " canvas-node-layout" : ""}${layout === "visualScope" ? " visual-scope-layout" : ""}${layout === "graph" ? " graph-node-layout" : ""}${layout === "filterCurve" ? " filter-curve-layout" : ""}${layout === "sliderWidget" ? " slider-widget-layout" : ""}${layout === "moduleShop" ? " module-shop-layout" : ""}${layout === "moduleHome" ? " module-home-layout" : ""}${layout === "keyboardController" ? " keyboard-controller-layout" : ""}${layout === "macroControls" ? " macro-controls-layout" : ""}${layout === "pitchModWheel" ? " pitch-mod-wheel-layout" : ""}${layout === "speakerProtection" ? " speaker-protection-layout" : ""}${layout === "clapPlugin" ? " clap-plugin-layout" : ""}${layout === "led" ? " led-layout" : ""}`;
   article.dataset.node = node;
   article.dataset.nodeType = type;
   article.dataset.portSignature = `${inputPorts.join(",")}=>${outputPorts.join(",")}`;
@@ -239,10 +239,6 @@ function createNodeGraphModuleElement(type, node) {
     article.append(createNodeGraphModuleShopBody(node));
   } else if (definition.layout === "moduleHome") {
     article.append(createNodeGraphModuleHomeBody(node));
-  } else if (definition.layout === "modulePlaceholder") {
-    const label = type === "moduleGoods" ? "Goods" : "Services";
-    const note = type === "moduleGoods" ? "Placeholder catalog shelf" : "Placeholder workbench shelf";
-    article.append(createNodeGraphModulePlaceholderBody(node, label, note));
   } else if (layout === "speakerProtection") {
     article.append(createNodeGraphSpeakerProtectionBody(node));
     const ioSection = document.createElement("div");

@@ -700,7 +700,13 @@ function nodeGraphClockAnalogWhipSample(phase, level) {
   return (body + sheen) * snapEnvelope * level;
 }
 
-function nodeGraphClockSample(state, rate, duty, level, sampleRate, runtime = null, nodeId = "") {
+function nodeGraphClockSample(state, reset, phaseOffset, rate, duty, level, sampleRate, runtime = null, nodeId = "") {
+  const safeReset = nodeGraphSafeFilterNumber(reset, runtime, nodeId, null, "clock reset");
+  const safePhaseOffset = wrapNodeSliderValue(
+    nodeGraphSafeFilterNumber(phaseOffset, runtime, nodeId, null, "clock phase"),
+    0,
+    1,
+  );
   const safeRate = Math.max(0, nodeGraphSafeFilterNumber(rate, runtime, nodeId, null, "clock rate"));
   const safeDuty = clampNodeSliderValue(
     nodeGraphSafeFilterNumber(duty, runtime, nodeId, null, "clock duty"),
@@ -708,13 +714,15 @@ function nodeGraphClockSample(state, rate, duty, level, sampleRate, runtime = nu
     1,
   );
   const safeLevel = nodeGraphSafeFilterNumber(level, runtime, nodeId, null, "clock level");
-  const phase = wrapNodeSliderValue(Number(state.phase) || 0, 0, 1);
+  const resetActive = safeReset > 0;
+  const rawPhase = resetActive ? 0 : wrapNodeSliderValue(Number(state.phase) || 0, 0, 1);
+  const phase = wrapNodeSliderValue(rawPhase + safePhaseOffset, 0, 1);
   const digital = phase < safeDuty ? safeLevel : 0;
   const analog = nodeGraphClockAnalogWhipSample(phase, safeLevel);
-  const nextPhase = wrapNodeSliderValue(phase + safeRate / Math.max(1, sampleRate), 0, 1);
-  const pulse = safeRate > 0 && (!state.hasStarted || nextPhase < phase) ? safeLevel : 0;
-  state.hasStarted = true;
-  state.phase = nextPhase;
+  const nextRawPhase = wrapNodeSliderValue(rawPhase + safeRate / Math.max(1, sampleRate), 0, 1);
+  const pulse = safeRate > 0 && !resetActive && (!state.hasStarted || nextRawPhase < rawPhase) ? safeLevel : 0;
+  state.hasStarted = !resetActive;
+  state.phase = resetActive ? 0 : nextRawPhase;
   return {
     "Analog Out": analog,
     "Digital Out": digital,
@@ -2000,6 +2008,8 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       runtime.clockStates.set(nodeId, state);
       value = nodeGraphClockSample(
         state,
+        mixInput(nodeId, "Reset"),
+        readNodeGraphLiveEffectiveParam(runtime, node, "phase", 0, frame, frames, frameValues),
         readNodeGraphLiveEffectiveParam(runtime, node, "rate", 2, frame, frames, frameValues),
         readNodeGraphLiveEffectiveParam(runtime, node, "duty", 0.5, frame, frames, frameValues),
         readNodeGraphLiveEffectiveParam(runtime, node, "level", 1, frame, frames, frameValues),

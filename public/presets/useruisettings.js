@@ -106,6 +106,8 @@
     "moduleOscilloscopesVisible": true,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
+    "moduleScopeBurn": 0.85,
+    "moduleScopeDecay": 0.78,
     "moduleScopeDotCore1Size": 3.18,
     "moduleScopeDotCore1Brightness": 4.5,
     "moduleScopeDotCore1Color": "#ffffff",
