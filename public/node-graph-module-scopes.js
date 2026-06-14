@@ -5480,7 +5480,7 @@ function nodeGraphModuleScopeCanvasDotSprite(heatmapMode = false) {
     return cached;
   }
 
-  const size = 64;
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -5489,11 +5489,11 @@ function nodeGraphModuleScopeCanvasDotSprite(heatmapMode = false) {
     return null;
   }
   const pixels = nodeGraphModuleScopeGeneratedDotTextureData({
-    core1Blur: 0,
+    core1Blur: heatmapMode ? 0.72 : 0.58,
     core1Brightness: heatmapMode ? Math.max(0.55, core1Brightness) : core1Brightness,
     core1Color: heatmapMode ? "#ffffff" : core1Color,
     core1Size,
-    core2Blur: 0,
+    core2Blur: 0.95,
     core2Brightness: heatmapMode ? Math.max(0.18, core2Brightness * 0.65) : core2Brightness,
     core2Color: heatmapMode ? "#ffffff" : core2Color,
     core2Size,
@@ -5517,12 +5517,12 @@ function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pix
     return false;
   }
   const dotSize = clampNodeSliderValue(
-    nodeGraphModuleScopeDotSizeScale() * Math.max(1, pixelRatio) * (heatmapMode ? 2.35 : 2.65),
+    nodeGraphModuleScopeDotSizeScale() * Math.max(1, pixelRatio) * (heatmapMode ? 2.9 : 3.2),
     2,
-    96,
+    128,
   );
   const radius = dotSize * 0.5;
-  const spacing = Math.max(0.55, dotSize * 0.22);
+  const spacing = Math.max(0.35, dotSize * 0.055);
   const rawValues = Array.isArray(points?.nodeGraphScopeRawValues)
     ? points.nodeGraphScopeRawValues
     : null;
@@ -5534,7 +5534,7 @@ function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pix
     : typeof normalizeNodeGraphModuleScopeDiscontinuitySkipSamples === "function"
       ? normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(nodeGraphMvp?.moduleScopeDiscontinuitySkipSamples ?? 1)
       : 1;
-  const stampLimit = 12000;
+  const stampLimit = 48000;
   let stampCount = 0;
   let skipThroughSegment = -1;
 

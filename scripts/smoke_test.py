@@ -10646,7 +10646,7 @@ def require_node_graph_mvp_contract() -> None:
         "drawNodeGraphVisualOscilloscopeLocalFallback(item, pixelRatio)",
         "const localVisibleOptions = {",
         "function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pixelRatio, heatmapMode = false)",
-        "const stampLimit = 12000",
+        "const stampLimit = 48000",
         "const firstVisibleSlot = visibleItems.find((item) => item.slot?.type !== \"visualOscilloscope\")?.slot",
         "sampleWidth: nodeGraphModuleScopeUnzoomedLength(drawRect.width, zoomScale)",
         "sampleHeight: nodeGraphModuleScopeUnzoomedLength(drawRect.height, zoomScale)",
