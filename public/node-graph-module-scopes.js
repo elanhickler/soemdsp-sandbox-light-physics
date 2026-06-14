@@ -294,6 +294,9 @@ function nodeGraphModuleScopeShaderNumber(source, dotName, key, fallback) {
 function nodeGraphModuleScopeShaderGlobalValue(dotName, key, fallback) {
   const dotIndex = dotName === "dot2" ? 2 : 1;
   const defaultCore = nodeGraphModuleScopeDefaultDotCore(dotName);
+  const enabled = dotIndex === 2
+    ? nodeGraphMvp?.moduleScopeDotCore2Enabled !== false
+    : nodeGraphMvp?.moduleScopeDotCore1Enabled !== false;
   if (key === "size") {
     const size = dotIndex === 2
       ? normalizeNodeGraphModuleScopeDotCoreSize(
@@ -307,6 +310,9 @@ function nodeGraphModuleScopeShaderGlobalValue(dotName, key, fallback) {
     return clampNodeSliderValue((Number(fallback) || 0) * (size / defaultCore.size), 0, 1);
   }
   if (key === "brightness") {
+    if (!enabled) {
+      return 0;
+    }
     return dotIndex === 2
       ? normalizeNodeGraphModuleScopeDotCoreBrightness(
         nodeGraphMvp?.moduleScopeDotCore2Brightness ?? defaultCore.brightness,
@@ -374,6 +380,8 @@ function nodeGraphModuleScopeShaderBlurRatio(source, dotName, fallback = 0) {
 
 function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
   const source = nodeGraphModuleScopeShaderSourceForSlot(slot);
+  const dotCore1Enabled = nodeGraphMvp?.moduleScopeDotCore1Enabled !== false;
+  const dotCore2Enabled = nodeGraphMvp?.moduleScopeDotCore2Enabled !== false;
   const outerFallback = normalizeNodeGraphModuleScopeDotCoreColor(
     buffer.nodeGraphScopeLightOuterColor ?? nodeGraphMvp?.moduleScopeDotCore2Color ?? nodeGraphModuleScopeDefaultDotCores.dot2.color,
     nodeGraphModuleScopeDefaultDotCores.dot2.color,
@@ -384,7 +392,7 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
   );
   return {
     centerBrightness: clampNodeSliderValue(
-      nodeGraphModuleScopeShaderNumber(
+      (dotCore1Enabled ? 1 : 0) * nodeGraphModuleScopeShaderNumber(
         source,
         "dot1",
         "brightness",
@@ -404,7 +412,7 @@ function nodeGraphModuleScopeLightShaderStyle(slot, buffer) {
       0.035,
     ),
     outerBrightness: clampNodeSliderValue(
-      nodeGraphModuleScopeShaderNumber(
+      (dotCore2Enabled ? 1 : 0) * nodeGraphModuleScopeShaderNumber(
         source,
         "dot2",
         "brightness",
@@ -4864,6 +4872,7 @@ function nodeGraphModuleScopeGeneratedDotTextureData(...args) {
 
 function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
   const state = nodeGraphModuleScopeState.traceImageTexture;
+  const core1Enabled = nodeGraphMvp?.moduleScopeDotCore1Enabled !== false;
   const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(
     nodeGraphMvp?.moduleScopeDotCore1Size ?? nodeGraphModuleScopeDefaultDotCores.dot1.size,
     nodeGraphModuleScopeDefaultDotCores.dot1.size,
@@ -4876,6 +4885,7 @@ function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
     nodeGraphMvp?.moduleScopeDotCore1Color ?? nodeGraphModuleScopeDefaultDotCores.dot1.color,
     nodeGraphModuleScopeDefaultDotCores.dot1.color,
   );
+  const core2Enabled = nodeGraphMvp?.moduleScopeDotCore2Enabled !== false;
   const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(
     nodeGraphMvp?.moduleScopeDotCore2Size ?? nodeGraphModuleScopeDefaultDotCores.dot2.size,
     nodeGraphModuleScopeDefaultDotCores.dot2.size,
@@ -4893,7 +4903,7 @@ function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
   );
   const core1Blur = 0;
   const core2Blur = 0;
-  const key = `generated:${core1Size.toFixed(3)}:${core1Brightness.toFixed(3)}:${core1Color}:${core1Blur.toFixed(3)}:${core2Size.toFixed(3)}:${core2Brightness.toFixed(3)}:${core2Color}:${core2Blur.toFixed(3)}:${lineThickness.toFixed(3)}`;
+  const key = `generated:${core1Enabled}:${core1Size.toFixed(3)}:${core1Brightness.toFixed(3)}:${core1Color}:${core1Blur.toFixed(3)}:${core2Enabled}:${core2Size.toFixed(3)}:${core2Brightness.toFixed(3)}:${core2Color}:${core2Blur.toFixed(3)}:${lineThickness.toFixed(3)}`;
   if (state.generatedKey === key && state.texture) {
     return state.texture;
   }
@@ -4921,11 +4931,11 @@ function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
     gl.UNSIGNED_BYTE,
     nodeGraphModuleScopeGeneratedDotTextureData({
       core1Blur,
-      core1Brightness,
+      core1Brightness: core1Enabled ? core1Brightness : 0,
       core1Color,
       core1Size,
       core2Blur,
-      core2Brightness,
+      core2Brightness: core2Enabled ? core2Brightness : 0,
       core2Color,
       core2Size,
       lineThickness,

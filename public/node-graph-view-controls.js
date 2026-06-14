@@ -160,6 +160,10 @@ function normalizeNodeGraphModuleScopeDotCoreColor(value, fallback = "#ffffff") 
   return /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : fallback;
 }
 
+function normalizeNodeGraphModuleScopeDotCoreEnabled(value) {
+  return value !== false;
+}
+
 function normalizeNodeGraphModuleScopeDotCoreSize(value, fallback = 0.5) {
   const number = Number(value);
   return Number.isFinite(number) ? clampNodeSliderValue(number, 0.01, 10) : fallback;
@@ -220,9 +224,11 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const burn = normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0);
   const decay = normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0.78);
   const backgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor);
+  const dotCore1Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(nodeGraphMvp.moduleScopeDotCore1Enabled);
   const dotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18, 3.18);
   const dotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 4.5, 4.5);
   const dotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffffff", "#ffffff");
+  const dotCore2Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(nodeGraphMvp.moduleScopeDotCore2Enabled);
   const dotCore2Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore2Size ?? 4, 4);
   const dotCore2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
   const dotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#17002f", "#17002f");
@@ -236,9 +242,11 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   nodeGraphMvp.moduleScopeBurn = burn;
   nodeGraphMvp.moduleScopeDecay = decay;
   nodeGraphMvp.moduleScopeBackgroundColor = backgroundColor;
+  nodeGraphMvp.moduleScopeDotCore1Enabled = dotCore1Enabled;
   nodeGraphMvp.moduleScopeDotCore1Size = dotCore1Size;
   nodeGraphMvp.moduleScopeDotCore1Brightness = dotCore1Brightness;
   nodeGraphMvp.moduleScopeDotCore1Color = dotCore1Color;
+  nodeGraphMvp.moduleScopeDotCore2Enabled = dotCore2Enabled;
   nodeGraphMvp.moduleScopeDotCore2Size = dotCore2Size;
   nodeGraphMvp.moduleScopeDotCore2Brightness = dotCore2Brightness;
   nodeGraphMvp.moduleScopeDotCore2Color = dotCore2Color;
@@ -250,9 +258,11 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const burnInput = document.getElementById("nodeMasterScopeBurn");
   const decayInput = document.getElementById("nodeMasterScopeDecay");
   const backgroundInput = document.getElementById("nodeMasterScopeBackgroundColor");
+  const dotCore1EnabledInput = document.getElementById("nodeMasterScopeDotCore1Enabled");
   const dotCore1SizeInput = document.getElementById("nodeMasterScopeDotCore1Size");
   const dotCore1BrightnessInput = document.getElementById("nodeMasterScopeDotCore1Brightness");
   const dotCore1ColorInput = document.getElementById("nodeMasterScopeDotCore1Color");
+  const dotCore2EnabledInput = document.getElementById("nodeMasterScopeDotCore2Enabled");
   const dotCore2SizeInput = document.getElementById("nodeMasterScopeDotCore2Size");
   const dotCore2BrightnessInput = document.getElementById("nodeMasterScopeDotCore2Brightness");
   const dotCore2ColorInput = document.getElementById("nodeMasterScopeDotCore2Color");
@@ -270,6 +280,11 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   if (backgroundInput && document.activeElement !== backgroundInput) {
     backgroundInput.value = backgroundColor;
   }
+  if (dotCore1EnabledInput) {
+    dotCore1EnabledInput.setAttribute("aria-pressed", String(dotCore1Enabled));
+    dotCore1EnabledInput.closest(".node-master-scope-dot-core-row")
+      ?.classList.toggle("dot-core-disabled", !dotCore1Enabled);
+  }
   if (dotCore1SizeInput && document.activeElement !== dotCore1SizeInput) {
     dotCore1SizeInput.value = dotCore1Size.toFixed(2);
   }
@@ -278,6 +293,11 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   }
   if (dotCore1ColorInput && document.activeElement !== dotCore1ColorInput) {
     dotCore1ColorInput.value = dotCore1Color;
+  }
+  if (dotCore2EnabledInput) {
+    dotCore2EnabledInput.setAttribute("aria-pressed", String(dotCore2Enabled));
+    dotCore2EnabledInput.closest(".node-master-scope-dot-core-row")
+      ?.classList.toggle("dot-core-disabled", !dotCore2Enabled);
   }
   if (dotCore2SizeInput && document.activeElement !== dotCore2SizeInput) {
     dotCore2SizeInput.value = dotCore2Size.toFixed(2);
@@ -290,7 +310,7 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   }
   renderNodeGraphModuleScopeDotPreview(
     dotCore1Size,
-    dotCore1Brightness,
+    dotCore1Enabled ? dotCore1Brightness : 0,
     dotCore1Color,
     0.01,
     0,
@@ -303,17 +323,17 @@ function renderNodeGraphModuleScopeBrightnessControl() {
     0,
     dotCore1Color,
     dotCore2Size,
-    dotCore2Brightness,
+    dotCore2Enabled ? dotCore2Brightness : 0,
     dotCore2Color,
     lineThickness,
     "nodeMasterScopeDotCore2Preview",
   );
   renderNodeGraphModuleScopeDotPreview(
     dotCore1Size,
-    dotCore1Brightness,
+    dotCore1Enabled ? dotCore1Brightness : 0,
     dotCore1Color,
     dotCore2Size,
-    dotCore2Brightness,
+    dotCore2Enabled ? dotCore2Brightness : 0,
     dotCore2Color,
     lineThickness,
   );
@@ -425,6 +445,26 @@ function refreshNodeGraphModuleScopeGeneratedDot() {
   }
 }
 
+function setNodeGraphModuleScopeDotCoreEnabled(dotName, enabled) {
+  if (dotName === "dot2") {
+    nodeGraphMvp.moduleScopeDotCore2Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(enabled);
+  } else {
+    nodeGraphMvp.moduleScopeDotCore1Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(enabled);
+  }
+  refreshNodeGraphModuleScopeGeneratedDot();
+}
+
+function toggleNodeGraphModuleScopeDotCore(dotName) {
+  const current = dotName === "dot2"
+    ? normalizeNodeGraphModuleScopeDotCoreEnabled(nodeGraphMvp.moduleScopeDotCore2Enabled)
+    : normalizeNodeGraphModuleScopeDotCoreEnabled(nodeGraphMvp.moduleScopeDotCore1Enabled);
+  setNodeGraphModuleScopeDotCoreEnabled(dotName, !current);
+}
+
+function handleNodeGraphModuleScopeDotCoreToggle(event) {
+  toggleNodeGraphModuleScopeDotCore(event.currentTarget.dataset.globalScopeDotToggle);
+}
+
 function setNodeGraphModuleScopeDotCore1Size(value) {
   nodeGraphMvp.moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(value, 3.18);
   refreshNodeGraphModuleScopeGeneratedDot();
@@ -494,6 +534,10 @@ function setNodeGraphModuleScopeOverdrawFade(value) {
 
 function handleNodeGraphModuleScopeOverdrawPointsInput(event) {
   setNodeGraphModuleScopeOverdrawPoints(event.currentTarget.value);
+}
+
+function handleNodeGraphModuleScopeOverdrawFadeInput(event) {
+  setNodeGraphModuleScopeOverdrawFade(event.currentTarget.value);
 }
 
 const nodeGraphSliderLayouts = Object.freeze([

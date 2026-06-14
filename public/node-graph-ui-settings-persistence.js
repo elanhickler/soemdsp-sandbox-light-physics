@@ -36,6 +36,9 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(
     view.moduleScopeDecay ?? nodeGraphMvp.moduleScopeDecay ?? 0.78,
   );
+  const moduleScopeDotCore1Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(
+    view.moduleScopeDotCore1Enabled ?? nodeGraphMvp.moduleScopeDotCore1Enabled ?? true,
+  );
   const moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(
     view.moduleScopeDotCore1Size ?? view.moduleScopeDotCore ?? nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18,
     3.18,
@@ -47,6 +50,9 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(
     view.moduleScopeDotCore1Color ?? nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffffff",
     "#ffffff",
+  );
+  const moduleScopeDotCore2Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(
+    view.moduleScopeDotCore2Enabled ?? nodeGraphMvp.moduleScopeDotCore2Enabled ?? true,
   );
   const moduleScopeDotCore2Size = normalizeNodeGraphModuleScopeDotCoreSize(
     view.moduleScopeDotCore2Size ?? view.moduleScopeDotGlow ?? nodeGraphMvp.moduleScopeDotCore2Size ?? 4,
@@ -110,9 +116,11 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleScopeBackgroundColor,
       moduleScopeBurn,
       moduleScopeDecay,
+      moduleScopeDotCore1Enabled,
       moduleScopeDotCore1Size,
       moduleScopeDotCore1Brightness,
       moduleScopeDotCore1Color,
+      moduleScopeDotCore2Enabled,
       moduleScopeDotCore2Size,
       moduleScopeDotCore2Brightness,
       moduleScopeDotCore2Color,
@@ -165,9 +173,11 @@ function readNodeUiDevSettingsFromControls() {
       moduleScopeBackgroundColor: normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor ?? "#000000"),
       moduleScopeBurn: normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0.85),
       moduleScopeDecay: normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0.78),
+      moduleScopeDotCore1Enabled: normalizeNodeGraphModuleScopeDotCoreEnabled(nodeGraphMvp.moduleScopeDotCore1Enabled ?? true),
       moduleScopeDotCore1Size: normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 3.18, 3.18),
       moduleScopeDotCore1Brightness: normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore1Brightness ?? 4.5, 4.5),
       moduleScopeDotCore1Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore1Color ?? "#ffffff", "#ffffff"),
+      moduleScopeDotCore2Enabled: normalizeNodeGraphModuleScopeDotCoreEnabled(nodeGraphMvp.moduleScopeDotCore2Enabled ?? true),
       moduleScopeDotCore2Size: normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore2Size ?? 4, 4),
       moduleScopeDotCore2Brightness: normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore2Brightness ?? 0.45, 0.45),
       moduleScopeDotCore2Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#17002f", "#17002f"),
@@ -237,9 +247,11 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleScopeBackgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(normalized.view.moduleScopeBackgroundColor);
   nodeGraphMvp.moduleScopeBurn = normalizeNodeGraphModuleScopeBurn(normalized.view.moduleScopeBurn);
   nodeGraphMvp.moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(normalized.view.moduleScopeDecay);
+  nodeGraphMvp.moduleScopeDotCore1Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(normalized.view.moduleScopeDotCore1Enabled);
   nodeGraphMvp.moduleScopeDotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(normalized.view.moduleScopeDotCore1Size, 3.18);
   nodeGraphMvp.moduleScopeDotCore1Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(normalized.view.moduleScopeDotCore1Brightness, 4.5);
   nodeGraphMvp.moduleScopeDotCore1Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore1Color, "#ffffff");
+  nodeGraphMvp.moduleScopeDotCore2Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(normalized.view.moduleScopeDotCore2Enabled);
   nodeGraphMvp.moduleScopeDotCore2Size = normalizeNodeGraphModuleScopeDotCoreSize(normalized.view.moduleScopeDotCore2Size, 4);
   nodeGraphMvp.moduleScopeDotCore2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(normalized.view.moduleScopeDotCore2Brightness, 0.45);
   nodeGraphMvp.moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore2Color, "#17002f");

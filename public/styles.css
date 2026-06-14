@@ -10442,6 +10442,14 @@ button.saved-default,
   color: #ffffff;
 }
 
+.node-scope-settings-help {
+  margin: 1px 0 0;
+  color: rgba(173, 204, 211, 0.58);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.54rem;
+  line-height: 1.25;
+}
+
 .node-master-scope-dot-preview-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -10499,6 +10507,7 @@ button.saved-default,
   display: grid;
   place-items: center;
   min-width: 0;
+  min-height: 1.85rem;
   border: 1px solid rgba(127, 199, 217, 0.18);
   border-radius: 4px;
   background: rgba(127, 199, 217, 0.08);
@@ -10508,6 +10517,28 @@ button.saved-default,
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.node-master-scope-dot-core-title[aria-pressed="true"] {
+  border-color: rgba(127, 199, 217, 0.48);
+  background: rgba(34, 82, 96, 0.34);
+  color: #ffffff;
+}
+
+.node-master-scope-dot-core-title[aria-pressed="false"] {
+  border-color: rgba(173, 204, 211, 0.12);
+  background: rgba(0, 0, 0, 0.32);
+  color: rgba(173, 204, 211, 0.42);
+}
+
+.node-master-scope-dot-core-title:focus-visible {
+  outline: 2px solid rgba(127, 199, 217, 0.65);
+  outline-offset: 1px;
+}
+
+.node-master-scope-dot-core-row.dot-core-disabled label,
+.node-master-scope-dot-core-row.dot-core-disabled .node-master-scope-dot-preview-shell {
+  opacity: 0.48;
 }
 
 .node-master-scope-dot-core-row label {

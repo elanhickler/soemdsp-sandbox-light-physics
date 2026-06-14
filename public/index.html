@@ -1938,9 +1938,17 @@
               <input id="nodeMasterScopeDiscontinuitySkipSamples" type="number" min="0" max="2" step="1" data-global-scope-input="discontinuitySkipSamples" data-global-scope-number-drag="true" value="1">
             </label>
           </div>
+          <p class="node-scope-settings-help">
+            Overdraw adds guaranteed connector points between samples. Fade controls how strongly older overdraw points dim before the newest point.
+          </p>
           <div class="node-master-scope-dot-core-grid" aria-label="Trace dot image layers">
             <div class="node-master-scope-dot-core-row">
-              <div class="node-master-scope-dot-core-title">Dot 1</div>
+              <button
+                id="nodeMasterScopeDotCore1Enabled"
+                class="node-master-scope-dot-core-title"
+                type="button"
+                data-global-scope-dot-toggle="dot1"
+                aria-pressed="true">Dot 1</button>
               <label>
               <span>size px</span>
               <input id="nodeMasterScopeDotCore1Size" type="number" min="0.01" max="10" step="0.01" data-global-scope-input="dotCore1Size" data-global-scope-number-drag="true" value="3.18">
@@ -1964,7 +1972,12 @@
               </div>
             </div>
             <div class="node-master-scope-dot-core-row">
-              <div class="node-master-scope-dot-core-title">Dot 2</div>
+              <button
+                id="nodeMasterScopeDotCore2Enabled"
+                class="node-master-scope-dot-core-title"
+                type="button"
+                data-global-scope-dot-toggle="dot2"
+                aria-pressed="true">Dot 2</button>
               <label>
               <span>size px</span>
               <input id="nodeMasterScopeDotCore2Size" type="number" min="0.01" max="10" step="0.01" data-global-scope-input="dotCore2Size" data-global-scope-number-drag="true" value="4">
