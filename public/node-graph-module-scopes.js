@@ -5519,7 +5519,13 @@ function nodeGraphModuleScopeCanvasDotSprite(heatmapMode = false) {
   return sprite;
 }
 
-function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pixelRatio, heatmapMode = false) {
+function nodeGraphModuleScopeCanvasRgba(rgb, alpha) {
+  const color = Array.isArray(rgb) ? rgb : [1, 1, 1];
+  const opacity = clampNodeSliderValue(Number(alpha) || 0, 0, 1);
+  return `rgba(${Math.round(color[0] * 255)}, ${Math.round(color[1] * 255)}, ${Math.round(color[2] * 255)}, ${opacity})`;
+}
+
+function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pixelRatio, heatmapMode = false, slot = null) {
   const pixelPoints = nodeGraphModuleScopePixelPoints(points, proxyCanvas);
   if (pixelPoints.length < 4) {
     return false;
@@ -5534,7 +5540,6 @@ function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pix
     128,
   );
   const radius = dotSize * 0.5;
-  const spacing = Math.max(0.35, dotSize * 0.055);
   const rawValues = Array.isArray(points?.nodeGraphScopeRawValues)
     ? points.nodeGraphScopeRawValues
     : null;
@@ -5546,15 +5551,68 @@ function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pix
     : typeof normalizeNodeGraphModuleScopeDiscontinuitySkipSamples === "function"
       ? normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(nodeGraphMvp?.moduleScopeDiscontinuitySkipSamples ?? 1)
       : 1;
-  const stampLimit = 48000;
+  const colors = heatmapMode ? nodeGraphModuleScopeHeatmapTraceColors() : nodeGraphModuleScopeTraceColors(slot);
+  const stampLimit = 4096;
   let stampCount = 0;
   let skipThroughSegment = -1;
+  let segmentCount = 0;
 
   context.save();
   context.globalCompositeOperation = "lighter";
-  context.globalAlpha = heatmapMode ? 0.72 : 0.86;
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
+
+  const drawConnectedStroke = (lineWidth, shadowBlur, rgb, alpha) => {
+    context.beginPath();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.lineWidth = lineWidth;
+    context.shadowBlur = shadowBlur;
+    context.shadowColor = nodeGraphModuleScopeCanvasRgba(rgb, alpha * 0.65);
+    context.strokeStyle = nodeGraphModuleScopeCanvasRgba(rgb, alpha);
+    let pathOpen = false;
+    let localSkipThroughSegment = -1;
+    for (let index = 0; index + 3 < pixelPoints.length; index += 2) {
+      const segmentIndex = index / 2;
+      if (skippedPoints?.[segmentIndex] || skippedPoints?.[segmentIndex + 1]) {
+        pathOpen = false;
+        continue;
+      }
+      if (skipSamples > 0 && rawValues && segmentIndex + 1 < rawValues.length) {
+        const previousRaw = Number(rawValues[segmentIndex]);
+        const currentRaw = Number(rawValues[segmentIndex + 1]);
+        if (
+          Number.isFinite(previousRaw) &&
+          Number.isFinite(currentRaw) &&
+          Math.abs(currentRaw - previousRaw) > nodeGraphModuleScopeDiscontinuityThreshold
+        ) {
+          localSkipThroughSegment = Math.max(localSkipThroughSegment, segmentIndex + skipSamples - 1);
+        }
+      }
+      if (segmentIndex <= localSkipThroughSegment) {
+        pathOpen = false;
+        continue;
+      }
+      const x1 = pixelPoints[index];
+      const y1 = pixelPoints[index + 1];
+      const x2 = pixelPoints[index + 2];
+      const y2 = pixelPoints[index + 3];
+      if (Math.hypot(x2 - x1, y2 - y1) < 0.001) {
+        continue;
+      }
+      if (!pathOpen) {
+        context.moveTo(x1, y1);
+        pathOpen = true;
+      }
+      context.lineTo(x2, y2);
+    }
+    context.stroke();
+  };
+
+  drawConnectedStroke(dotSize * 0.72, dotSize * 0.38, colors.halo, heatmapMode ? 0.18 : 0.22);
+  drawConnectedStroke(dotSize * 0.26, dotSize * 0.1, colors.core, heatmapMode ? 0.42 : 0.64);
+  context.shadowBlur = 0;
+  context.globalAlpha = heatmapMode ? 0.28 : 0.36;
 
   const stamp = (x, y) => {
     if (stampCount >= stampLimit) {
@@ -5583,23 +5641,14 @@ function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pix
     if (segmentIndex <= skipThroughSegment) {
       continue;
     }
-    const x1 = pixelPoints[index];
-    const y1 = pixelPoints[index + 1];
     const x2 = pixelPoints[index + 2];
     const y2 = pixelPoints[index + 3];
-    const distance = Math.hypot(x2 - x1, y2 - y1);
-    if (distance < 0.001) {
-      continue;
-    }
-    const steps = Math.max(1, Math.ceil(distance / spacing));
-    for (let step = 1; step <= steps && stampCount < stampLimit; step += 1) {
-      const mix = step / steps;
-      stamp(x1 + (x2 - x1) * mix, y1 + (y2 - y1) * mix);
-    }
+    segmentCount += 1;
+    stamp(x2, y2);
   }
   context.restore();
-  recordNodeGraphModuleScopeRenderMetrics(points.length / 2, stampCount);
-  return stampCount > 0;
+  recordNodeGraphModuleScopeRenderMetrics(points.length / 2, segmentCount + stampCount);
+  return segmentCount > 0 || stampCount > 0;
 }
 
 function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
@@ -5654,7 +5703,7 @@ function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
   const xyPoints = nodeGraphModuleScopeXyPoints(fallbackBuffer, localRect, proxyCanvas, pixelRatio, slot);
   let drewTrace = false;
   if (xyPoints.length >= 4) {
-    drewTrace = drawNodeGraphModuleScopeCanvasDotPath(context, xyPoints, proxyCanvas, pixelRatio, heatmapMode);
+    drewTrace = drawNodeGraphModuleScopeCanvasDotPath(context, xyPoints, proxyCanvas, pixelRatio, heatmapMode, slot);
   } else {
     for (const [start, end] of nodeGraphModuleScopeBufferProgressRanges(fallbackBuffer)) {
       drewTrace = drawNodeGraphModuleScopeCanvasDotPath(
@@ -5672,6 +5721,7 @@ function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
         proxyCanvas,
         pixelRatio,
         heatmapMode,
+        slot,
       ) || drewTrace;
     }
   }
