@@ -3917,13 +3917,25 @@ function nodeGraphModuleScopeMixColor(left, right, amount) {
   ];
 }
 
-function nodeGraphModuleScopeTraceColors(setting) {
-  const base = nodeGraphScopeHexColorToRgb(
-    nodeGraphNormalizeScopeTraceColor("#3de0ff"),
+function nodeGraphModuleScopeTraceColors(slot) {
+  const source = nodeGraphModuleScopeShaderSourceForSlot(slot);
+  const core = nodeGraphScopeHexColorToRgb(
+    nodeGraphModuleScopeShaderColor(
+      source,
+      "dot1",
+      nodeGraphModuleScopeShaderGlobalColor("dot1"),
+    ),
   );
-  const halo = nodeGraphModuleScopeMixColor(base, [0, 0, 0], 0.55);
+  const haloBase = nodeGraphScopeHexColorToRgb(
+    nodeGraphModuleScopeShaderColor(
+      source,
+      "dot2",
+      nodeGraphModuleScopeShaderGlobalColor("dot2"),
+    ),
+  );
+  const halo = nodeGraphModuleScopeMixColor(haloBase, [0, 0, 0], 0.15);
   return {
-    core: base,
+    core,
     halo,
   };
 }
@@ -6064,7 +6076,7 @@ function drawNodeGraphModuleScopes() {
     const heatmapMode = blendMode === "heatmap";
     const colors = heatmapMode
       ? nodeGraphModuleScopeHeatmapTraceColors()
-      : nodeGraphModuleScopeTraceColors(scopeSettings);
+      : nodeGraphModuleScopeTraceColors(slot);
     if (bloomEnabled) {
       setNodeGraphModuleScopeDebugPhase(`draw-halo:${slot.type}`);
       applyNodeGraphModuleScopeTraceBlendMode(gl, blendMode);
