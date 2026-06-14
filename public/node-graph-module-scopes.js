@@ -5344,43 +5344,27 @@ function clearNodeGraphModuleScopeLocalFallback(slot) {
   }
 }
 
-function nodeGraphModuleScopeDecaySmoothstep(edge0, edge1, value) {
-  const range = Math.max(0.0001, edge1 - edge0);
-  const t = clampNodeSliderValue((value - edge0) / range, 0, 1);
-  return t * t * (3 - 2 * t);
-}
-
-function applyNodeGraphModuleScopeCanvasPhosphorDecay(context, canvas, settings) {
-  const decay = nodeGraphModuleScopeBurnDecaySettings(settings);
+function applyNodeGraphModuleScopeCanvasAnalogFade(context, canvas, settings) {
+  const burn = nodeGraphModuleScopeTraceBurn(settings);
+  const decay = typeof normalizeNodeGraphModuleScopeDecay === "function"
+    ? normalizeNodeGraphModuleScopeDecay(nodeGraphMvp?.moduleScopeDecay ?? 0.78)
+    : 0.78;
   if (!canvas?.width || !canvas?.height || !context) {
     return;
   }
-  if (decay.fast <= 0 || decay.slow <= 0) {
+  if (burn <= 0) {
     context.clearRect(0, 0, canvas.width, canvas.height);
     return;
   }
-  try {
-    const image = context.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = image.data;
-    const floor = clampNodeSliderValue(Number(decay.floor) || 0, 0, 1) * 255;
-    const fast = clampNodeSliderValue(Number(decay.fast) || 0, 0, 1);
-    const slow = clampNodeSliderValue(Number(decay.slow) || 0, 0, 1);
-    for (let index = 0; index + 3 < pixels.length; index += 4) {
-      const energy = Math.max(pixels[index], pixels[index + 1], pixels[index + 2]) / 255;
-      const bright = nodeGraphModuleScopeDecaySmoothstep(0.12, 0.86, energy);
-      const factor = slow + (fast - slow) * bright;
-      const red = Math.max(0, pixels[index] * factor - floor);
-      const green = Math.max(0, pixels[index + 1] * factor - floor);
-      const blue = Math.max(0, pixels[index + 2] * factor - floor);
-      pixels[index] = red;
-      pixels[index + 1] = green;
-      pixels[index + 2] = blue;
-      pixels[index + 3] = Math.max(red, green, blue);
-    }
-    context.putImageData(image, 0, 0);
-  } catch {
-    context.clearRect(0, 0, canvas.width, canvas.height);
-  }
+  const fadeAlpha = clampNodeSliderValue(0.018 + decay * 0.13 - burn * 0.065, 0.006, 0.18);
+  context.save();
+  context.globalCompositeOperation = "destination-out";
+  context.fillStyle = `rgba(0, 0, 0, ${fadeAlpha.toFixed(4)})`;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.globalCompositeOperation = "source-over";
+  context.fillStyle = "rgba(0, 0, 0, 0.006)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.restore();
 }
 
 function nodeGraphModuleScopeFallbackBufferView(buffer, limit = 384) {
@@ -5419,7 +5403,7 @@ function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
     return;
   }
   const fallbackBuffer = nodeGraphModuleScopeFallbackBufferView(buffer);
-  applyNodeGraphModuleScopeCanvasPhosphorDecay(context, canvas, settings);
+  applyNodeGraphModuleScopeCanvasAnalogFade(context, canvas, settings);
   const localScaleX = screenRect.width > 0
     ? canvas.clientWidth / screenRect.width
     : 1;
