@@ -12101,6 +12101,16 @@ body.node-slider-dragging .node-param-port {
   border-color: rgba(127, 199, 217, 0.58);
 }
 
+.node-output-summary {
+  flex: 1 1 100%;
+  min-width: min(100%, 24rem);
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
 .node-live-controls {
   display: inline-flex;
   align-items: center;
