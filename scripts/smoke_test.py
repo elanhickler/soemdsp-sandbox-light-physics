@@ -5921,7 +5921,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeDonateFiveButton",
         'href="https://soundemote.io/donate?amount=10"',
         'data-support-amount="10"',
-        "Donate$10",
+        "Download$10",
         "node-donate-five-button",
         "nodeDownloadFiftyButton",
         'data-support-amount="50"',
