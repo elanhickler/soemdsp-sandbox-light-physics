@@ -437,6 +437,7 @@ function configureNodeSceneContextMenu(mode) {
   const textBoxVerticalAlignValue = document.getElementById("nodeSceneTextBoxVerticalAlignValue");
   const homeModules = document.getElementById("nodeSceneHomeModules");
   const homeModuleList = document.getElementById("nodeSceneHomeModuleList");
+  const savedPatches = document.getElementById("nodeSceneSavedPatches");
   const moduleMode = mode === "module";
   const wireMode = mode === "wire";
   const homeMode = mode === "home";
@@ -488,6 +489,12 @@ function configureNodeSceneContextMenu(mode) {
     homeModules.hidden = !homeMode;
     if (homeMode) {
       renderNodeSceneHomeModuleList(homeModuleList);
+    }
+  }
+  if (savedPatches) {
+    savedPatches.hidden = !homeMode;
+    if (homeMode) {
+      renderNodeGraphDemoPatchList("nodeSceneSavedPatchList");
     }
   }
   wireTypeControl.hidden = !wireMode;

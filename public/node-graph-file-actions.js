@@ -257,8 +257,8 @@ function nodeGraphDemoPatchRows(patches) {
   return safePatches.concat(nodeGraphDemoPatchEmptySlots(10 - safePatches.length));
 }
 
-function renderNodeGraphDemoPatchRows(patches = []) {
-  const list = document.getElementById("nodeDemoPatchList");
+function renderNodeGraphDemoPatchRows(patches = [], listId = "nodeDemoPatchList") {
+  const list = document.getElementById(listId);
   if (!list) {
     return;
   }
@@ -285,8 +285,17 @@ function renderNodeGraphDemoPatchRows(patches = []) {
   }
 }
 
-async function renderNodeGraphDemoPatchList() {
-  const list = document.getElementById("nodeDemoPatchList");
+async function loadNodeGraphDemoPatchEntries() {
+  const response = await fetch("/api/patches");
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ok === false) {
+    throw new Error(result.error || `HTTP ${response.status}`);
+  }
+  return result.patches || [];
+}
+
+async function renderNodeGraphDemoPatchList(listId = "nodeDemoPatchList") {
+  const list = document.getElementById(listId);
   if (!list) {
     return;
   }
@@ -296,12 +305,7 @@ async function renderNodeGraphDemoPatchList() {
   loading.textContent = "Loading saved patches...";
   list.append(loading);
   try {
-    const response = await fetch("/api/patches");
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.ok === false) {
-      throw new Error(result.error || `HTTP ${response.status}`);
-    }
-    renderNodeGraphDemoPatchRows(result.patches || []);
+    renderNodeGraphDemoPatchRows(await loadNodeGraphDemoPatchEntries(), listId);
   } catch (error) {
     list.replaceChildren();
     const row = document.createElement("div");
@@ -328,6 +332,7 @@ async function loadNodeGraphDemoPatch(filename) {
     commitNodeGraphPatch(loadNodeGraphPatchFromScript(text), {
       status: `patch loaded: ${safeFilename}`,
     });
+    closeNodeSceneContextMenu();
   } catch (error) {
     setNodeGraphScriptStatus(`patch load failed: ${error?.message || error}`, false);
   }

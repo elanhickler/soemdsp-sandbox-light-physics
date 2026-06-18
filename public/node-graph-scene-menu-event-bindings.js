@@ -22,6 +22,8 @@ function bindNodeGraphSceneMenuEvents() {
   bindNodeGraphSceneElementEvent("nodeSceneCopyModule", "click", copyNodeGraphModuleFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneOpenModuleBrowser", "click", () =>
     openNodeGraphModuleShop(nodeGraphMvp.sceneContextPoint));
+  bindNodeGraphSceneElementEvent("nodeSceneSavedPatchesRefresh", "click", () =>
+    renderNodeGraphDemoPatchList("nodeSceneSavedPatchList"));
   bindNodeGraphSceneElementEvent("nodeSceneAddToGroup", "click", saveNodeGraphSelectionAsModuleGroup);
   bindNodeGraphSceneElementEvent("nodeSceneAddToUi", "click", addNodeGraphModuleToUiFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneWidthDecrease", "click", () => adjustNodeGraphModuleWidthFromContext(-1));
