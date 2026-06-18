@@ -26,27 +26,6 @@ function bindNodeGraphHeaderControlEvents() {
   document.getElementById("nodeModuleButtonsToggleButton").addEventListener("click", toggleNodeGraphModuleButtonsVisibility);
   document.getElementById("nodeOscilloscopeToggleButton").addEventListener("click", toggleNodeGraphOscilloscopeVisibility);
   document.getElementById("nodeGlobalScopeMenuButton").addEventListener("click", toggleNodeGlobalScopeMenu);
-  document
-    .getElementById("nodeCopyViewportImageOverlayButton")
-    .addEventListener("click", exportNodeGraphViewportPng);
-  document
-    .getElementById("nodeExportViewportGifButton")
-    .addEventListener("click", exportNodeGraphViewportGif);
-  document
-    .getElementById("nodeExportViewportMp4Button")
-    .addEventListener("click", exportNodeGraphViewportMp4);
-  document
-    .getElementById("nodeExportViewportYoutubeButton")
-    .addEventListener("click", exportNodeGraphViewportYoutube);
-  document
-    .getElementById("nodeExportViewportWavButton")
-    .addEventListener("click", exportNodeGraphViewportWav);
-  document
-    .getElementById("nodeExportViewportOggButton")
-    .addEventListener("click", exportNodeGraphViewportOgg);
-  document
-    .getElementById("nodeExportViewportFlacButton")
-    .addEventListener("click", exportNodeGraphViewportFlac);
   document.getElementById("nodeGlobalScopeCloseMenu").addEventListener("click", closeNodeGlobalScopeMenu);
   document.getElementById("nodeGlobalScopeDragHandle").addEventListener("pointerdown", beginNodeGlobalScopeMenuDrag);
   document

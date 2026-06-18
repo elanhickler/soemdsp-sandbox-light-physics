@@ -18,8 +18,7 @@
     "resize": "Mouse: drag to resize workspace by grid units.",
     "resizeTitle": "Resize modular workspace",
     "origin": "World origin: X 0, Y 0",
-    "backToFull": "Return to full modular view",
-    "copyViewportImage": "Save the visible modular viewport or rendered media to Downloads"
+    "backToFull": "Return to full modular view"
   },
   "view": {
     "patchSettings": "Patch settings",
@@ -206,10 +205,6 @@
     "phaseListUnavailable": "Phase list unavailable: manifest required",
     "manifestReloading": "Manifest reload in progress",
     "manifestReload": "Reload manifest and artifacts",
-    "visualOutputCopy": "Copy visual output PNG to clipboard",
-    "visualOutputCopyRenderFirst": "Render Sample before copying visual output",
-    "visualOutputSave": "Save visual output as PNG",
-    "visualOutputRenderFirst": "Render Sample before saving visual output",
     "visualOutputWaiting": "Node graph visual output waiting for Render Sample"
   }
 }

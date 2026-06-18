@@ -1495,12 +1495,19 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   createSmoother(initialValue, metadata = {}) {
     const value = Number(initialValue);
     const safeValue = Number.isFinite(value) ? value : 0;
+    const signal = this.parameterValueToNormalizedSignal(safeValue, metadata);
     return {
       current: safeValue,
       linearSmoothing: metadata?.linearSmoothing !== false,
       max: Number.isFinite(Number(metadata?.max)) ? Number(metadata.max) : 1,
+      metadata,
       min: Number.isFinite(Number(metadata?.min)) ? Number(metadata.min) : 0,
+      nonlinearSmoothing: Boolean(metadata?.nonlinearSlider),
+      outputBuffer: signal,
+      targetSignal: signal,
       target: safeValue,
+      lastFrame: -1,
+      lastValue: safeValue,
       wraparound: Boolean(metadata?.wraparound),
     };
   }
@@ -1510,10 +1517,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     smoother.target = Number.isFinite(value) ? value : smoother.target;
     smoother.linearSmoothing = metadata?.linearSmoothing !== false;
     smoother.max = Number.isFinite(Number(metadata?.max)) ? Number(metadata.max) : smoother.max;
+    smoother.metadata = metadata;
     smoother.min = Number.isFinite(Number(metadata?.min)) ? Number(metadata.min) : smoother.min;
+    smoother.nonlinearSmoothing = Boolean(metadata?.nonlinearSlider);
+    smoother.targetSignal = this.parameterValueToNormalizedSignal(smoother.target, metadata);
     smoother.wraparound = Boolean(metadata?.wraparound);
     if (!smoother.linearSmoothing) {
       smoother.current = smoother.target;
+      smoother.outputBuffer = smoother.targetSignal;
+      smoother.lastValue = smoother.target;
     }
   }
 
@@ -1523,7 +1535,26 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       const value = Number(node?.params?.[key]);
       return Number.isFinite(value) ? value : fallback;
     }
-    if (!smoother.linearSmoothing || frames <= 1) {
+    if (!smoother.linearSmoothing) {
+      return smoother.target;
+    }
+    if (smoother.nonlinearSmoothing) {
+      if (smoother.lastFrame === frame) {
+        return smoother.lastValue;
+      }
+      const signal = this.onePoleLowpassSample(
+        smoother,
+        smoother.targetSignal,
+        90,
+        sampleRate,
+      );
+      const value = this.normalizedSignalToParameterValue(signal, smoother.metadata);
+      smoother.current = value;
+      smoother.lastFrame = frame;
+      smoother.lastValue = value;
+      return value;
+    }
+    if (frames <= 1) {
       return smoother.target;
     }
     const progress = (frame + 1) / frames;
@@ -1538,6 +1569,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   finishSmoothing() {
     for (const smoother of this.smoothers.values()) {
+      if (smoother.nonlinearSmoothing) {
+        smoother.current = smoother.lastValue ?? smoother.current;
+        smoother.lastFrame = -1;
+        continue;
+      }
       smoother.current = smoother.wraparound
         ? this.wrapValue(smoother.target, smoother.min, smoother.max)
         : smoother.target;

@@ -1,4 +1,12 @@
 const NODE_GRAPH_KNOB_WIDGET_DRAG_DISTANCE_PX = 174;
+const NODE_GRAPH_KNOB_WIDGET_MAX_SIZE_PX = 58;
+const nodeGraphKnobWidgetResizeObserver = typeof ResizeObserver === "function"
+  ? new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      syncNodeGraphKnobWidgetSize(entry.target);
+    }
+  })
+  : null;
 
 function ensureNodeGraphDragHandle(node) {
   const actions = node.querySelector(".node-header-actions");
@@ -33,6 +41,33 @@ function nodeGraphKnobWidgetInputForControl(control) {
   const node = control?.closest?.(".dsp-node");
   const key = control?.dataset?.param || "value";
   return node?.querySelector?.(`.node-knob-widget-input[data-param="${CSS.escape(key)}"]`) || null;
+}
+
+function syncNodeGraphKnobWidgetSize(control) {
+  if (!control) {
+    return;
+  }
+  const size = Math.max(
+    8,
+    Math.min(
+      NODE_GRAPH_KNOB_WIDGET_MAX_SIZE_PX,
+      control.clientWidth || NODE_GRAPH_KNOB_WIDGET_MAX_SIZE_PX,
+      control.clientHeight || NODE_GRAPH_KNOB_WIDGET_MAX_SIZE_PX,
+    ),
+  );
+  control.style.setProperty("--knob-widget-slot-size", `${size}px`);
+}
+
+function observeNodeGraphKnobWidgetSize(control) {
+  syncNodeGraphKnobWidgetSize(control);
+  nodeGraphKnobWidgetResizeObserver?.observe(control);
+  requestAnimationFrame(() => syncNodeGraphKnobWidgetSize(control));
+}
+
+function nodeGraphKnobWidgetDragSpeed(event) {
+  return NODE_GRAPH_KNOB_WIDGET_DRAG_DISTANCE_PX *
+    (event.shiftKey ? 3 : 1) *
+    (event.ctrlKey || event.metaKey ? 10 : 1);
 }
 
 function syncNodeGraphKnobWidgetControl(control) {
@@ -85,6 +120,9 @@ function setNodeGraphKnobWidgetValue(control, value, options = {}) {
 }
 
 function beginNodeGraphKnobWidgetDrag(event) {
+  if (!event.target?.closest?.(".node-knob-widget-face")) {
+    return;
+  }
   const control = event.currentTarget;
   const input = nodeGraphKnobWidgetInputForControl(control);
   if (!input) {
@@ -116,9 +154,7 @@ function dragNodeGraphKnobWidget(event) {
   const startX = Number(control.dataset.knobDragStartX) || event.clientX;
   const startY = Number(control.dataset.knobDragStartY) || event.clientY;
   const startValue = Number(control.dataset.knobDragStartValue) || 0;
-  const speed = event.shiftKey
-    ? NODE_GRAPH_KNOB_WIDGET_DRAG_DISTANCE_PX * 3
-    : NODE_GRAPH_KNOB_WIDGET_DRAG_DISTANCE_PX;
+  const speed = nodeGraphKnobWidgetDragSpeed(event);
   const delta = ((startY - event.clientY) + (event.clientX - startX)) / speed;
   setNodeGraphKnobWidgetValue(control, startValue + delta * range);
 }
@@ -182,6 +218,7 @@ function attachNodeGraphNodeEvents(node) {
     });
   }
   for (const control of node.querySelectorAll("[data-knob-widget-control]")) {
+    observeNodeGraphKnobWidgetSize(control);
     syncNodeGraphKnobWidgetControl(control);
     control.addEventListener("pointerdown", beginNodeGraphKnobWidgetDrag);
     control.addEventListener("pointermove", dragNodeGraphKnobWidget);
@@ -329,13 +366,20 @@ function createNodeGraphModuleElement(type, node) {
     (port) => !parameterDefinitions.some((parameter) => parameter.key === port),
   );
   const layout = nodeGraphPatchNodeLayout(patchNode);
+  const widthGu = nodeGraphPatchNodeGridWidthUnits(patchNode);
+  const heightGu = nodeGraphPatchNodeGridHeightUnits(patchNode);
   const article = document.createElement("article");
   article.className = nodeGraphModuleLayoutClassNames(definition, layout);
   article.dataset.node = node;
   article.dataset.nodeType = type;
   article.dataset.portSignature = `${inputPorts.join(",")}=>${outputPorts.join(",")}`;
-  article.style.setProperty("--node-grid-width-units", String(nodeGraphPatchNodeGridWidthUnits(patchNode)));
-  article.style.setProperty("--node-grid-height-units", String(nodeGraphPatchNodeGridHeightUnits(patchNode)));
+  article.dataset.gridWidthGu = String(widthGu);
+  article.dataset.gridHeightGu = String(heightGu);
+  article.style.setProperty("--node-grid-width-units", String(widthGu));
+  article.style.setProperty("--node-grid-height-units", String(heightGu));
+  if (layout === "knobWidget" && widthGu <= 1 && heightGu <= 1) {
+    article.classList.add("knob-widget-compact");
+  }
 
   if (layout === "led") {
     const ledFace = createNodeGraphLedFace(node, type);

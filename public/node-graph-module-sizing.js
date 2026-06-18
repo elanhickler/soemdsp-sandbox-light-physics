@@ -22,14 +22,14 @@ function nodeGraphModuleWidthLimitsForType(type) {
     return { ...nodeGraphModuleWidthLimits, minGu: 1 };
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
-    return { ...nodeGraphModuleWidthLimits, minGu: 2 };
+    return { ...nodeGraphModuleWidthLimits, minGu: 1 };
   }
   return nodeGraphModuleWidthLimits;
 }
 
 function nodeGraphModuleHeightLimitsForType(type) {
   if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
-    return { ...nodeGraphModuleHeightLimits, minGu: 2 };
+    return { ...nodeGraphModuleHeightLimits, minGu: 1 };
   }
   return nodeGraphModuleHeightLimits;
 }

@@ -11,11 +11,6 @@ function nodeGraphPatchFileName() {
   return `${safeName || "soemdsp-patch"}.json`;
 }
 
-function nodeGraphVisualOutputFileName(fingerprint = nodeGraphMvp.rendered?.patchFingerprint || nodeGraphPatchFingerprint()) {
-  const fingerprintSuffix = fingerprint ? `-${fingerprint}` : "";
-  return nodeGraphPatchFileName().replace(/\.json$/i, `${fingerprintSuffix}-visual.png`);
-}
-
 function saveNodeGraphScript() {
   if (!nodeGraphScriptReadyForGraphAction("save")) {
     return;
