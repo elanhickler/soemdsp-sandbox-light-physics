@@ -29,6 +29,12 @@ function syncNodeGraphPatchMetadataFromSlider(slider, options = {}) {
   renderNodeGraphExecutionPlanDebug();
   syncNodeGraphFilterCurveDisplays();
   scheduleNodeGraphLiveParameterSync();
+  if (typeof setNodeGraphPatchDirtyState === "function") {
+    setNodeGraphPatchDirtyState("edited");
+  } else if (typeof saveNodeGraphWorkingPatchToUserSettings === "function") {
+    nodeGraphMvp.patchDirtyState = "edited";
+    saveNodeGraphWorkingPatchToUserSettings();
+  }
   if (options.record) {
     recordNodeGraphHistory();
   } else {
@@ -70,6 +76,12 @@ function syncNodeGraphPatchParameterFromSlider(slider, options = {}) {
     nodeGraphGraphEndpointYLockEnabledForNode(patchNode)
   ) {
     patchNode.graph = nodeGraphGraphWithLockedEndpointY(patchNode.graph);
+  }
+  if (typeof setNodeGraphPatchDirtyState === "function") {
+    setNodeGraphPatchDirtyState("edited");
+  } else if (typeof saveNodeGraphWorkingPatchToUserSettings === "function") {
+    nodeGraphMvp.patchDirtyState = "edited";
+    saveNodeGraphWorkingPatchToUserSettings();
   }
   if (options.deferUi) {
     return;

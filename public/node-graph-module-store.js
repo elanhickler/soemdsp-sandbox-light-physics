@@ -92,6 +92,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "chromaColor",
   "image",
   "canvas",
+  "formulaVisual",
   "led",
   "visualOscilloscope",
   "parabol",
@@ -107,12 +108,12 @@ const nodeGraphModuleCatalogVisibilityStorageKey = "soemdsp-sandbox.moduleCatalo
 
 const nodeGraphModuleStoreDepartments = Object.freeze([
   "Oscillator",
-  "Additive Engines",
+  "Additive",
   "Drum Machines",
   "Filter",
-  "Effects",
+  "Delay",
   "Clock",
-  "Melody Sequencer",
+  "Sequencer",
   "Chord Sequencer",
   "Arpeggiator",
   "Time",
@@ -137,9 +138,9 @@ const nodeGraphModuleStoreDepartmentAds = Object.freeze({
     title: "Oscillator",
     pitch: "Start with a voice. Tone generators, phase motion, and the raw signal that everything else learns to orbit.",
   },
-  "Additive Engines": {
+  Additive: {
     symbol: "+",
-    title: "Additive Engines",
+    title: "Additive",
     pitch: "Harmonic engines, partial banks, and tone builders for sculpting sound from summed sine energy.",
   },
   "Drum Machines": {
@@ -152,9 +153,9 @@ const nodeGraphModuleStoreDepartmentAds = Object.freeze({
     title: "Filter",
     pitch: "Shape the airframe. Carve mass, reveal brightness, and teach a signal where it is allowed to fly.",
   },
-  Effects: {
+  Delay: {
     symbol: "FX",
-    title: "Effects",
+    title: "Delay",
     pitch: "Delay, reverb, distortion, and performance processors for shaping finished sound.",
   },
   Clock: {
@@ -162,9 +163,9 @@ const nodeGraphModuleStoreDepartmentAds = Object.freeze({
     title: "Clock",
     pitch: "Pulse generators, dividers, counters, delays, and timing utilities for musical logic.",
   },
-  "Melody Sequencer": {
+  "Sequencer": {
     symbol: "♪",
-    title: "Melody Sequencer",
+    title: "Sequencer",
     pitch: "Pitch lanes and melodic pattern tools for generating lines, hooks, and motion.",
   },
   "Chord Sequencer": {
@@ -245,7 +246,7 @@ const nodeGraphModuleStoreDepartmentAds = Object.freeze({
   Visual: {
     symbol: "V",
     title: "Visual",
-    pitch: "Patch signals into sandbox behavior. Screen shake is the first control port for sound-to-visual routing.",
+    pitch: "Visual sinks, RGBA sources, canvas layers, and formula tiles for turning patch motion into screen output.",
   },
 });
 
@@ -256,12 +257,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["phase counter", "waveform selection", "frequency control"],
   },
   additiveOsc: {
-    category: "Additive Engines",
+    category: "Additive",
     description: "Harmonic additive tone source using SOEMDSP waveform partial recipes.",
     notes: ["harmonic sum", "waveform selector", "band-limited partials"],
   },
   gpuAdditiveOsc: {
-    category: "Additive Engines",
+    category: "Additive",
     description: "Buffered GPU additive engine proof module. Reuses the CPU additive path in live audio and prepares WebGPU chunk rendering with fallback.",
     label: "GPU Additive",
     notes: ["WebGPU proof", "buffered backend", "CPU fallback"],
@@ -357,12 +358,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["trigger division", "reset input", "pulse width"],
   },
   stepSequencer: {
-    category: "Melody Sequencer",
+    category: "Sequencer",
     description: "Eight-step trigger sequencer. Advance it with Clock and route stepped control values anywhere.",
     notes: ["trigger input", "reset input", "stepped modulation"],
   },
   melodySequencer: {
-    category: "Melody Sequencer",
+    category: "Sequencer",
     description: "Placeholder for a pitch-aware sequencer for hooks, lines, and scale-constrained motion.",
     label: "MelodySequencer",
     notes: ["placeholder", "pitch lane", "scale control"],
@@ -682,19 +683,19 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["up time", "down time", "asymmetric glide"],
   },
   delayEffect: {
-    category: "Effects",
+    category: "Delay",
     description: "SOEMDSP-style modulated fractional delay with feedback, wet/dry mix, and diffuse mode.",
     label: "Delay",
     notes: ["modulated delay", "fractional echo", "diffuse mode"],
   },
   reverbEffect: {
-    category: "Effects",
+    category: "Delay",
     description: "Placeholder for space, room, tail, and ambience processing.",
     label: "ReverbEffect",
     notes: ["placeholder", "space", "decay"],
   },
   distortionEffect: {
-    category: "Effects",
+    category: "Delay",
     description: "Placeholder for drive, clipping, saturation, and tone-shaping distortion effects.",
     label: "DistortionEffect",
     notes: ["placeholder", "drive", "saturation"],
@@ -773,6 +774,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     category: "Visual",
     description: "Layered RGBA compositor for images, scopes, shader passes, transforms, and future game-engine surfaces.",
     notes: ["layer compositor", "RGBA output", "shader script"],
+  },
+  formulaVisual: {
+    category: "Visual",
+    description: "Formula-driven pattern tile with compact presets and x/y formula expressions for Lissajous, rose, and spirograph-style curves.",
+    label: "Formula Visual",
+    notes: ["formula presets", "x/y expressions", "RGBA output"],
   },
   led: {
     category: "Visual",
@@ -869,7 +876,7 @@ function nodeGraphModuleIsStoreVisible(type, shelf = "shop") {
   if (shelf === "home") {
     return visibility?.home === true;
   }
-  return visibility?.developer !== false;
+  return true;
 }
 
 function applyNodeGraphModuleCatalogVisibility(value = {}) {
@@ -918,8 +925,8 @@ function nodeGraphModuleStoreEntries() {
       homeVisible: nodeGraphModuleIsStoreVisible(type, "home") && Object.hasOwn(nodeGraphModuleDefinitions, type),
       implemented: Object.hasOwn(nodeGraphModuleDefinitions, type),
       label: nodeGraphModuleStoreCatalog[type]?.label || nodeGraphNodeLabels[type] || type,
-      shopVisible: nodeGraphModuleIsStoreVisible(type, "shop") && Object.hasOwn(nodeGraphModuleDefinitions, type),
-      visible: nodeGraphModuleIsStoreVisible(type, "shop") && Object.hasOwn(nodeGraphModuleDefinitions, type),
+      shopVisible: Object.hasOwn(nodeGraphModuleDefinitions, type),
+      visible: Object.hasOwn(nodeGraphModuleDefinitions, type),
     }));
 }
 
@@ -941,7 +948,7 @@ function setNodeGraphModuleCatalogVisibility(type, visible, shelf = "shop") {
 }
 
 function setNodeGraphModuleStoreDepartment(department = "") {
-  nodeGraphMvp.moduleStoreDepartment = "";
+  nodeGraphMvp.moduleStoreDepartment = String(department || "");
   renderNodeGraphModuleStoreCatalog();
 }
 
@@ -970,6 +977,45 @@ function nodeGraphModuleStoreEntryMatchesSearch(entry, query) {
     .join(" ")
     .toLowerCase();
   return haystack.includes(needle);
+}
+
+function nodeGraphModuleStoreDepartmentMatchesSearch(department, entries, query) {
+  const needle = nodeGraphNormalizeModuleDepartmentSearch(query);
+  if (!needle) {
+    return true;
+  }
+  const haystack = [
+    department,
+    ...(entries || []).flatMap((entry) => [
+      entry.label,
+      entry.type,
+      entry.description,
+      ...(entry.notes || []),
+    ]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(needle);
+}
+
+function nodeGraphModuleStorePublicEntriesByDepartment(entries = []) {
+  const groups = new Map();
+  entries
+    .filter((entry) => entry.implemented && entry.visible)
+    .forEach((entry) => {
+      const department = entry.category || "Other";
+      if (!groups.has(department)) {
+        groups.set(department, []);
+      }
+      groups.get(department).push(entry);
+    });
+  return [...groups.entries()]
+    .map(([department, departmentEntries]) => [
+      department,
+      departmentEntries.sort((a, b) => a.label.localeCompare(b.label)),
+    ])
+    .sort(([a], [b]) => a.localeCompare(b));
 }
 
 function syncNodeGraphModuleShopGridColumns() {
@@ -1054,6 +1100,9 @@ function saveNodeGraphModuleShopWindowSizeToUserSettings() {
 function handleNodeGraphModuleShopFitInput(event) {
   nodeGraphMvp.moduleStoreGridColumns = normalizeNodeGraphModuleStoreGridColumns(event?.currentTarget?.value);
   syncNodeGraphModuleShopGridColumns();
+  if (nodeGraphMvp.moduleStoreDepartment) {
+    renderNodeGraphModuleStoreCatalog();
+  }
 }
 
 function handleNodeGraphModuleDepartmentSearchInput(event) {
@@ -1205,36 +1254,16 @@ function createNodeGraphModuleStoreButton(entry) {
   card.setAttribute("aria-label", entry.visible && entry.implemented
     ? `Add ${entry.label} module`
     : `${entry.label} module unavailable`);
+  if (entry.visible && entry.implemented) {
+    card.dataset.contextModule = entry.type;
+    card.role = "button";
+    card.tabIndex = 0;
+  }
 
   const label = document.createElement("strong");
   label.textContent = entry.label;
 
-  const actions = document.createElement("div");
-  actions.className = "node-module-store-card-actions";
-
-  const homeButton = document.createElement("button");
-  homeButton.className = "node-module-store-card-action";
-  homeButton.type = "button";
-  homeButton.dataset.storeToggleModule = entry.type;
-  homeButton.dataset.storeToggleShelf = "home";
-  homeButton.dataset.visible = String(!entry.homeVisible);
-  homeButton.title = entry.homeVisible ? "Remove from Home" : "Add to Home";
-  homeButton.setAttribute("aria-label", homeButton.title);
-  homeButton.textContent = entry.homeVisible ? "🏠-" : "🏠+";
-  actions.append(homeButton);
-
-  if (entry.visible && entry.implemented) {
-    const addButton = document.createElement("button");
-    addButton.className = "node-module-store-card-action node-module-store-card-add";
-    addButton.type = "button";
-    addButton.dataset.contextModule = entry.type;
-    addButton.title = `Add ${entry.label}`;
-    addButton.setAttribute("aria-label", `Add ${entry.label}`);
-    addButton.textContent = "+";
-    actions.append(addButton);
-  }
-
-  card.append(label, actions);
+  card.append(label);
   return card;
 }
 
@@ -1242,7 +1271,7 @@ function createNodeGraphModuleDepartmentButton(department, entries) {
   const ad = nodeGraphModuleStoreDepartmentAds[department] || {};
   const titleText = ad.title || department;
   const button = document.createElement("button");
-  button.className = "scene-context-store-department-card";
+  button.className = "scene-context-store-department-card node-module-category-row";
   button.type = "button";
   button.dataset.storeDepartment = department;
   button.title = `${titleText}: module department`;
@@ -1252,23 +1281,15 @@ function createNodeGraphModuleDepartmentButton(department, entries) {
     setNodeGraphModuleStoreDepartment(department);
   });
 
-  const symbol = document.createElement("span");
-  symbol.className = "scene-context-store-department-symbol";
-  symbol.setAttribute("aria-hidden", "true");
-  symbol.textContent = ad.symbol || "◇";
-
   const title = document.createElement("strong");
   title.className = "scene-context-store-department-title";
   title.textContent = titleText;
 
-  const preview = document.createElement("span");
-  preview.className = "scene-context-store-department-preview";
-  preview.textContent = entries
-    .slice(0, 4)
-    .map((entry) => entry.label)
-    .join(" / ");
+  const count = document.createElement("span");
+  count.className = "scene-context-store-department-count";
+  count.textContent = String(entries.length);
 
-  button.append(symbol, title, preview);
+  button.append(title, count);
   return button;
 }
 
@@ -1332,6 +1353,9 @@ function renderNodeGraphModuleStoreCatalog() {
   const developerShell = document.getElementById("nodeModuleDeveloperListShell");
   const developerList = document.getElementById("nodeModuleDeveloperList");
   const shopView = document.getElementById("nodeModuleShopView");
+  const backButton = document.getElementById("nodeModuleDepartmentBack");
+  const fitControl = document.getElementById("nodeModuleShopFitControl");
+  const departmentTitle = document.getElementById("nodeModuleDepartmentTitle");
   if (!available || !homeShell || !homeShelf || !developerShell || !developerList || !shopView) {
     return;
   }
@@ -1342,38 +1366,69 @@ function renderNodeGraphModuleStoreCatalog() {
   syncNodeGraphModuleShopGridColumns();
 
   const entries = nodeGraphModuleStoreEntries();
+  const selectedDepartment = nodeGraphMvp.moduleStoreDepartment || "";
   const departmentSearch = nodeGraphMvp.moduleStoreDepartmentSearch || "";
   const departmentSearchField = document.getElementById("nodeModuleDepartmentSearch");
   if (departmentSearchField && departmentSearchField.value !== departmentSearch) {
     departmentSearchField.value = departmentSearch;
   }
 
+  const publicDepartmentEntries = nodeGraphModuleStorePublicEntriesByDepartment(entries);
   const matchingEntries = entries.filter((item) => nodeGraphModuleStoreEntryMatchesSearch(item, departmentSearch));
-  const publicEntries = matchingEntries.filter((entry) => entry.implemented && entry.visible);
+  const publicEntries = matchingEntries.filter((entry) =>
+    entry.implemented &&
+    entry.visible &&
+    (!selectedDepartment || entry.category === selectedDepartment)
+  );
   const homeEntries = entries.filter((entry) => entry.implemented && entry.homeVisible);
-  const developerEntries = matchingEntries.filter((entry) => !entry.implemented);
+  const selectedDepartmentCount =
+    publicDepartmentEntries.find(([department]) => department === selectedDepartment)?.[1]?.length || 0;
+
+  shopView.classList.toggle("department-selected", Boolean(selectedDepartment));
+  if (backButton) {
+    backButton.hidden = !selectedDepartment;
+  }
+  if (fitControl) {
+    fitControl.hidden = true;
+  }
+  if (departmentTitle) {
+    departmentTitle.hidden = !selectedDepartment;
+    departmentTitle.textContent = selectedDepartment
+      ? `${selectedDepartment} · ${selectedDepartmentCount}`
+      : "";
+  }
+  available.classList.add("scene-context-store-department-list");
+  available.classList.toggle("node-module-store-list", Boolean(selectedDepartment));
+  available.classList.remove("node-module-store-grid");
 
   for (const entry of homeEntries) {
     homeShelf.append(createNodeGraphModuleStoreButton(entry));
   }
   homeShell.hidden = homeEntries.length === 0;
 
-  for (const entry of publicEntries) {
-    available.append(createNodeGraphModuleStoreButton(entry));
+  if (selectedDepartment) {
+    for (const entry of publicEntries) {
+      available.append(createNodeGraphModuleStoreButton(entry));
+    }
+  } else {
+    for (const [department, departmentEntries] of publicDepartmentEntries) {
+      if (nodeGraphModuleStoreDepartmentMatchesSearch(department, departmentEntries, departmentSearch)) {
+        available.append(createNodeGraphModuleDepartmentButton(department, departmentEntries));
+      }
+    }
   }
   if (!available.children.length) {
     const empty = document.createElement("div");
     empty.className = "scene-context-store-empty";
     empty.textContent = departmentSearch
       ? "No modules match this search."
-      : "No modules are available.";
+      : selectedDepartment
+        ? "No modules are available in this category."
+        : "No categories are available.";
     available.append(empty);
   }
 
-  for (const entry of developerEntries) {
-    developerList.append(createNodeGraphModuleStoreButton(entry));
-  }
-  developerShell.hidden = developerEntries.length === 0;
+  developerShell.hidden = true;
   renderNodeGraphModuleGroupCatalog();
 }
 
@@ -1493,6 +1548,7 @@ function openNodeGraphModuleShop(point = null) {
   nodeGraphMvp.moduleStoreDepartment = "";
   closeNodeSceneContextMenu();
   setNodeGraphViewMode("shop");
+  renderNodeGraphModuleStoreCatalog();
   const panel = document.getElementById("nodeModuleShopView");
   if (typeof applyNodeGraphModuleShopWindowSize === "function") {
     applyNodeGraphModuleShopWindowSize(nodeGraphMvp.workspaceWindowStates?.moduleBrowser?.size);

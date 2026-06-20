@@ -68,6 +68,9 @@ function setNodeGraphZoom(nextZoom, anchor = null) {
   };
   applyNodeGraphZoom();
   applyNodeGraphPan();
+  if (typeof saveNodeGraphWorkspaceViewToUserSettings === "function") {
+    saveNodeGraphWorkspaceViewToUserSettings({ status: false });
+  }
 }
 
 function clampNodeGraphZoom(value) {
@@ -149,6 +152,9 @@ function resetNodeGraphZoomToOne() {
   };
   applyNodeGraphZoom();
   applyNodeGraphPan();
+  if (typeof saveNodeGraphWorkspaceViewToUserSettings === "function") {
+    saveNodeGraphWorkspaceViewToUserSettings({ status: false });
+  }
 }
 
 function normalizeNodeGraphZoomInput(value) {

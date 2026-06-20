@@ -113,7 +113,6 @@ function addNodeGraphModuleFromShop(button) {
     return;
   }
   const point = nodeGraphMvp.sceneContextPoint;
-  setNodeGraphViewMode("modular");
   beginNodeGraphModulePlacement(type, point);
   nodeGraphMvp.sceneContextPoint = null;
 }
@@ -242,10 +241,26 @@ function handleNodeGraphModuleStoreClick(event) {
   }
 }
 
+function handleNodeGraphModuleStoreKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+  const addButton = event.target.closest("[data-context-module]");
+  if (!addButton) {
+    return;
+  }
+  event.preventDefault();
+  addNodeGraphModuleFromShop(addButton);
+}
+
 function nodeGraphModuleGroupSelection() {
   const targetNodeId = nodeGraphModuleActionTargetNodeId();
   const selectedIds = [...nodeGraphSelectedNodeIds()].filter((id) => nodeGraphPatchNode(id));
   return selectedIds.length ? selectedIds : targetNodeId ? [targetNodeId] : [];
+}
+
+function nodeGraphModuleActionTargetNodeIds() {
+  return [...new Set(nodeGraphModuleGroupSelection())].filter((id) => nodeGraphPatchNode(id));
 }
 
 function saveNodeGraphSelectionAsModuleGroup() {
@@ -485,9 +500,13 @@ function addNodeGraphModuleToUiFromContext() {
 }
 
 function deleteNodeGraphSelectionFromContext() {
+  if (!nodeGraphMvp.selected && nodeGraphModuleActionTargetNodeId()) {
+    setNodeGraphSelection({ type: "node", id: nodeGraphModuleActionTargetNodeId() });
+  }
   deleteSelectedNodeGraphItem();
-  const menu = document.getElementById("nodeSceneContextMenu");
-  if (!menu || menu.hidden) {
+  const commandMenu = document.getElementById("nodeSceneContextMenu");
+  const actionWindow = document.getElementById("nodeModuleActionsWindow");
+  if ((!commandMenu || commandMenu.hidden) && (!actionWindow || actionWindow.hidden)) {
     return;
   }
   if (nodeGraphMvp.selected?.type === "wire") {
@@ -495,62 +514,81 @@ function deleteNodeGraphSelectionFromContext() {
   } else if (nodeGraphSelectedNodeIds().size) {
     configureNodeSceneContextMenu("module");
   } else {
-    configureNodeSceneContextMenu(menu.dataset.mode === "wire" ? "wire" : "module");
+    configureNodeSceneContextMenu(commandMenu?.dataset?.mode === "wire" ? "wire" : "module");
   }
 }
 
 function adjustNodeGraphModuleWidthFromContext(delta) {
-  const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode) {
+  const targetNodeIds = nodeGraphModuleActionTargetNodeIds();
+  if (!targetNodeIds.length) {
     return;
   }
 
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-  const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
-  if (!targetNode) {
-    return;
+  let changedCount = 0;
+  for (const targetNode of patch.nodes) {
+    if (!targetNodeIds.includes(targetNode.id)) {
+      continue;
+    }
+    const currentWidthGu = nodeGraphPatchNodeGridWidthUnits(targetNode);
+    const nextWidthGu = normalizeNodeGraphModuleWidthUnits(targetNode.type, currentWidthGu + delta);
+    if (nextWidthGu === currentWidthGu) {
+      continue;
+    }
+    const defaultWidthGu = nodeGraphDefaultModuleGridWidthUnits(targetNode.type);
+    if (nextWidthGu === defaultWidthGu) {
+      delete targetNode.widthGu;
+    } else {
+      targetNode.widthGu = nextWidthGu;
+    }
+    changedCount += 1;
   }
-  const currentWidthGu = nodeGraphPatchNodeGridWidthUnits(targetNode);
-  const nextWidthGu = normalizeNodeGraphModuleWidthUnits(targetNode.type, currentWidthGu + delta);
-  if (nextWidthGu === currentWidthGu) {
-    configureNodeSceneContextMenu("module");
-    return;
+  if (changedCount) {
+    commitNodeGraphPatch(patch, { status: changedCount > 1 ? "module widths changed" : "module width changed" });
   }
-
-  const defaultWidthGu = nodeGraphDefaultModuleGridWidthUnits(targetNode.type);
-  if (nextWidthGu === defaultWidthGu) {
-    delete targetNode.widthGu;
-  } else {
-    targetNode.widthGu = nextWidthGu;
-  }
-  commitNodeGraphPatch(patch, { status: "module width changed" });
   configureNodeSceneContextMenu("module");
 }
 
 function adjustNodeGraphModuleHeightFromContext(delta) {
-  const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode) {
+  const targetNodeIds = nodeGraphModuleActionTargetNodeIds();
+  if (!targetNodeIds.length) {
     return;
   }
 
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-  const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
-  if (!targetNode) {
-    return;
+  let changedCount = 0;
+  let graphChanged = false;
+  for (const targetNode of patch.nodes) {
+    if (!targetNodeIds.includes(targetNode.id)) {
+      continue;
+    }
+    const currentHeightGu = nodeGraphPatchNodeGridHeightUnits(targetNode);
+    const currentOffsetGu = nodeGraphPatchNodeHeightOffsetUnits(targetNode);
+    const nextOffsetGu = normalizeNodeGraphModuleHeightOffsetUnits(currentOffsetGu + delta);
+    const nextHeightGu = normalizeNodeGraphModuleHeightUnits(
+      targetNode.type,
+      currentHeightGu + (nextOffsetGu - currentOffsetGu),
+      targetNode.ui,
+    );
+    if (nextHeightGu === currentHeightGu) {
+      continue;
+    }
+    delete targetNode.heightGu;
+    if (nextOffsetGu === 0) {
+      delete targetNode.heightOffsetGu;
+    } else {
+      targetNode.heightOffsetGu = nextOffsetGu;
+    }
+    graphChanged = graphChanged || nodeGraphModuleIsGraphType(targetNode.type);
+    changedCount += 1;
   }
-  const currentHeightGu = nodeGraphPatchNodeGridHeightUnits(targetNode);
-  const nextHeightGu = normalizeNodeGraphModuleHeightUnits(
-    targetNode.type,
-    currentHeightGu + delta,
-    targetNode.ui,
-  );
-  if (nextHeightGu === currentHeightGu) {
-    configureNodeSceneContextMenu("module");
-    return;
+  if (changedCount) {
+    commitNodeGraphPatch(patch, {
+      status: changedCount > 1
+        ? "module heights changed"
+        : graphChanged ? "graph height changed" : "module height changed",
+    });
   }
-
-  targetNode.heightGu = nextHeightGu;
-  commitNodeGraphPatch(patch, { status: nodeGraphModuleIsGraphType(targetNode.type) ? "graph height changed" : "module height changed" });
   configureNodeSceneContextMenu("module");
 }
 

@@ -495,6 +495,52 @@ function normalizeNodeGraphScreenSpaceShader(screenSpaceShader = {}) {
   };
 }
 
+const nodeGraphFormulaVisualPresetSources = Object.freeze({
+  hybrid: [
+    "formula.preset = hybrid;",
+    "x = lissX * (1 - mix) + roseX * mix;",
+    "y = lissY * (1 - mix) + roseY * mix;",
+  ].join("\n"),
+  lissajous: [
+    "formula.preset = lissajous;",
+    "x = lissX;",
+    "y = lissY;",
+  ].join("\n"),
+  rose: [
+    "formula.preset = rose;",
+    "x = roseX;",
+    "y = roseY;",
+  ].join("\n"),
+  spiro: [
+    "formula.preset = spiro;",
+    "x = spiroX;",
+    "y = spiroY;",
+  ].join("\n"),
+});
+
+const nodeGraphFormulaVisualDefaultSource = nodeGraphFormulaVisualPresetSources.hybrid;
+
+function parseNodeGraphFormulaVisualPreset(source = "") {
+  const match = String(source || "").match(/(?:^|\n)\s*formula\.preset\s*=\s*([^;\n]+)\s*;/i);
+  const preset = normalizeNodeGraphCanvasScriptToken(match?.[1], "hybrid").toLowerCase();
+  return Object.hasOwn(nodeGraphFormulaVisualPresetSources, preset) ? preset : "custom";
+}
+
+function normalizeNodeGraphFormulaVisualScript(formulaVisual = {}) {
+  const source = typeof formulaVisual === "string"
+    ? formulaVisual
+    : formulaVisual && typeof formulaVisual === "object"
+      ? formulaVisual.source
+      : "";
+  const normalizedSource = String(source || "").trim().slice(0, 10000) || nodeGraphFormulaVisualDefaultSource;
+  return {
+    kind: "formulaVisual",
+    language: String(formulaVisual?.language || "formula-xy-v1").trim().slice(0, 32) || "formula-xy-v1",
+    preset: parseNodeGraphFormulaVisualPreset(normalizedSource),
+    source: normalizedSource,
+  };
+}
+
 function parseNodeGraphCanvasScriptBackground(source = "") {
   const match = String(source || "").match(/(?:^|\n)\s*canvas\.background\s*=\s*([^;\n]+)\s*;/i);
   return normalizeNodeGraphCanvasScriptHexColor(match?.[1], "#00000000").slice(0, 64);

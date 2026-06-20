@@ -69,12 +69,15 @@ function syncNodeGraphWorldPositionReadout() {
   );
 }
 
-function setNodeGraphPan(x, y) {
+function setNodeGraphPan(x, y, options = {}) {
   nodeGraphMvp.pan = {
     x: Number.isFinite(Number(x)) ? Number(x) : 0,
     y: Number.isFinite(Number(y)) ? Number(y) : 0,
   };
   applyNodeGraphPan();
+  if (options.persist !== false && typeof saveNodeGraphWorkspaceViewToUserSettings === "function") {
+    saveNodeGraphWorkspaceViewToUserSettings({ status: false });
+  }
 }
 
 function nodeGraphVisualControlValue(value, fallback = 0) {
@@ -144,6 +147,9 @@ function nodeGraphSetVisualControls(values = {}) {
     visualBloom: nodeGraphVisualControlValue(values.visualBloom, current.visualBloom || 0),
     visualBrightness: nodeGraphVisualControlValue(values.visualBrightness, current.visualBrightness || 0),
     visualGlow: nodeGraphVisualControlValue(values.visualGlow, current.visualGlow || 0),
+    formulaVisual: values.formulaVisual && typeof values.formulaVisual === "object"
+      ? values.formulaVisual
+      : (current.formulaVisual || {}),
     x: nodeGraphVisualControlSignedValue(values.x, current.x || 0),
     y: nodeGraphVisualControlSignedValue(values.y, current.y || 0),
   };
@@ -186,6 +192,7 @@ function nodeGraphClearVisualControls() {
     visualBloom: 0,
     visualBrightness: 0,
     visualGlow: 0,
+    formulaVisual: {},
     x: 0,
     y: 0,
   };
@@ -408,6 +415,9 @@ function alignNodeGraphViewToGridWithOptions(options = {}) {
     y: snapPan(unsnappedPan.y, nodeGraphGridHeight()),
   };
   applyNodeGraphPan();
+  if (typeof saveNodeGraphWorkspaceViewToUserSettings === "function") {
+    saveNodeGraphWorkspaceViewToUserSettings({ status: false });
+  }
   setNodeInteractionHelp(options.snapWorkspaceEdges
     ? "View snapped to complete grid cells."
     : "View aligned to grid. Hotkey: Ctrl+Shift+G.");

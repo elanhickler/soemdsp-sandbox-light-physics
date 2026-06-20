@@ -6,6 +6,7 @@ function bindNodeGraphHeaderControlEvents() {
   renderNodeGraphPatchTimingControls();
   const closeNodeGraphModuleBrowser = () => {
     nodeGraphMvp.sceneContextPoint = null;
+    document.getElementById("nodeModuleShopView").hidden = true;
     setNodeGraphViewMode("modular");
   };
   document.getElementById("nodeDeleteButton").addEventListener("click", deleteSelectedNodeGraphItem);
@@ -234,6 +235,9 @@ function bindNodeGraphHeaderControlEvents() {
   document
     .getElementById("nodeModuleDepartmentSearch")
     .addEventListener("keydown", handleNodeGraphModuleDepartmentSearchKeydown);
+  document
+    .getElementById("nodeModuleDepartmentBack")
+    .addEventListener("click", () => setNodeGraphModuleStoreDepartment(""));
   document
     .getElementById("nodeModuleShopFitInput")
     .addEventListener("input", handleNodeGraphModuleShopFitInput);

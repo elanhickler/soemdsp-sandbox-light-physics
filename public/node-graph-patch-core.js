@@ -95,6 +95,11 @@ function validateNodeGraphPatch(patch) {
     if (hasCustomHeight && !Number.isFinite(Number(node.heightGu))) {
       throw new Error(`node ${id} heightGu invalid`);
     }
+    const hasCustomHeightOffset = Object.hasOwn(node, "heightOffsetGu");
+    const heightOffsetGu = normalizeNodeGraphModuleHeightOffsetUnits(node.heightOffsetGu);
+    if (hasCustomHeightOffset && !Number.isFinite(Number(node.heightOffsetGu))) {
+      throw new Error(`node ${id} heightOffsetGu invalid`);
+    }
     const params = {};
     const paramMeta = {};
     for (const parameter of nodeGraphModuleDefinitions[type].parameters || []) {
@@ -148,6 +153,7 @@ function validateNodeGraphPatch(patch) {
         : {}),
       ...(hasCustomWidth ? { widthGu } : {}),
       ...(hasCustomHeight ? { heightGu } : {}),
+      ...(hasCustomHeightOffset ? { heightOffsetGu } : {}),
     };
     if (nodeGraphModuleDefinitions[type].layout === "textBox") {
       normalizedNode.layout = normalizeNodeGraphTextBoxLayout(node.layout);
@@ -169,6 +175,9 @@ function validateNodeGraphPatch(patch) {
     }
     if (type === "screenSpaceShader") {
       normalizedNode.screenSpaceShader = normalizeNodeGraphScreenSpaceShader(node.screenSpaceShader);
+    }
+    if (type === "formulaVisual") {
+      normalizedNode.formulaVisual = normalizeNodeGraphFormulaVisualScript(node.formulaVisual);
     }
     if (Object.hasOwn(node, "scopeShader")) {
       normalizedNode.scopeShader = normalizeNodeGraphScopeShader(node.scopeShader);
@@ -251,8 +260,22 @@ function validateNodeGraphPatch(patch) {
     }
   }
 
+  const legacyFormulaVisualInputParams = new Map([
+    ["A", "formulaA"],
+    ["B", "formulaB"],
+    ["Petals", "formulaPetals"],
+    ["Mix", "formulaMix"],
+    ["Scale", "formulaScale"],
+    ["Rotate", "formulaRotate"],
+    ["Morph", "formulaMorph"],
+    ["Hue", "formulaHue"],
+    ["Glow", "formulaGlow"],
+    ["Dots", "formulaDots"],
+  ]);
+  const migratedModulations = [];
+  const migratedModulationKeys = new Set();
   const connectionKeys = new Set();
-  const connections = Array.isArray(patch.connections) ? patch.connections.map((connection) => {
+  const connections = Array.isArray(patch.connections) ? patch.connections.flatMap((connection) => {
     const sourceNode = String(connection.sourceNode || "").trim();
     let sourcePort = String(connection.sourcePort || "").trim();
     const destinationNode = String(connection.destinationNode || "").trim();
@@ -270,15 +293,47 @@ function validateNodeGraphPatch(patch) {
       destinationPort = "Mono";
     }
     destinationPort = nodeGraphCanonicalInputPort(destinationType, destinationPort);
+    if (destinationType === "formulaVisual" && legacyFormulaVisualInputParams.has(destinationPort)) {
+      const destinationParam = legacyFormulaVisualInputParams.get(destinationPort);
+      const alreadyModulated = (Array.isArray(patch.modulations) ? patch.modulations : []).some((modulation) => {
+        const modulationSourceType = nodes.find((node) => node.id === String(modulation.sourceNode || "").trim())?.type;
+        const modulationSourcePort = modulationSourceType
+          ? nodeGraphCanonicalOutputPort(modulationSourceType, String(modulation.sourcePort || "").trim())
+          : String(modulation.sourcePort || "").trim();
+        return (
+          String(modulation.sourceNode || "").trim() === sourceNode &&
+          modulationSourcePort === sourcePort &&
+          String(modulation.destinationNode || "").trim() === destinationNode &&
+          String(modulation.destinationParam || "").trim() === destinationParam
+        );
+      });
+      const migrationKey = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationParam}`;
+      if (!alreadyModulated && !migratedModulationKeys.has(migrationKey)) {
+        migratedModulationKeys.add(migrationKey);
+        migratedModulations.push({
+          destinationNode,
+          destinationParam,
+          sourceNode,
+          sourcePort,
+          ...(nodeGraphWireTypePatchValue(connection.wireType)
+            ? { wireType: nodeGraphWireTypePatchValue(connection.wireType) }
+            : {}),
+          ...(normalizeNodeGraphTracePoints(connection.tracePoints).length
+            ? { tracePoints: normalizeNodeGraphTracePoints(connection.tracePoints) }
+            : {}),
+        });
+      }
+      return [];
+    }
     if (!nodeGraphPatchNodeInputPorts(nodes.find((node) => node.id === destinationNode)).includes(destinationPort)) {
       throw new Error(`connection destination port invalid: ${destinationNode}.${destinationPort}`);
     }
     const key = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationPort}`;
     if (connectionKeys.has(key)) {
-      throw new Error(`duplicate connection ${key}`);
+      return [];
     }
     connectionKeys.add(key);
-    return {
+    return [{
       destinationNode,
       destinationPort,
       sourceNode,
@@ -289,49 +344,51 @@ function validateNodeGraphPatch(patch) {
       ...(normalizeNodeGraphTracePoints(connection.tracePoints).length
         ? { tracePoints: normalizeNodeGraphTracePoints(connection.tracePoints) }
         : {}),
-    };
-  }) : [];
+    }];
+  });
 
   const modulationKeys = new Set();
-  const modulations = Array.isArray(patch.modulations) ? patch.modulations.map((modulation) => {
-    const sourceNode = String(modulation.sourceNode || "").trim();
-    let sourcePort = String(modulation.sourcePort || "").trim();
-    const destinationNode = String(modulation.destinationNode || "").trim();
-    const destinationParam = String(modulation.destinationParam || "").trim();
-    if (!sourceNode || !sourcePort || !destinationNode || !destinationParam) {
-      throw new Error("modulation entries require sourceNode, sourcePort, destinationNode, destinationParam");
-    }
-    const sourceType = nodes.find((node) => node.id === sourceNode)?.type;
-    const destinationType = nodes.find((node) => node.id === destinationNode)?.type;
-    if (!sourceType || !destinationType) {
-      throw new Error("modulation references missing node");
-    }
-    sourcePort = nodeGraphCanonicalOutputPort(sourceType, sourcePort);
-    if (!nodeGraphPatchNodeOutputPorts(nodes.find((node) => node.id === sourceNode)).includes(sourcePort)) {
-      throw new Error(`modulation source port invalid: ${sourceNode}.${sourcePort}`);
-    }
-    const destinationPatchNode = nodes.find((node) => node.id === destinationNode);
-    if (!nodeGraphPatchNodeParameterDefinitions(destinationPatchNode).some((parameter) => parameter.key === destinationParam)) {
-      throw new Error(`modulation destination parameter invalid: ${destinationNode}.${destinationParam}`);
-    }
-    const key = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationParam}`;
-    if (modulationKeys.has(key)) {
-      throw new Error(`duplicate modulation ${key}`);
-    }
-    modulationKeys.add(key);
-    return {
-      destinationNode,
-      destinationParam,
-      sourceNode,
-      sourcePort,
-      ...(nodeGraphWireTypePatchValue(modulation.wireType)
-        ? { wireType: nodeGraphWireTypePatchValue(modulation.wireType) }
-        : {}),
-      ...(normalizeNodeGraphTracePoints(modulation.tracePoints).length
-        ? { tracePoints: normalizeNodeGraphTracePoints(modulation.tracePoints) }
-        : {}),
-    };
-  }) : [];
+  const modulations = (Array.isArray(patch.modulations) ? patch.modulations : [])
+    .concat(migratedModulations)
+    .flatMap((modulation) => {
+      const sourceNode = String(modulation.sourceNode || "").trim();
+      let sourcePort = String(modulation.sourcePort || "").trim();
+      const destinationNode = String(modulation.destinationNode || "").trim();
+      const destinationParam = String(modulation.destinationParam || "").trim();
+      if (!sourceNode || !sourcePort || !destinationNode || !destinationParam) {
+        throw new Error("modulation entries require sourceNode, sourcePort, destinationNode, destinationParam");
+      }
+      const sourceType = nodes.find((node) => node.id === sourceNode)?.type;
+      const destinationType = nodes.find((node) => node.id === destinationNode)?.type;
+      if (!sourceType || !destinationType) {
+        throw new Error("modulation references missing node");
+      }
+      sourcePort = nodeGraphCanonicalOutputPort(sourceType, sourcePort);
+      if (!nodeGraphPatchNodeOutputPorts(nodes.find((node) => node.id === sourceNode)).includes(sourcePort)) {
+        throw new Error(`modulation source port invalid: ${sourceNode}.${sourcePort}`);
+      }
+      const destinationPatchNode = nodes.find((node) => node.id === destinationNode);
+      if (!nodeGraphPatchNodeParameterDefinitions(destinationPatchNode).some((parameter) => parameter.key === destinationParam)) {
+        throw new Error(`modulation destination parameter invalid: ${destinationNode}.${destinationParam}`);
+      }
+      const key = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationParam}`;
+      if (modulationKeys.has(key)) {
+        return [];
+      }
+      modulationKeys.add(key);
+      return [{
+        destinationNode,
+        destinationParam,
+        sourceNode,
+        sourcePort,
+        ...(nodeGraphWireTypePatchValue(modulation.wireType)
+          ? { wireType: nodeGraphWireTypePatchValue(modulation.wireType) }
+          : {}),
+        ...(normalizeNodeGraphTracePoints(modulation.tracePoints).length
+          ? { tracePoints: normalizeNodeGraphTracePoints(modulation.tracePoints) }
+          : {}),
+      }];
+    });
 
   const graphConnectionKeys = new Set();
   const graphConnections = Array.isArray(patch.graphConnections) ? patch.graphConnections.map((connection) => {

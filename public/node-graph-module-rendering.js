@@ -218,6 +218,9 @@ function attachNodeGraphNodeEvents(node) {
       if (typeof scheduleNodeGraphFilterCurveDraw === "function") {
         scheduleNodeGraphFilterCurveDraw();
       }
+      if (typeof scheduleNodeGraphFormulaVisualDraw === "function") {
+        scheduleNodeGraphFormulaVisualDraw();
+      }
       scheduleNodeGraphLiveParameterSync();
     });
   }
@@ -260,6 +263,51 @@ function attachNodeGraphNodeEvents(node) {
   screenSpaceShaderSource?.addEventListener("input", (event) => {
     refreshNodeGraphScreenSpaceShaderBodyStatus(event.currentTarget.closest(".node-screen-space-shader-body"));
   });
+  node.querySelector("[data-formula-visual-apply]")?.addEventListener("click", applyNodeGraphFormulaVisualScript);
+  const formulaVisualPreset = node.querySelector("[data-formula-visual-preset]");
+  formulaVisualPreset?.addEventListener("pointerdown", (event) => {
+    event.stopPropagation();
+  });
+  formulaVisualPreset?.addEventListener("change", applyNodeGraphFormulaVisualPreset);
+  const formulaVisualSource = node.querySelector("[data-formula-visual-source]");
+  formulaVisualSource?.addEventListener("pointerdown", (event) => {
+    event.stopPropagation();
+  });
+  formulaVisualSource?.addEventListener("keydown", (event) => {
+    event.stopPropagation();
+  });
+}
+
+function applyNodeGraphFormulaVisualPreset(event) {
+  const body = event.currentTarget?.closest?.(".node-formula-visual-body");
+  const preset = event.currentTarget?.value || "custom";
+  const editor = body?.querySelector?.("[data-formula-visual-source]");
+  if (editor && Object.hasOwn(nodeGraphFormulaVisualPresetSources, preset)) {
+    editor.value = nodeGraphFormulaVisualPresetSources[preset];
+  }
+  return applyNodeGraphFormulaVisualScript(event);
+}
+
+function applyNodeGraphFormulaVisualScript(event) {
+  const body = event.currentTarget?.closest?.(".node-formula-visual-body");
+  const nodeId = body?.dataset?.node || "";
+  const source = body?.querySelector?.("[data-formula-visual-source]")?.value || "";
+  const targetNode = nodeGraphPatchNode(nodeId);
+  if (!targetNode || targetNode.type !== "formulaVisual") {
+    return false;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const node = patch.nodes.find((candidate) => candidate.id === nodeId);
+  if (!node) {
+    return false;
+  }
+  node.formulaVisual = normalizeNodeGraphFormulaVisualScript({
+    ...node.formulaVisual,
+    source,
+  });
+  commitNodeGraphPatch(patch, { status: "formula visual applied" });
+  scheduleNodeGraphFormulaVisualDraw();
+  return true;
 }
 
 function applyNodeGraphScreenSpaceShaderScript(event) {
@@ -352,6 +400,7 @@ function nodeGraphModuleLayoutClassNames(type, definition, layout) {
   const layoutClasses = {
     clapPlugin: "clap-plugin-layout",
     filterCurve: "filter-curve-layout",
+    formulaVisual: "formula-visual-layout",
     graph: "graph-node-layout",
     image: "image-node-layout",
     keyboardController: "keyboard-controller-layout",
@@ -434,6 +483,15 @@ function createNodeGraphModuleElement(type, node) {
     const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
     ioSection.append(inputColumn || document.createElement("div"));
     ioSection.append(document.createElement("div"));
+    article.append(ioSection);
+  } else if (layout === "formulaVisual") {
+    article.append(createNodeGraphFormulaVisualBody(node));
+    const ioSection = document.createElement("div");
+    ioSection.className = "dsp-node-io-section";
+    const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
+    const outputColumn = createNodeGraphIoColumn(node, type, outputPorts, "output");
+    ioSection.append(inputColumn || document.createElement("div"));
+    ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
   } else if (definition.layout === "canvas") {
     const canvasBody = createNodeGraphCanvasBody(node);

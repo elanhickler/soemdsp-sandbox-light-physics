@@ -17,6 +17,11 @@ const nodeGraphModuleHeightLimits = Object.freeze({
   minGu: 1,
 });
 
+const nodeGraphModuleHeightOffsetLimits = Object.freeze({
+  maxGu: 24,
+  minGu: -24,
+});
+
 function nodeGraphModuleWidthLimitsForType(type) {
   if (nodeGraphModuleDefinitions[type]?.layout === "led") {
     return { ...nodeGraphModuleWidthLimits, minGu: 1 };
@@ -30,6 +35,9 @@ function nodeGraphModuleWidthLimitsForType(type) {
 function nodeGraphModuleHeightLimitsForType(type) {
   if (type === "audioPlayer") {
     return { ...nodeGraphModuleHeightLimits, maxGu: nodeGraphModuleHeightLimits.maxGu + 1 };
+  }
+  if (nodeGraphModuleDefinitions[type]?.layout === "formulaVisual") {
+    return { ...nodeGraphModuleHeightLimits, maxGu: 36 };
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
     return { ...nodeGraphModuleHeightLimits, minGu: 1 };
@@ -58,6 +66,7 @@ function nodeGraphModuleTypeHasHideableOscilloscope(type) {
     "canvas",
     "clapPlugin",
     "filterCurve",
+    "formulaVisual",
     "graph",
     "image",
     "keyboardController",
@@ -127,6 +136,9 @@ function nodeGraphDefaultModuleGridWidthUnits(type) {
   if (nodeGraphModuleDefinitions[type]?.layout === "filterCurve") {
     return 8;
   }
+  if (nodeGraphModuleDefinitions[type]?.layout === "formulaVisual") {
+    return 8;
+  }
   return 7;
 }
 
@@ -158,6 +170,21 @@ function normalizeNodeGraphModuleHeightUnits(type, heightGu, ui = {}) {
   return Number.isFinite(value)
     ? Math.max(limits.minGu, Math.min(limits.maxGu, value))
     : fallback;
+}
+
+function normalizeNodeGraphModuleHeightOffsetUnits(offsetGu) {
+  const value = Math.round(Number(offsetGu));
+  return Number.isFinite(value)
+    ? Math.max(
+      nodeGraphModuleHeightOffsetLimits.minGu,
+      Math.min(nodeGraphModuleHeightOffsetLimits.maxGu, value),
+    )
+    : 0;
+}
+
+function nodeGraphModuleHeightOffsetLabel(offsetGu) {
+  const value = normalizeNodeGraphModuleHeightOffsetUnits(offsetGu);
+  return value > 0 ? `+${value}` : String(value);
 }
 
 function normalizeNodeGraphTextBoxHeightUnits(heightGu) {
@@ -212,86 +239,118 @@ function nodeGraphModuleHeaderHeightUnits(ui = {}) {
   return nodeGraphModuleLayout.headerHeightGu;
 }
 
-function nodeGraphModuleRequiredHeightUnitsForUi(type, ui = {}) {
+function nodeGraphModuleHeightWidgetUnits(type, ui = {}) {
   if (nodeGraphModuleDefinitions[type]?.layout === "led") {
-    return 1;
+    return [{ id: "face", heightGu: 1, visible: true }];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
-    return 4;
+    return [{ id: "face", heightGu: 4, visible: true }];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "textBox") {
-    return nodeGraphModuleHeaderHeightUnits(ui) + nodeGraphModuleLayout.textBoxBodyMinGu;
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "text", heightGu: nodeGraphModuleLayout.textBoxBodyMinGu, visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "image") {
-    return (
-      nodeGraphModuleHeaderHeightUnits(ui) +
-      nodeGraphModuleLayout.moduleScopeHeightGu +
-      nodeGraphModuleIoSectionHeightGu(type) +
-      nodeGraphModuleLayout.fitCushionGu
-    );
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "image", heightGu: nodeGraphModuleLayout.moduleScopeHeightGu, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "canvas") {
-    return (
-      nodeGraphModuleHeaderHeightUnits(ui) +
-      nodeGraphModuleLayout.moduleScopeHeightGu * 1.5 +
-      nodeGraphModuleIoSectionHeightGu(type) +
-      nodeGraphModuleLayout.fitCushionGu +
-      nodeGraphModuleLayout.moduleGridInsetGu * 2
-    );
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "canvas", heightGu: nodeGraphModuleLayout.moduleScopeHeightGu * 1.5, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+      { id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "visualScope") {
-    return (
-      nodeGraphModuleHeaderHeightUnits(ui) +
-      nodeGraphModuleGridWidthUnits(type) +
-      nodeGraphModuleIoSectionHeightGu(type) +
-      nodeGraphModuleLayout.fitCushionGu
-    );
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "screen", heightGu: nodeGraphDefaultModuleGridWidthUnits(type), visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "graph") {
-    return (
-      nodeGraphModuleHeaderHeightUnits(ui) +
-      nodeGraphModuleLayout.moduleScopeHeightGu * 4 +
-      nodeGraphModuleIoSectionHeightGu(type) +
-      nodeGraphModuleSliderBodyHeightGu(type) +
-      nodeGraphModuleLayout.fitCushionGu +
-      nodeGraphModuleLayout.moduleGridInsetGu * 2
-    );
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "graph", heightGu: nodeGraphModuleLayout.moduleScopeHeightGu * 4, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "params", heightGu: nodeGraphModuleSliderBodyHeightGu(type), visible: true },
+      { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+      { id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "sliderWidget") {
-    return (
-      nodeGraphModuleHeaderHeightUnits(ui) +
-      nodeGraphModuleLayout.moduleScopeHeightGu +
-      nodeGraphModuleIoSectionHeightGu(type) +
-      nodeGraphModuleLayout.fitCushionGu +
-      nodeGraphModuleLayout.moduleGridInsetGu * 2
-    );
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "slider", heightGu: nodeGraphModuleLayout.moduleScopeHeightGu, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+      { id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "keyboardController") {
-    return nodeGraphModuleHeaderHeightUnits(ui) + 12 + nodeGraphModuleIoSectionHeightGu(type);
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "keyboard", heightGu: 12, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "macroControls") {
-    return nodeGraphModuleHeaderHeightUnits(ui) + 5 + nodeGraphModuleIoSectionHeightGu(type);
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "macros", heightGu: 5, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "pitchModWheel") {
-    return nodeGraphModuleHeaderHeightUnits(ui) + 5 + nodeGraphModuleIoSectionHeightGu(type);
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "wheels", heightGu: 5, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+    ];
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "filterCurve") {
-    return (
-      nodeGraphModuleHeaderHeightUnits(ui) +
-      nodeGraphModuleLayout.moduleScopeHeightGu * 1.5 +
-      nodeGraphModuleIoSectionHeightGu(type) +
-      nodeGraphModuleSliderBodyHeightGu(type) +
-      nodeGraphModuleLayout.fitCushionGu +
-      nodeGraphModuleLayout.moduleGridInsetGu * 2
-    );
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "curve", heightGu: nodeGraphModuleLayout.moduleScopeHeightGu * 1.5, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "params", heightGu: nodeGraphModuleSliderBodyHeightGu(type), visible: true },
+      { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+      { id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true },
+    ];
   }
-  return (
-    nodeGraphModuleHeaderHeightUnits(ui) +
-    nodeGraphModuleIoSectionHeightGu(type) +
-    nodeGraphModuleSliderBodyHeightGu(type) +
-    nodeGraphModuleLayout.fitCushionGu +
-    nodeGraphModuleLayout.moduleGridInsetGu * 2
-  );
+  if (nodeGraphModuleDefinitions[type]?.layout === "formulaVisual") {
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "visual", heightGu: 8, visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "params", heightGu: nodeGraphModuleSliderBodyHeightGu(type), visible: true },
+      { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+      { id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true },
+    ];
+  }
+  return [
+    { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+    { id: "scope", heightGu: nodeGraphModuleLayout.moduleScopeHeightGu, visible: nodeGraphModuleScopeExtraHeightUnits(type, ui) > 0 },
+    { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+    { id: "params", heightGu: nodeGraphModuleSliderBodyHeightGu(type), visible: true },
+    { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
+    { id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true },
+  ];
+}
+
+function nodeGraphModuleRequiredHeightUnitsForUi(type, ui = {}) {
+  return nodeGraphModuleHeightWidgetUnits(type, ui)
+    .filter((widget) => widget.visible !== false)
+    .reduce((total, widget) => total + Math.max(0, Number(widget.heightGu) || 0), 0);
 }
 
 function nodeGraphModuleGridHeightUnits(type) {
@@ -335,6 +394,14 @@ function nodeGraphModuleGridHeightUnitsForUi(type, ui = {}) {
     : defaultGridUnits;
 }
 
+function nodeGraphPatchNodeHeightOffsetUnits(node) {
+  const patchNode = typeof node === "string" ? nodeGraphPatchNode(node) : node;
+  if (Object.hasOwn(patchNode || {}, "heightOffsetGu")) {
+    return normalizeNodeGraphModuleHeightOffsetUnits(patchNode.heightOffsetGu);
+  }
+  return 0;
+}
+
 function nodeGraphPatchNodeGridHeightUnits(node) {
   const scriptGrid = nodeGraphPatchNodeCanvasScriptGridUnits(node);
   if (scriptGrid?.heightGu) {
@@ -344,15 +411,16 @@ function nodeGraphPatchNodeGridHeightUnits(node) {
     ...node?.ui,
     buttonsHidden: node?.ui?.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false,
   });
-  const scopeExtraHeightGu = nodeGraphModuleScopeExtraHeightUnits(node?.type, effectiveUi);
-  if (Object.hasOwn(node || {}, "heightGu")) {
-    return Math.min(
-      nodeGraphModuleHeightLimitsForType(node.type).maxGu,
-      normalizeNodeGraphModuleHeightUnits(node.type, node.heightGu, effectiveUi) + scopeExtraHeightGu,
+  const autoHeightGu = nodeGraphModuleGridHeightUnitsForUi(node?.type, effectiveUi);
+  if (Object.hasOwn(node || {}, "heightOffsetGu")) {
+    return normalizeNodeGraphModuleHeightUnits(
+      node?.type,
+      autoHeightGu + normalizeNodeGraphModuleHeightOffsetUnits(node.heightOffsetGu),
+      effectiveUi,
     );
   }
-  return Math.min(
-    nodeGraphModuleHeightLimitsForType(node?.type).maxGu,
-    nodeGraphModuleGridHeightUnitsForUi(node?.type, effectiveUi) + scopeExtraHeightGu,
-  );
+  if (Object.hasOwn(node || {}, "heightGu")) {
+    return normalizeNodeGraphModuleHeightUnits(node.type, node.heightGu, effectiveUi);
+  }
+  return normalizeNodeGraphModuleHeightUnits(node?.type, autoHeightGu, effectiveUi);
 }

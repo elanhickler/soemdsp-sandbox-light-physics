@@ -121,9 +121,26 @@ function selectNodeGraphSavedPatch(filename = "", program = null) {
 function setNodeGraphPatchDirtyState(state = "edited") {
   nodeGraphMvp.patchDirtyState = ["saved", "edited", "untouched"].includes(state) ? state : "edited";
   syncNodeGraphCurrentSavedPatchHeader();
-  if (nodeGraphMvp.workingPatch && typeof saveNodeGraphWorkingPatchToUserSettings === "function") {
+  if (typeof saveNodeGraphWorkingPatchToUserSettings === "function") {
     saveNodeGraphWorkingPatchToUserSettings();
   }
+}
+
+let nodeGraphWorkingPatchFileAutosaveTimer = 0;
+
+function scheduleNodeGraphWorkingPatchFileAutosave(text) {
+  if (typeof postNodeUiDevSettingsPreset !== "function") {
+    return;
+  }
+  if (nodeGraphWorkingPatchFileAutosaveTimer) {
+    window.clearTimeout(nodeGraphWorkingPatchFileAutosaveTimer);
+  }
+  nodeGraphWorkingPatchFileAutosaveTimer = window.setTimeout(() => {
+    nodeGraphWorkingPatchFileAutosaveTimer = 0;
+    postNodeUiDevSettingsPreset(text).catch(() => {
+      // Local settings already saved; file sync is best-effort while dragging.
+    });
+  }, 350);
 }
 
 function saveNodeGraphWorkingPatchToUserSettings() {
@@ -135,7 +152,10 @@ function saveNodeGraphWorkingPatchToUserSettings() {
   }
   nodeGraphMvp.workingPatch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   syncNodeGraphCurrentSavedPatchHeader();
-  return saveNodeUiDevLocalDefaultSettings(serializeNodeUiDevSettings());
+  const text = serializeNodeUiDevSettings();
+  const saved = saveNodeUiDevLocalDefaultSettings(text);
+  scheduleNodeGraphWorkingPatchFileAutosave(text);
+  return saved;
 }
 
 function clearNodeGraphWorkingPatchFromUserSettings() {

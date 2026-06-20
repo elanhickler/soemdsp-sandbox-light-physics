@@ -345,7 +345,8 @@ function setNodeSliderMetadata(slider, metadata) {
   slider.dataset.default = String(
     clampNodeSliderValue(metadata.def, metadata.min, metadata.max),
   );
-  slider.dataset.step = metadata.step > 0 ? String(metadata.step) : "any";
+  slider.step = metadata.step > 0 ? String(metadata.step) : "any";
+  slider.dataset.step = slider.step;
   slider.dataset.kind = metadata.kind || "decimal";
   slider.dataset.maxDigits = String(
     normalizeNodeGraphMetadataMaxDigits(metadata.maxDigits, metadata.kind),

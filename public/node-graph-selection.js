@@ -1,5 +1,9 @@
 function setNodeGraphSelection(selection) {
   nodeGraphMvp.selected = selection;
+  const selectedNode = nodeGraphSingleSelectedNodeId(selection);
+  if (selectedNode && nodeGraphPatchNode(selectedNode)) {
+    nodeGraphMvp.lastModuleActionTargetNode = selectedNode;
+  }
   renderNodeGraphSelection();
 }
 
@@ -60,6 +64,10 @@ function nodeGraphModuleActionTargetNodeId() {
   if (selectedNode && nodeGraphPatchNode(selectedNode)) {
     return selectedNode;
   }
+  const lastNode = nodeGraphMvp.lastModuleActionTargetNode;
+  if (lastNode && nodeGraphPatchNode(lastNode)) {
+    return lastNode;
+  }
   return null;
 }
 
@@ -84,6 +92,7 @@ function syncNodeGraphModuleActionTargetFromSelection() {
   const selectedNode = nodeGraphSingleSelectedNodeId();
   if (selectedNode && nodeGraphPatchNode(selectedNode)) {
     nodeGraphMvp.sceneContextTargetNode = selectedNode;
+    nodeGraphMvp.lastModuleActionTargetNode = selectedNode;
     nodeGraphMvp.sceneContextTargetWire = null;
     configureNodeSceneContextMenu("module");
   } else {

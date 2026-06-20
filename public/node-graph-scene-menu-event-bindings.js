@@ -9,13 +9,11 @@ function bindNodeGraphSceneElementEvent(id, eventName, handler, options = undefi
 function bindNodeGraphSceneMenuEvents() {
   ensureNodeGraphModuleActionsWindowBody();
   bindNodeGraphSceneElementEvent("nodeModuleShopView", "click", handleNodeGraphModuleStoreClick);
+  bindNodeGraphSceneElementEvent("nodeModuleShopView", "keydown", handleNodeGraphModuleStoreKeydown);
   bindNodeGraphSceneElementEvent("nodeGraphWorkspace", "pointerdown", beginNodeGraphGraphNodeDrag, true);
   document.addEventListener("pointermove", dragNodeGraphGraphNode);
   document.addEventListener("pointerup", endNodeGraphGraphNodeDrag);
   document.addEventListener("pointercancel", endNodeGraphGraphNodeDrag);
-  document.addEventListener("pointermove", dragNodeSceneContextMenuResize);
-  document.addEventListener("pointerup", endNodeSceneContextMenuResize);
-  document.addEventListener("pointercancel", endNodeSceneContextMenuResize);
   document.addEventListener("pointermove", dragNodeModuleActionsWindowResize);
   document.addEventListener("pointerup", endNodeModuleActionsWindowResize);
   document.addEventListener("pointercancel", endNodeModuleActionsWindowResize);
@@ -26,7 +24,6 @@ function bindNodeGraphSceneMenuEvents() {
       button.addEventListener("click", () => setSelectedNodeGraphWireType(button.dataset.wireType));
     });
   bindNodeGraphSceneElementEvent("nodeSceneCopyModule", "click", copyNodeGraphModuleFromContext);
-  bindNodeGraphSceneElementEvent("nodeSceneResizeHandle", "pointerdown", beginNodeSceneContextMenuResize);
   bindNodeGraphSceneElementEvent("nodeSceneOpenModuleBrowser", "click", () => {
     openNodeGraphModuleShop(nodeGraphMvp.sceneContextPoint);
   });

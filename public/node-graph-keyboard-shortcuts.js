@@ -102,15 +102,22 @@ function resizeSelectedNodeGraphModulesOnGrid(axis, delta) {
     }
 
     const currentHeightGu = nodeGraphPatchNodeGridHeightUnits(patchNode);
+    const currentOffsetGu = nodeGraphPatchNodeHeightOffsetUnits(patchNode);
+    const nextOffsetGu = normalizeNodeGraphModuleHeightOffsetUnits(currentOffsetGu + delta);
     const nextHeightGu = normalizeNodeGraphModuleHeightUnits(
       patchNode.type,
-      currentHeightGu + delta,
+      currentHeightGu + (nextOffsetGu - currentOffsetGu),
       patchNode.ui,
     );
     if (nextHeightGu === currentHeightGu) {
       continue;
     }
-    patchNode.heightGu = nextHeightGu;
+    delete patchNode.heightGu;
+    if (nextOffsetGu === 0) {
+      delete patchNode.heightOffsetGu;
+    } else {
+      patchNode.heightOffsetGu = nextOffsetGu;
+    }
     changedCount += 1;
   }
 

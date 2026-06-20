@@ -563,7 +563,7 @@ function nodeGraphDialogDragTargetIsInteractive(event) {
     return false;
   }
   return Boolean(target.closest?.(
-    "button, a, input, textarea, select, option, label, [contenteditable='true']",
+    "button, a, input, textarea, select, option, label, [role='button'], [data-context-module], [contenteditable='true']",
   ));
 }
 
@@ -1702,7 +1702,12 @@ function setNodeGraphViewMode(mode) {
   document
     .getElementById("nodeModularOnlyBackButton")
     .setAttribute("aria-label", uiMode ? "Close UI view" : "Return to full modular view");
-  document.getElementById("nodeModuleShopView").hidden = !shopMode;
+  const moduleShopView = document.getElementById("nodeModuleShopView");
+  if (shopMode) {
+    moduleShopView.hidden = false;
+  } else if (!modularMode) {
+    moduleShopView.hidden = true;
+  }
   document.getElementById("nodeScriptView").hidden = !scriptMode;
   document.getElementById("nodeCodeScreenView").hidden = !codeMode;
   document.getElementById("nodeUiView").hidden = !uiMode;

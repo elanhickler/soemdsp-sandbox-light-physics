@@ -371,6 +371,260 @@ function refreshNodeGraphSpeakerProtectionBodies() {
   });
 }
 
+let nodeGraphFormulaVisualFrame = null;
+const nodeGraphFormulaVisualExpressionCache = new Map();
+
+function nodeGraphFormulaVisualParam(nodeId, key, fallback = 0) {
+  const liveValue = Number(nodeGraphMvp.visualControls?.formulaVisual?.[nodeId]?.[key]);
+  if (Number.isFinite(liveValue)) {
+    return liveValue;
+  }
+  if (typeof nodeGraphReadNodeNumber === "function") {
+    const value = Number(nodeGraphReadNodeNumber(nodeId, key));
+    return Number.isFinite(value) ? value : fallback;
+  }
+  const element = document.querySelector?.(`.dsp-node[data-node="${CSS.escape(nodeId)}"] input[data-param="${CSS.escape(key)}"]`);
+  const value = Number(element?.dataset?.unboundedValue ?? element?.value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function nodeGraphFormulaVisualResizeCanvas(canvas, options = {}) {
+  const rect = canvas.getBoundingClientRect();
+  const pixelRatio = Math.max(1, Math.min(2, Number(options.pixelRatio) || window.devicePixelRatio || 1));
+  const cssWidth = Math.max(1, Number(options.width) || rect.width || canvas.width || 1);
+  const cssHeight = Math.max(1, Number(options.height) || rect.height || canvas.height || 1);
+  const width = Math.max(1, Math.round(cssWidth * pixelRatio));
+  const height = Math.max(1, Math.round(cssHeight * pixelRatio));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  return { height, pixelRatio, width };
+}
+
+function nodeGraphFormulaVisualExpression(source = "", property = "x", fallback = "") {
+  const text = String(source || "");
+  const match = text.match(new RegExp(`(?:^|\\n)\\s*(?:formula\\.)?${property}\\s*=\\s*([^;\\n]+)\\s*;?`, "i"));
+  return String(match?.[1] || fallback || "0").trim().slice(0, 2000) || "0";
+}
+
+function compileNodeGraphFormulaVisualExpression(expression, fallbackExpression) {
+  const source = String(expression || fallbackExpression || "0").trim() || "0";
+  const cacheKey = source;
+  if (nodeGraphFormulaVisualExpressionCache.has(cacheKey)) {
+    return nodeGraphFormulaVisualExpressionCache.get(cacheKey);
+  }
+  let compiled = null;
+  try {
+    compiled = new Function(
+      "v",
+      [
+        "\"use strict\";",
+        "const {abs, atan2, cos, max, min, PI, pow, sin, sqrt, tan} = Math;",
+        "const {a, b, mix, p, petals, phase, progress, t, lissX, lissY, roseX, roseY, spiroX, spiroY} = v;",
+        `const value = (${source});`,
+        "return Number.isFinite(Number(value)) ? Number(value) : 0;",
+      ].join("\n"),
+    );
+  } catch {
+    compiled = () => 0;
+  }
+  nodeGraphFormulaVisualExpressionCache.set(cacheKey, compiled);
+  if (nodeGraphFormulaVisualExpressionCache.size > 64) {
+    nodeGraphFormulaVisualExpressionCache.delete(nodeGraphFormulaVisualExpressionCache.keys().next().value);
+  }
+  return compiled;
+}
+
+function nodeGraphFormulaVisualScriptForNode(nodeId) {
+  return normalizeNodeGraphFormulaVisualScript(nodeGraphPatchNode(nodeId)?.formulaVisual);
+}
+
+function drawNodeGraphFormulaVisualCanvas(canvas, timeMs = performance.now(), options = {}) {
+  const nodeId = canvas?.dataset?.node;
+  if (!canvas || !nodeId) {
+    return false;
+  }
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return false;
+  }
+  const { height, pixelRatio, width } = nodeGraphFormulaVisualResizeCanvas(canvas, options);
+  const minSide = Math.max(1, Math.min(width, height));
+  const centerX = width * 0.5;
+  const centerY = height * 0.5;
+  const param = (key, fallback) => nodeGraphFormulaVisualParam(nodeId, key, fallback);
+  const a = Math.max(1, Math.round(param("formulaA", 3)));
+  const b = Math.max(1, Math.round(param("formulaB", 2)));
+  const petals = Math.max(1, param("formulaPetals", 5));
+  const roseMix = Math.max(0, Math.min(1, param("formulaMix", 0.38)));
+  const scale = Math.max(0.02, param("formulaScale", 0.82));
+  const rotation = param("formulaRotate", 0.12) * Math.PI * 2;
+  const morph = Math.max(0, param("formulaMorph", 0.25));
+  const hue = ((param("formulaHue", 0.64) % 1) + 1) % 1;
+  const glow = Math.max(0, Math.min(1, param("formulaGlow", 0.85)));
+  const dots = Math.max(0, Math.min(1, param("formulaDots", 0.55)));
+  const phase = timeMs * 0.00028 * morph;
+  const radius = minSide * 0.42 * scale;
+  const pointCount = Math.max(240, Math.min(2600, Math.round(minSide * 2.5)));
+  const cosR = Math.cos(rotation);
+  const sinR = Math.sin(rotation);
+  const colorA = `hsl(${Math.round(hue * 360)} 94% 66%)`;
+  const colorB = `hsl(${Math.round((hue * 360 + 76) % 360)} 92% 60%)`;
+  const script = nodeGraphFormulaVisualScriptForNode(nodeId);
+  const xExpression = nodeGraphFormulaVisualExpression(script.source, "x", "lissX * (1 - mix) + roseX * mix");
+  const yExpression = nodeGraphFormulaVisualExpression(script.source, "y", "lissY * (1 - mix) + roseY * mix");
+  const xFormula = compileNodeGraphFormulaVisualExpression(xExpression, "lissX * (1 - mix) + roseX * mix");
+  const yFormula = compileNodeGraphFormulaVisualExpression(yExpression, "lissY * (1 - mix) + roseY * mix");
+
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "rgba(0, 0, 0, 0.92)";
+  context.fillRect(0, 0, width, height);
+  context.globalCompositeOperation = "lighter";
+  context.lineCap = "round";
+  context.lineJoin = "round";
+
+  const points = [];
+  for (let i = 0; i <= pointCount; i += 1) {
+    const progress = i / pointCount;
+    const t = progress * Math.PI * 2;
+    const lissX = Math.sin(a * t + phase);
+    const lissY = Math.sin(b * t + phase * 1.31 + Math.PI * 0.5);
+    const rose = Math.cos(petals * t + phase * 0.7);
+    const roseX = rose * Math.cos(t);
+    const roseY = rose * Math.sin(t);
+    const spiroRadius = 0.72 + 0.28 * Math.cos(petals * t + phase);
+    const spiroX = spiroRadius * Math.cos(a * t + phase * 0.35) + 0.22 * Math.cos((a + b) * t - phase);
+    const spiroY = spiroRadius * Math.sin(b * t - phase * 0.45) - 0.22 * Math.sin((a + petals) * t + phase);
+    const formulaValues = {
+      a,
+      b,
+      lissX,
+      lissY,
+      mix: roseMix,
+      p: progress,
+      petals,
+      phase,
+      progress,
+      roseX,
+      roseY,
+      spiroX,
+      spiroY,
+      t,
+    };
+    const rawX = Math.max(-3, Math.min(3, xFormula(formulaValues)));
+    const rawY = Math.max(-3, Math.min(3, yFormula(formulaValues)));
+    const x = centerX + (rawX * cosR - rawY * sinR) * radius;
+    const y = centerY + (rawX * sinR + rawY * cosR) * radius;
+    points.push([x, y, progress]);
+  }
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    context.beginPath();
+    points.forEach(([x, y], index) => {
+      if (index === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+    context.strokeStyle = pass === 0 ? colorB : colorA;
+    context.globalAlpha = pass === 0 ? 0.11 + glow * 0.22 : 0.58 + glow * 0.28;
+    context.lineWidth = (pass === 0 ? 7.5 : 1.25) * pixelRatio * (0.6 + glow);
+    context.shadowBlur = pass === 0 ? 15 * pixelRatio * glow : 4 * pixelRatio * glow;
+    context.shadowColor = pass === 0 ? colorB : colorA;
+    context.stroke();
+  }
+
+  if (dots > 0.01) {
+    const stride = Math.max(1, Math.round(9 - dots * 7));
+    context.shadowBlur = 8 * pixelRatio * glow;
+    context.shadowColor = colorA;
+    for (let i = 0; i < points.length; i += stride) {
+      const [x, y, progress] = points[i];
+      context.beginPath();
+      context.fillStyle = `hsl(${Math.round((hue * 360 + progress * 96) % 360)} 96% 68%)`;
+      context.globalAlpha = 0.18 + dots * 0.56;
+      context.arc(x, y, (0.75 + dots * 1.8) * pixelRatio, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  return true;
+}
+
+function drawNodeGraphFormulaVisuals(timeMs = performance.now()) {
+  let needsAnimation = false;
+  for (const canvas of document.querySelectorAll(".node-formula-visual-canvas")) {
+    needsAnimation = drawNodeGraphFormulaVisualCanvas(canvas, timeMs) || needsAnimation;
+  }
+  return needsAnimation;
+}
+
+function scheduleNodeGraphFormulaVisualDraw() {
+  if (nodeGraphFormulaVisualFrame !== null) {
+    return;
+  }
+  nodeGraphFormulaVisualFrame = window.requestAnimationFrame((timeMs) => {
+    nodeGraphFormulaVisualFrame = null;
+    if (drawNodeGraphFormulaVisuals(timeMs)) {
+      scheduleNodeGraphFormulaVisualDraw();
+    }
+  });
+}
+
+function createNodeGraphFormulaVisualBody(node) {
+  const script = nodeGraphFormulaVisualScriptForNode(node);
+  const body = document.createElement("div");
+  body.className = "node-formula-visual-body";
+  body.dataset.node = node;
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "node-formula-visual-canvas";
+  canvas.dataset.node = node;
+  canvas.width = 320;
+  canvas.height = 320;
+  canvas.setAttribute("aria-label", `${nodeGraphNodeDisplayName(node)} formula visual`);
+  const controls = document.createElement("div");
+  controls.className = "node-formula-visual-controls";
+
+  const preset = document.createElement("select");
+  preset.className = "node-formula-visual-preset";
+  preset.dataset.formulaVisualPreset = "true";
+  preset.setAttribute("aria-label", "Formula preset");
+  for (const [key, source] of Object.entries(nodeGraphFormulaVisualPresetSources)) {
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = key;
+    option.selected = script.preset === key && script.source === source;
+    preset.append(option);
+  }
+  const customOption = document.createElement("option");
+  customOption.value = "custom";
+  customOption.textContent = "custom";
+  customOption.selected = script.preset === "custom" || !Object.values(nodeGraphFormulaVisualPresetSources).includes(script.source);
+  preset.append(customOption);
+
+  const editor = document.createElement("textarea");
+  editor.className = "node-formula-visual-source";
+  editor.dataset.formulaVisualSource = "true";
+  editor.spellcheck = false;
+  editor.value = script.source;
+  editor.setAttribute("aria-label", "Formula visual script");
+
+  const apply = document.createElement("button");
+  apply.type = "button";
+  apply.dataset.formulaVisualApply = "true";
+  apply.textContent = "Apply";
+
+  controls.append(preset, editor, apply);
+  body.append(canvas, controls);
+  scheduleNodeGraphFormulaVisualDraw();
+  return body;
+}
+
 function createNodeGraphScreenSpaceShaderBody(node) {
   const patchNode = nodeGraphPatchNode(node);
   const script = normalizeNodeGraphScreenSpaceShader(patchNode?.screenSpaceShader);

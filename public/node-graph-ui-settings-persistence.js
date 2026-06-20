@@ -93,6 +93,24 @@ function closeNodeGraphWorkspaceWindowStates(states = {}) {
   );
 }
 
+function normalizeNodeGraphWorkspaceViewState(view = {}) {
+  const source = view && typeof view === "object" ? view : {};
+  const panSource = source.pan && typeof source.pan === "object" ? source.pan : source;
+  const x = Number(panSource.x);
+  const y = Number(panSource.y);
+  const rawZoom = Number(source.zoom);
+  const zoom = typeof clampNodeGraphZoom === "function"
+    ? clampNodeGraphZoom(rawZoom)
+    : (Number.isFinite(rawZoom) && rawZoom > 0 ? rawZoom : 1);
+  return {
+    pan: {
+      x: Number.isFinite(x) ? x : 0,
+      y: Number.isFinite(y) ? y : 0,
+    },
+    zoom,
+  };
+}
+
 function nodeGraphWorkspaceWindowPositionFromElement(element) {
   if (!element) {
     return null;
@@ -159,6 +177,9 @@ function applyNodeGraphWorkspaceWindowStateToElement(key) {
   }
   const state = normalizeNodeGraphWorkspaceWindowStates(nodeGraphMvp.workspaceWindowStates)[key];
   element.hidden = !state.open;
+  if (key === "moduleActions" && typeof applyNodeModuleActionsWindowSize === "function") {
+    applyNodeModuleActionsWindowSize(state.size);
+  }
   if (key === "patchExplorer" && typeof applyNodeGraphSavedPatchesWindowSize === "function") {
     applyNodeGraphSavedPatchesWindowSize(state.size);
   }
@@ -170,6 +191,10 @@ function applyNodeGraphWorkspaceWindowStateToElement(key) {
   }
   if (state.open && state.position) {
     positionNodeGraphWorkspaceWindowFromState(key, element);
+  }
+  if (key === "moduleActions" && state.open && typeof configureNodeSceneContextMenu === "function") {
+    const mode = nodeGraphMvp.selected?.type === "wire" ? "wire" : "module";
+    configureNodeSceneContextMenu(mode);
   }
 }
 
@@ -323,6 +348,12 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const workspaceWindowStates = invalidAllOpenWorkspaceState
     ? closeNodeGraphWorkspaceWindowStates(rawWorkspaceWindowStates)
     : normalizeNodeGraphWorkspaceWindowStates(loadedWorkspaceWindowStates);
+  const workspaceView = normalizeNodeGraphWorkspaceViewState(
+    view.workspaceView ?? {
+      pan: view.workspacePan ?? nodeGraphMvp.pan,
+      zoom: view.workspaceZoom ?? nodeGraphMvp.zoom,
+    },
+  );
   let workingPatch = null;
   if (view.workingPatch && typeof view.workingPatch === "object") {
     try {
@@ -392,6 +423,7 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleActionWindowSize,
       workspaceWindowStatesVersion: 1,
       workspaceWindowStates,
+      workspaceView,
       savedPatchBankIndex,
       savedPatchBankName,
       savedPatchGridColumns,
@@ -463,6 +495,10 @@ function readNodeUiDevSettingsFromControls() {
         ? normalizeNodeModuleActionsWindowSize(nodeGraphMvp.moduleActionWindowSize)
         : nodeGraphMvp.moduleActionWindowSize,
       workspaceWindowStates: normalizeNodeGraphWorkspaceWindowStates(nodeGraphMvp.workspaceWindowStates),
+      workspaceView: normalizeNodeGraphWorkspaceViewState({
+        pan: nodeGraphMvp.pan,
+        zoom: typeof nodeGraphZoom === "function" ? nodeGraphZoom() : nodeGraphMvp.zoom,
+      }),
       workingPatch: nodeGraphMvp.workingPatch
         ? cloneNodeGraphPatch(nodeGraphMvp.workingPatch)
         : null,
@@ -555,6 +591,9 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.workspaceWindowStates = normalizeNodeGraphWorkspaceWindowStates(
     normalized.view.workspaceWindowStates,
   );
+  const workspaceView = normalizeNodeGraphWorkspaceViewState(normalized.view.workspaceView);
+  nodeGraphMvp.pan = { ...workspaceView.pan };
+  nodeGraphMvp.zoom = workspaceView.zoom;
   nodeGraphMvp.savedPatchBankIndex = typeof normalizeNodeGraphSavedPatchBankIndex === "function"
     ? normalizeNodeGraphSavedPatchBankIndex(normalized.view.savedPatchBankIndex)
     : Math.max(0, Math.min(127, Math.round(Number(normalized.view.savedPatchBankIndex) || 0)));
@@ -578,6 +617,12 @@ function applyNodeUiDevSettings(settings) {
     syncNodeSliderHiddenMouseClass();
   }
   applyNodeGraphModuleCatalogVisibility(normalized.view.moduleCatalogVisibility);
+  if (typeof applyNodeGraphZoom === "function") {
+    applyNodeGraphZoom();
+  }
+  if (typeof applyNodeGraphPan === "function") {
+    applyNodeGraphPan();
+  }
   renderNodeGraphGridToggle();
   renderNodeGraphModuleVisibilityToggles();
   renderNodeGraphModuleScopeBrightnessControl();
@@ -644,6 +689,29 @@ function saveNodeUiDevLocalDefaultSettings(text) {
   } catch {
     return false;
   }
+}
+
+let nodeGraphWorkspaceViewAutosaveTimer = 0;
+
+function saveNodeGraphWorkspaceViewToUserSettings(options = {}) {
+  if (
+    typeof serializeNodeUiDevSettings !== "function" ||
+    typeof saveNodeUiDevLocalDefaultSettings !== "function"
+  ) {
+    return false;
+  }
+  const text = serializeNodeUiDevSettings();
+  const saved = saveNodeUiDevLocalDefaultSettings(text);
+  if (options.file !== false && typeof postNodeUiDevSettingsPreset === "function") {
+    if (nodeGraphWorkspaceViewAutosaveTimer) {
+      window.clearTimeout(nodeGraphWorkspaceViewAutosaveTimer);
+    }
+    nodeGraphWorkspaceViewAutosaveTimer = window.setTimeout(() => {
+      nodeGraphWorkspaceViewAutosaveTimer = 0;
+      postNodeUiDevSettingsPreset(serializeNodeUiDevSettings()).catch(() => {});
+    }, 350);
+  }
+  return saved;
 }
 
 async function loadNodeUiDevDefaultSettings() {

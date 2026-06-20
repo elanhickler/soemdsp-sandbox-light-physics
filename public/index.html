@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=ui-window-resize-limits-2">
+  <link rel="stylesheet" href="./public/styles.css?v=formula-visual-6">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -519,6 +519,11 @@
         </div>
         <div class="node-module-shop-column">
           <div class="node-module-shop-controls">
+            <button
+              id="nodeModuleDepartmentBack"
+              class="node-module-department-back-button"
+              type="button"
+              hidden>Back</button>
             <section id="nodeModuleHomeShelfShell" class="node-module-home-shelf" hidden>
               <div class="node-module-shop-section-title">
                 <span>Home</span>
@@ -526,7 +531,6 @@
               <div id="nodeModuleHomeShelf" class="scene-context-store-list node-module-store-grid" aria-label="Home modules"></div>
             </section>
             <label id="nodeModuleDepartmentSearchShell" class="node-module-department-search-placeholder">
-              <span>search</span>
               <input
                 id="nodeModuleDepartmentSearch"
                 type="search"
@@ -534,7 +538,7 @@
                 autocomplete="off"
                 spellcheck="false">
             </label>
-            <label class="node-module-shop-fit-control">
+            <label id="nodeModuleShopFitControl" class="node-module-shop-fit-control">
               <span>Fit</span>
               <input
                 id="nodeModuleShopFitInput"
@@ -546,6 +550,7 @@
                 aria-label="Module buttons fit horizontally">
             </label>
           </div>
+          <div id="nodeModuleDepartmentTitle" class="node-module-department-title" hidden></div>
           <section id="nodeModuleDepartmentList" class="node-module-shop-section scene-context-store-list node-module-store-grid" aria-label="Modules"></section>
           <section id="nodeModuleDeveloperListShell" class="node-module-shop-section scene-context-store-hidden" hidden>
             <div class="node-module-shop-section-title">
@@ -1635,7 +1640,7 @@
           <strong>none</strong>
         </div>
         <div id="nodeSceneHomeModules" class="scene-context-home-modules" hidden></div>
-        <button id="nodeSceneAddToGroup" type="button" role="menuitem" hidden>
+        <button id="nodeSceneAddToGroup" class="node-under-construction-control" type="button" role="menuitem" disabled aria-disabled="true" title="Add to group is under construction." hidden>
           <span>Add to group</span>
         </button>
         <button id="nodeSceneAddToUi" type="button" role="menuitem" hidden>
@@ -1875,11 +1880,6 @@
           <span>Delete</span>
           <kbd>Delete</kbd>
         </button>
-        <button
-          id="nodeSceneResizeHandle"
-          class="scene-context-resize-handle"
-          type="button"
-          aria-label="Resize command center"></button>
       </div>
 
       <div
@@ -2798,22 +2798,22 @@
   <script src="./public/manifest-loader.js?v=manifest-loader-refactor-1780389600000"></script>
   <script src="./public/node-graph-wires.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-floating-windows.js?v=ui-window-resize-limits-2"></script>
-  <script src="./public/node-graph-file-actions.js?v=ui-window-resize-limits-2"></script>
+  <script src="./public/node-graph-file-actions.js?v=working-patch-autosave-1"></script>
   <script src="./public/node-graph-default-buttons.js?v=patch-save-refresh-1"></script>
   <script src="./public/node-graph-cookbook-filter.js?v=filter-curve-zero-cutoffs-1780822200000"></script>
   <script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>
-  <script src="./public/node-graph-module-definitions.js?v=module-home-actions-1"></script>
-  <script src="./public/node-graph-module-store.js?v=ui-window-resize-limits-2"></script>
-  <script src="./public/node-graph-module-sizing.js?v=scope-extra-height-1"></script>
+  <script src="./public/node-graph-module-definitions.js?v=formula-visual-params-1"></script>
+  <script src="./public/node-graph-module-store.js?v=module-browser-public-1"></script>
+  <script src="./public/node-graph-module-sizing.js?v=formula-visual-6"></script>
   <script src="./public/node-graph-metadata-kinds.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-parameter-metadata.js?v=audio-player-editable-metadata-1"></script>
   <script src="./public/node-graph-metadata-defaults.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-text-box-utils.js?v=text-box-size-1000-1"></script>
-  <script src="./public/node-graph-image-utils.js?v=canvas-hex-colors-1"></script>
+  <script src="./public/node-graph-image-utils.js?v=formula-visual-6"></script>
   <script src="./public/node-graph-graph-utils.js?v=graph2-through-curves-1"></script>
   <script src="./public/node-graph-samples.js?v=missing-sample-dismiss-1"></script>
   <script src="./public/node-graph-text-box-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-patch-normalizers.js?v=ui-window-resize-limits-2"></script>
+  <script src="./public/node-graph-patch-normalizers.js?v=formula-visual-6"></script>
   <script src="./public/node-graph-ui-view.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-audio-derivation.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-grid-utils.js?v=ui-window-resize-limits-2"></script>
@@ -2825,31 +2825,31 @@
   <script src="./public/node-graph-settings-text-fit.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-preset.js?v=default-visible-nodes-1"></script>
   <script src="./public/node-graph-script-status.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-view-controls.js?v=floating-window-header-clamp-1"></script>
+  <script src="./public/node-graph-view-controls.js?v=module-card-click-add-1"></script>
   <script src="./public/node-graph-workspace-geometry.js?v=workspace-viewport-clamp-1"></script>
-  <script src="./public/node-graph-workspace-zoom.js?v=patch-view-zoom-1"></script>
-  <script src="./public/node-graph-workspace-view.js?v=ui-window-resize-limits-2"></script>
+  <script src="./public/node-graph-workspace-zoom.js?v=workspace-view-autosave-1"></script>
+  <script src="./public/node-graph-workspace-view.js?v=workspace-view-autosave-1"></script>
   <script src="./public/node-graph-camera-view.js?v=utility-camera-feed-1780810000000"></script>
   <script src="./public/node-graph-clap-host.js?v=clap-under-construction-2"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-node-dragging.js?v=io-alt-bypass-1"></script>
-  <script src="./public/node-graph-context-menu.js?v=ui-window-resize-limits-2"></script>
-  <script src="./public/node-graph-module-actions.js?v=module-placement-unclamped-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=module-actions-last-target-1"></script>
+  <script src="./public/node-graph-module-actions.js?v=module-actions-last-target-1"></script>
   <script src="./public/node-graph-code-screen.js?v=canvas-ratio-language-2"></script>
   <script src="./public/node-graph-module-scopes.js?v=scope-zoom-gain-1"></script>
   <script src="./public/node-graph-shader-script.js?v=floating-window-drag-area-1"></script>
   <script src="./public/node-graph-canvas-script.js?v=floating-window-drag-area-1"></script>
-  <script src="./public/node-graph-module-factories.js?v=module-home-actions-1"></script>
+  <script src="./public/node-graph-module-factories.js?v=formula-visual-params-1"></script>
   <script src="./public/node-graph-module-header-rendering.js?v=timing-flat-controls-1"></script>
-  <script src="./public/node-graph-module-rendering.js?v=module-home-actions-1"></script>
+  <script src="./public/node-graph-module-rendering.js?v=formula-visual-6"></script>
   <script src="./public/node-graph-history.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-visual-utils.js?v=text-light-registry-1780800000000"></script>
   <script src="./public/node-graph-patch-clone.js?v=required-assets-1"></script>
   <script src="./public/node-graph-slider-metadata.js?v=metadata-step-zero-1"></script>
-  <script src="./public/node-graph-slider-values.js?v=metadata-alias-1"></script>
-  <script src="./public/node-graph-slider-dragging.js?v=music-speed-unbounded-1"></script>
+  <script src="./public/node-graph-slider-values.js?v=metadata-step-any-1"></script>
+  <script src="./public/node-graph-slider-dragging.js?v=working-patch-autosave-1"></script>
   <script src="./public/node-graph-node-accessors.js?v=unbounded-speed-1"></script>
-  <script src="./public/node-graph-selection.js?v=module-origin-independent-1"></script>
+  <script src="./public/node-graph-selection.js?v=module-actions-last-target-1"></script>
   <script src="./public/node-graph-port-geometry.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-slider-readout.js?v=unbounded-speed-1"></script>
   <script src="./public/node-graph-slider-readout-controls.js?v=unbounded-speed-1"></script>
@@ -2878,9 +2878,9 @@
   <script src="./public/node-graph-ui-settings-utils.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-user-ui-settings-controls.js?v=hide-mouse-drag-setting-2"></script>
   <script src="./public/node-graph-ui-settings-panels.js?v=workspace-window-state-1"></script>
-  <script src="./public/node-graph-ui-settings-persistence.js?v=metadata-window-resize-1"></script>
+  <script src="./public/node-graph-ui-settings-persistence.js?v=workspace-view-autosave-1"></script>
   <script src="./public/node-graph-ui-settings-sync.js?v=origin-marker-uidev-1"></script>
-  <script src="./public/node-graph-keyboard-shortcuts.js?v=music-height-clamp-1"></script>
+  <script src="./public/node-graph-keyboard-shortcuts.js?v=height-widget-registry-1"></script>
   <script src="./public/node-graph-live-status-text.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-live-status-controls.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-live-meter-controls.js?v=gpu-additive-status-recipe-1"></script>
@@ -2888,23 +2888,23 @@
   <script src="./public/node-graph-live-evidence.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-live-control-rendering.js?v=ear-protection-reset-1"></script>
   <script src="./public/node-graph-default-patch.js?v=patch-view-zoom-1"></script>
-  <script src="./public/node-graph-state.js?v=patch-bank-slots-1"></script>
+  <script src="./public/node-graph-state.js?v=formula-visual-inputs-1"></script>
   <script src="./public/node-graph-external-ui-events.js?v=button-events-1"></script>
-  <script src="./public/node-graph-patch-core.js?v=required-assets-1"></script>
+  <script src="./public/node-graph-patch-core.js?v=formula-visual-params-2"></script>
   <script src="./public/node-graph-live-plan-runtime.js?v=module-home-actions-1"></script>
   <script src="./public/node-graph-live-parameter-runtime.js?v=unbounded-speed-1"></script>
   <script src="./public/node-graph-oscillator-runtime.js?v=ellipsoid-audio-1"></script>
   <script src="./public/node-graph-gpu-additive-backend.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-jerobeam-spiral.js?v=node-graph-jerobeam-spiral-refactor-1780371000000"></script>
   <script src="./public/node-graph-lorenz-attractor.js?v=lorenz-unbounded-speed-1"></script>
-  <script src="./public/node-graph-live-frame-evaluator.js?v=module-home-actions-1"></script>
-  <script src="./public/node-graph-live-runtime.js?v=module-home-actions-1"></script>
+  <script src="./public/node-graph-live-frame-evaluator.js?v=formula-visual-params-1"></script>
+  <script src="./public/node-graph-live-runtime.js?v=formula-visual-params-1"></script>
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-workspace-event-bindings.js?v=module-placement-unclamped-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=beta-polish-1"></script>
-  <script src="./public/node-graph-header-event-bindings.js?v=patch-bank-slots-1"></script>
+  <script src="./public/node-graph-header-event-bindings.js?v=module-browser-categories-1"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=node-graph-help-event-bindings-refactor-1780369200000"></script>
-  <script src="./public/node-graph-scene-menu-event-bindings.js?v=patch-explorer-actions-1"></script>
+  <script src="./public/node-graph-scene-menu-event-bindings.js?v=command-center-fixed-width-1"></script>
   <script src="./public/node-graph-uidev-event-bindings.js?v=origin-marker-uidev-1"></script>
   <script src="./public/node-graph-settings-event-bindings.js?v=metadata-popover-bind-1"></script>
   <script src="./public/node-graph-slider-event-bindings.js?v=node-graph-slider-event-bindings-refactor-1780369200000"></script>

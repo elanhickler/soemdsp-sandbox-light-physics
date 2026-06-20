@@ -450,6 +450,40 @@ function nodeGraphScreenSpaceShaderSample(node, readInput, runtime, nodeId, samp
   return value;
 }
 
+function nodeGraphFormulaVisualSample(node, runtime, nodeId, sampleRate, frame = 0, frames = 1, frameValues = new Map()) {
+  const value = {};
+  const definition = nodeGraphModuleDefinitions.formulaVisual || {};
+  for (const parameter of definition.parameters || []) {
+    const key = parameter.key;
+    const metadata = node?.paramMeta?.[key] || nodeGraphParameterDefinitionMetadata(parameter);
+    const min = Number.isFinite(Number(metadata?.min)) ? Number(metadata.min) : Number(parameter.min) || 0;
+    const max = Number.isFinite(Number(metadata?.max)) ? Number(metadata.max) : Number(parameter.max) || min + 1;
+    const target = readNodeGraphLiveEffectiveParam(
+      runtime,
+      node,
+      key,
+      Number(parameter.defaultValue) || min,
+      frame,
+      frames,
+      frameValues,
+    );
+    value[key] = nodeGraphSmoothVisualControl(
+      runtime,
+      `formulaVisual:${nodeId}:${key}`,
+      target,
+      sampleRate,
+      0.025,
+      Math.min(min, max),
+      Math.max(min, max),
+    );
+  }
+  runtime.visualControls.formulaVisual = {
+    ...(runtime.visualControls.formulaVisual || {}),
+    [nodeId]: value,
+  };
+  return value;
+}
+
 function nodeGraphVisualHslToRgb(hue, saturation, lightness) {
   const h = ((Number(hue) || 0) % 1 + 1) % 1;
   const s = clampNodeSliderValue(Number(saturation) || 0, 0, 1);
@@ -500,6 +534,7 @@ function createNodeGraphVisualControlState() {
       visualBloom: 0,
       visualBrightness: 0,
       visualGlow: 0,
+      formulaVisual: {},
       x: 0,
       y: 0,
     },
@@ -2907,6 +2942,16 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       value = nodeGraphScreenSpaceShaderSample(
         node,
         (port) => mixInput(nodeId, port),
+        runtime,
+        nodeId,
+        sampleRate,
+        frame,
+        frames,
+        frameValues,
+      );
+    } else if (node?.type === "formulaVisual") {
+      value = nodeGraphFormulaVisualSample(
+        node,
         runtime,
         nodeId,
         sampleRate,
