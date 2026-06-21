@@ -115,3 +115,136 @@ function endNodeGraphFloatingWindowResize(event, stateKey, onEnd = null) {
   }
   return true;
 }
+
+function nodeGraphFloatingWindowKeyboardTargets() {
+  return [
+    {
+      draggingKey: "sceneContextDragging",
+      elementId: "nodeSceneContextMenu",
+      workspaceKey: "commandCenter",
+      applySize: typeof applyNodeSceneContextWindowSize === "function" ? applyNodeSceneContextWindowSize : null,
+      sizeAxes: { width: true, height: false },
+    },
+    {
+      draggingKey: "moduleActionDragging",
+      elementId: "nodeModuleActionsWindow",
+      workspaceKey: "moduleActions",
+      applySize: typeof applyNodeModuleActionsWindowSize === "function" ? applyNodeModuleActionsWindowSize : null,
+      sizeAxes: { width: true, height: true },
+    },
+    {
+      draggingKey: "moduleShopDragging",
+      elementId: "nodeModuleShopView",
+      workspaceKey: "moduleBrowser",
+      applySize: typeof applyNodeGraphModuleShopWindowSize === "function" ? applyNodeGraphModuleShopWindowSize : null,
+      sizeAxes: { width: true, height: true },
+    },
+    {
+      draggingKey: "savedPatchesWindowDragging",
+      elementId: "nodeSavedPatchesWindow",
+      workspaceKey: "patchExplorer",
+      applySize: typeof applyNodeGraphSavedPatchesWindowSize === "function" ? applyNodeGraphSavedPatchesWindowSize : null,
+      sizeAxes: { width: true, height: true },
+    },
+    {
+      draggingKey: "metadataDragging",
+      elementId: "nodeParameterMetadataPopover",
+      workspaceKey: "metaparameters",
+      applySize: typeof applyNodeMetadataPopoverSize === "function" ? applyNodeMetadataPopoverSize : null,
+      sizeAxes: { width: true, height: true },
+    },
+  ];
+}
+
+function nodeGraphActiveFloatingWindowKeyboardTarget() {
+  for (const config of nodeGraphFloatingWindowKeyboardTargets()) {
+    const drag = nodeGraphMvp[config.draggingKey];
+    const element = document.getElementById(config.elementId);
+    if (drag && element && !element.hidden) {
+      return { ...config, drag, element };
+    }
+  }
+  return null;
+}
+
+function nudgeNodeGraphFloatingWindowByKeyboard(target, dx, dy) {
+  const rect = target.element.getBoundingClientRect();
+  const next = nodeGraphFloatingWindowPosition(
+    target.element,
+    rect.left + dx,
+    rect.top + dy,
+  );
+  target.element.style.left = `${next.left}px`;
+  target.element.style.top = `${next.top}px`;
+  target.element.style.right = "auto";
+  if (Number.isFinite(Number(target.drag.offsetX))) {
+    target.drag.offsetX -= next.left - rect.left;
+  }
+  if (Number.isFinite(Number(target.drag.offsetY))) {
+    target.drag.offsetY -= next.top - rect.top;
+  }
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      target.workspaceKey,
+      target.element,
+      { open: true, position: next },
+      { persist: false },
+    );
+  }
+  return true;
+}
+
+function resizeNodeGraphFloatingWindowByKeyboard(target, dw, dh) {
+  if (typeof target.applySize !== "function") {
+    return false;
+  }
+  const rect = target.element.getBoundingClientRect();
+  const nextSize = {
+    width: rect.width + (target.sizeAxes.width === false ? 0 : dw),
+    height: rect.height + (target.sizeAxes.height === false ? 0 : dh),
+  };
+  if (target.sizeAxes.width === false) {
+    delete nextSize.width;
+  }
+  if (target.sizeAxes.height === false) {
+    delete nextSize.height;
+  }
+  if (!Object.keys(nextSize).length) {
+    return false;
+  }
+  const normalized = target.applySize(nextSize);
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      target.workspaceKey,
+      target.element,
+      { open: true, size: normalized },
+      { status: false },
+    );
+  }
+  return true;
+}
+
+function handleNodeGraphFloatingWindowKeyboardNudge(event) {
+  const arrows = {
+    ArrowDown: { dx: 0, dy: 1, dw: 0, dh: 1 },
+    ArrowLeft: { dx: -1, dy: 0, dw: -1, dh: 0 },
+    ArrowRight: { dx: 1, dy: 0, dw: 1, dh: 0 },
+    ArrowUp: { dx: 0, dy: -1, dw: 0, dh: -1 },
+  };
+  const arrow = arrows[event.key];
+  if (!arrow || event.ctrlKey || event.metaKey || event.altKey) {
+    return false;
+  }
+  const target = nodeGraphActiveFloatingWindowKeyboardTarget();
+  if (!target) {
+    return false;
+  }
+  const handled = event.shiftKey
+    ? resizeNodeGraphFloatingWindowByKeyboard(target, arrow.dw, arrow.dh)
+    : nudgeNodeGraphFloatingWindowByKeyboard(target, arrow.dx, arrow.dy);
+  if (handled) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  return handled;
+}

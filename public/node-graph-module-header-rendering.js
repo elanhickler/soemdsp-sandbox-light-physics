@@ -231,7 +231,7 @@ function createNodeGraphHeaderTimingWidgets() {
       "Burn",
       normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0).toFixed(2),
       {
-        ariaLabel: "Oscilloscope screen burn",
+        ariaLabel: "Display screen burn",
         max: 1,
         min: 0,
         scopeInput: "burn",
@@ -243,7 +243,7 @@ function createNodeGraphHeaderTimingWidgets() {
       "Decay",
       normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0).toFixed(2),
       {
-        ariaLabel: "Oscilloscope initial phosphor decay",
+        ariaLabel: "Display initial phosphor decay",
         max: 1,
         min: 0,
         scopeInput: "decay",
@@ -255,7 +255,7 @@ function createNodeGraphHeaderTimingWidgets() {
       "FPS",
       normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60),
       {
-        ariaLabel: "Oscilloscope frames per second",
+        ariaLabel: "Display frames per second",
         inputMode: "numeric",
         max: 240,
         min: 1,

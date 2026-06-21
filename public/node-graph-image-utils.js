@@ -178,38 +178,6 @@ function nodeGraphVisualOscilloscopeOutputDataUrl(nodeId) {
   return drew ? surface.toDataURL("image/png") : "";
 }
 
-function nodeGraphFormulaVisualOutputDataUrl(nodeId) {
-  const node = nodeGraphPatchNode(nodeId);
-  if (!node || node.type !== "formulaVisual") {
-    return "";
-  }
-  const liveNode = typeof nodeGraphNodeElement === "function" ? nodeGraphNodeElement(nodeId) : null;
-  const liveCanvas = liveNode?.querySelector(".node-formula-visual-canvas");
-  if (liveCanvas && typeof drawNodeGraphFormulaVisualCanvas === "function") {
-    drawNodeGraphFormulaVisualCanvas(liveCanvas);
-    try {
-      return liveCanvas.toDataURL("image/png");
-    } catch {
-      return "";
-    }
-  }
-  if (typeof drawNodeGraphFormulaVisualCanvas !== "function") {
-    return "";
-  }
-  const surface = document.createElement("canvas");
-  surface.dataset.node = nodeId;
-  drawNodeGraphFormulaVisualCanvas(surface, performance.now?.() || Date.now(), {
-    height: 512,
-    pixelRatio: 1,
-    width: 512,
-  });
-  try {
-    return surface.toDataURL("image/png");
-  } catch {
-    return "";
-  }
-}
-
 function nodeGraphCanvasLayerSourceConnection(nodeId, inputPort) {
   const port = String(inputPort || "").trim();
   if (!port) {
@@ -234,9 +202,6 @@ function nodeGraphRgbaOutputDataUrlForConnection(connection, visited = new Set()
   }
   if (sourceNode.type === "visualOscilloscope") {
     return nodeGraphVisualOscilloscopeOutputDataUrl(sourceNode.id);
-  }
-  if (sourceNode.type === "formulaVisual") {
-    return nodeGraphFormulaVisualOutputDataUrl(sourceNode.id);
   }
   if (sourceNode.type === "canvas") {
     return nodeGraphCanvasOutputDataUrl(sourceNode.id, visited);

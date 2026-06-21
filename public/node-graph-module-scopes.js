@@ -984,6 +984,18 @@ function nodeGraphModuleScopeSlots() {
     .filter((slot) => slot.element?.isConnected && !slot.element.hidden && slot.scopeElement);
 }
 
+function nodeGraphModuleScopeSlotIgnoresGlobalHide(slot) {
+  return ["visualOscilloscope", "canvas"].includes(slot?.type);
+}
+
+function nodeGraphVisibleModuleScopeSlots() {
+  const slots = nodeGraphModuleScopeSlots();
+  if (nodeGraphMvp.moduleOscilloscopesVisible !== false) {
+    return slots;
+  }
+  return slots.filter(nodeGraphModuleScopeSlotIgnoresGlobalHide);
+}
+
 function nodeGraphModuleScopeMonitorFingerprint(monitors = []) {
   return normalizeNodeGraphPatchMonitors(monitors)
     .map(nodeGraphMonitorEndpointKey)
@@ -6015,7 +6027,7 @@ function nodeGraphModuleScopeScreenItems(workspace, canvas, pixelRatio) {
     top: 0,
     width: workspaceRect.width,
   };
-  return nodeGraphModuleScopeSlots()
+  return nodeGraphVisibleModuleScopeSlots()
     .map((slot) => {
       const buffer = nodeGraphModuleScopeDisplayBuffer(
         slot,
@@ -6076,7 +6088,8 @@ function drawNodeGraphModuleScopes() {
   });
   const canvas = nodeGraphModuleScopeCanvas();
   const workspace = document.getElementById("nodeGraphWorkspace");
-  if (nodeGraphMvp.moduleOscilloscopesVisible === false) {
+  if (nodeGraphMvp.moduleOscilloscopesVisible === false && !nodeGraphVisibleModuleScopeSlots().length) {
+    setNodeGraphModuleScopesEnabled(false);
     markNodeGraphModuleScopeDebugSkip("hidden");
     return;
   }

@@ -22,6 +22,7 @@
     "workspaceBackgroundColor": "#0d0d0d",
     "settingsHeaderTopRatio": 62,
     "settingsHeaderPadding": 2,
+    "floatingWindowHeaderHeight": 30,
     "sliderDotSize": 4,
     "moduleTitleFont": "cascadia",
     "moduleTitleHeight": 26,
@@ -71,6 +72,7 @@
     "workspaceBackgroundColor": true,
     "settingsHeaderTopRatio": false,
     "settingsHeaderPadding": false,
+    "floatingWindowHeaderHeight": true,
     "sliderDotSize": true,
     "moduleTitleFont": true,
     "moduleTitleHeight": true,
@@ -122,7 +124,7 @@
   "view": {
     "gridVisible": true,
     "moduleButtonsVisible": false,
-    "moduleOscilloscopesVisible": false,
+    "moduleOscilloscopesVisible": true,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
     "moduleScopeBurn": 0,
@@ -355,10 +357,6 @@
         "developer": true,
         "home": false
       },
-      "moduleShop": {
-        "developer": true,
-        "home": false
-      },
       "macroControls": {
         "developer": true,
         "home": false
@@ -515,10 +513,6 @@
         "developer": true,
         "home": false
       },
-      "formulaVisual": {
-        "developer": true,
-        "home": false
-      },
       "led": {
         "developer": true,
         "home": false
@@ -553,93 +547,66 @@
       }
     },
     "sceneContextWindowSize": {
-      "width": 160
+      "width": 37
     },
     "moduleActionWindowSize": {
-      "width": 261,
-      "height": 381
+      "width": 241,
+      "height": 504
     },
     "workspaceWindowStatesVersion": 1,
     "workspaceWindowStates": {
       "commandCenter": {
-        "open": false,
-        "position": {
-          "left": 28,
-          "top": 33
-        }
+        "open": false
       },
       "moduleActions": {
         "open": false,
         "position": {
-          "left": 220,
-          "top": 111
+          "left": 217,
+          "top": 269
         }
       },
       "metaparameters": {
-        "open": false,
+        "open": true,
         "position": {
-          "left": -178,
-          "top": 221
+          "left": 156,
+          "top": 103
         },
         "size": {
-          "width": 512,
-          "height": 556
+          "width": 384,
+          "height": 581
         }
       },
       "oscilloscopeSettings": {
-        "open": false,
-        "position": {
-          "left": 0,
-          "top": 0
-        }
+        "open": false
       },
       "patchExplorer": {
-        "open": false,
-        "position": {
-          "left": 34,
-          "top": 393
-        },
-        "size": {
-          "width": 161,
-          "height": 241
-        }
+        "open": false
       },
       "moduleBrowser": {
-        "open": true,
-        "position": {
-          "left": 576,
-          "top": 117
-        },
-        "size": {
-          "width": 287,
-          "height": 685
-        }
+        "open": false
+      },
+      "visibilityMenu": {
+        "open": false
       },
       "uiSettings": {
-        "open": false,
-        "position": {
-          "left": 195,
-          "top": 82
-        }
+        "open": false
       },
       "uiDev": {
-        "open": false,
-        "position": {
-          "left": 0,
-          "top": 0
-        }
+        "open": false
       }
     },
     "workspaceView": {
       "pan": {
-        "x": 42.7271728515625,
-        "y": 545.4545288085938
+        "x": 3.6363525390625,
+        "y": 3.6363525390625
       },
-      "zoom": 0.8928571428571442
+      "zoom": 1
     },
+    "moduleStoreDepartment": "",
     "savedPatchBankIndex": 0,
-    "savedPatchBankName": "portfolio music",
-    "savedPatchGridColumns": 9,
+    "savedPatchBankName": "",
+    "savedPatchGridColumns": 3,
+    "savedPatchExplorerView": "banks",
     "workingPatch": {
       "activeCameraId": "camera-1",
       "audio": {
@@ -670,7 +637,22 @@
         "slots": [],
         "ui": []
       },
-      "connections": [],
+      "connections": [
+        {
+          "destinationNode": "output",
+          "destinationPort": "Left",
+          "sourceNode": "audioPlayer-1",
+          "sourcePort": "Left",
+          "tracePoints": []
+        },
+        {
+          "destinationNode": "output",
+          "destinationPort": "Right",
+          "sourceNode": "audioPlayer-1",
+          "sourcePort": "Right",
+          "tracePoints": []
+        }
+      ],
       "format": {
         "kind": "soemdsp-sandbox-node-patch",
         "version": 1
@@ -686,142 +668,17 @@
         "bank": 0,
         "bankName": "",
         "description": "",
-        "name": "Hydrus - Retro Fusion",
+        "name": "Init",
         "program": 0,
         "tags": ""
       },
-      "modulations": [
-        {
-          "destinationNode": "formulaVisual-1",
-          "destinationParam": "formulaPetals",
-          "sourceNode": "osc-1",
-          "sourcePort": "Wave Out",
-          "tracePoints": []
-        }
-      ],
+      "modulations": [],
       "monitors": [],
       "nodes": [
         {
-          "gx": -30,
-          "gy": 18,
-          "id": "shop",
-          "paramMeta": {},
-          "params": {},
-          "type": "moduleShop",
-          "widthGu": 10
-        },
-        {
-          "gx": -29,
-          "gy": 6,
-          "id": "canvas-origin",
-          "paramMeta": {},
-          "params": {},
-          "type": "canvas",
-          "alias": "Origin",
-          "canvasScript": {
-            "aspectRatio": 1,
-            "background": "#00000000",
-            "bufferedInputs": [
-              "a_buffer"
-            ],
-            "bufferSampleLimit": 262144,
-            "enabled": true,
-            "faceBackground": "checkerboard",
-            "faceFit": "contain",
-            "faceScreen": "#000000",
-            "gridHeightGu": 9,
-            "gridWidthGu": 8,
-            "inputs": [
-              "a_buffer",
-              "a not buffer"
-            ],
-            "kind": "canvasScript",
-            "language": "canvas-js",
-            "layout": "oscilloscope",
-            "layers": [
-              {
-                "id": "a_buffer",
-                "input": "a_buffer",
-                "opacity": 1,
-                "rotation": 0,
-                "scale": 1,
-                "visible": true,
-                "x": 0.5,
-                "y": 0.5
-              }
-            ],
-            "output": "canvas",
-            "ratioHeight": 1,
-            "ratioWidth": 1,
-            "source": "canvas.ratio(1, 1);\ncanvas.background = #00000000;\ncanvas.layout = oscilloscope;\ncanvas.grid(8, 9);\ncanvas.face.background = checkerboard;\ncanvas.face.screen = #000000;\nbufferInput(\"a_buffer\");\ninput(\"a not buffer\");\n\nlayer(\"a_buffer\").input   = a_buffer;\nlayer(\"a_buffer\").x       = 0.5;\nlayer(\"a_buffer\").y       = 0.5;\nlayer(\"a_buffer\").scale   = 1.0;\nlayer(\"a_buffer\").opacity = 1.0;\n\noutput = canvas;"
-          }
-        },
-        {
-          "gx": -29,
-          "gy": 15,
-          "id": "home",
-          "paramMeta": {},
-          "params": {},
-          "type": "moduleHome",
-          "widthGu": 8
-        },
-        {
-          "gx": 18,
-          "gy": -6,
-          "id": "output",
-          "paramMeta": {
-            "volume": {
-              "alias": "",
-              "choices": [],
-              "def": 0.1,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.1,
-              "min": 0,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            }
-          },
-          "params": {
-            "volume": 0.881539349828075
-          },
-          "type": "output",
-          "widthGu": 5,
-          "heightGu": 4,
-          "scopeShader": {
-            "cycles": 2,
-            "blendMode": "laser",
-            "enabled": true,
-            "kind": "scopeShader",
-            "language": "scope-js",
-            "length": 1,
-            "mode": "1d_full",
-            "padding": 0.04,
-            "source": "video.input     = ~;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\nscope.cycles    = 2.0;\nscope.zoom      = 1.0;\nscope.length    = 1.0;\nscope.padding   = 0.04;\nscope.syncSpeed = 1.0;\ndot1.color      = dot1.global.color;\ndot1.size       = 1.0 * dot1.global.size;\ndot1.blur       = 1.0 * dot1.global.blur;\ndot1.brightness = 1.0 * dot1.global.brightness;\ndot2.color      = dot2.global.color;\ndot2.size       = 1.0 * dot2.global.size;\ndot2.blur       = 1.0 * dot2.global.blur;\ndot2.brightness = 1.0 * dot2.global.brightness;\nblend.mode      = laser;",
-            "sync": "inherit",
-            "syncSpeed": 1,
-            "videoInput": "~",
-            "zoom": 1
-          },
-          "ui": {
-            "buttonsHidden": false,
-            "oscilloscopeHidden": true,
-            "titleHidden": true
-          }
-        },
-        {
-          "gx": -13,
-          "gy": 8,
-          "id": "audioInput",
+          "gx": 1,
+          "gy": 1,
+          "id": "audioPlayer-1",
           "paramMeta": {
             "level": {
               "alias": "",
@@ -837,128 +694,43 @@
               "min": 0,
               "nonlinearSlider": false,
               "showSign": false,
-              "step": 0.01,
+              "step": 0,
               "unboundedMax": false,
               "unboundedMin": false,
               "unit": "",
               "wraparound": false
             },
-            "seed": {
+            "speed": {
               "alias": "",
               "choices": [],
               "def": 1,
               "displayChoices": false,
               "divideChoicesVisibly": false,
               "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 99999,
+              "linearSmoothing": false,
+              "max": 10000,
               "maxDigits": 5,
               "mid": 1,
-              "min": 0,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 1,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            }
-          },
-          "params": {
-            "level": 1,
-            "seed": 1
-          },
-          "type": "audioInput",
-          "widthGu": 5
-        },
-        {
-          "gx": 17,
-          "gy": 11,
-          "id": "led-1",
-          "paramMeta": {},
-          "params": {},
-          "type": "led",
-          "led": {
-            "color": "#ff0000",
-            "kind": "led"
-          }
-        },
-        {
-          "gx": 10,
-          "gy": -13,
-          "id": "formulaVisual-1",
-          "paramMeta": {
-            "formulaA": {
-              "alias": "",
-              "choices": [],
-              "def": 3,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 16,
-              "maxDigits": 0,
-              "mid": 3,
-              "min": 1,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 1,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            },
-            "formulaB": {
-              "alias": "",
-              "choices": [],
-              "def": 2,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 16,
-              "maxDigits": 0,
-              "mid": 2,
-              "min": 1,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 1,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            },
-            "formulaPetals": {
-              "alias": "",
-              "choices": [],
-              "def": 5,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 24,
-              "maxDigits": 0,
-              "mid": 5,
-              "min": 1,
-              "nonlinearSlider": false,
+              "min": -10000,
+              "nonlinearSlider": true,
               "showSign": false,
               "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
+              "unboundedMax": true,
+              "unboundedMin": true,
+              "unit": "x",
               "wraparound": false
             },
-            "formulaMix": {
+            "start": {
               "alias": "",
               "choices": [],
-              "def": 0.38,
+              "def": 0,
               "displayChoices": false,
               "divideChoicesVisibly": false,
               "kind": "decimal",
-              "linearSmoothing": true,
+              "linearSmoothing": false,
               "max": 1,
               "maxDigits": 3,
-              "mid": 0.38,
+              "mid": 0.5,
               "min": 0,
               "nonlinearSlider": false,
               "showSign": false,
@@ -968,57 +740,17 @@
               "unit": "",
               "wraparound": false
             },
-            "formulaScale": {
+            "end": {
               "alias": "",
               "choices": [],
-              "def": 0.82,
+              "def": 1,
               "displayChoices": false,
               "divideChoicesVisibly": false,
               "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 1.5,
-              "maxDigits": 3,
-              "mid": 0.82,
-              "min": 0.1,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            },
-            "formulaRotate": {
-              "alias": "",
-              "choices": [],
-              "def": 0.12,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
+              "linearSmoothing": false,
               "max": 1,
               "maxDigits": 3,
-              "mid": 0.12,
-              "min": 0,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": true
-            },
-            "formulaMorph": {
-              "alias": "",
-              "choices": [],
-              "def": 0.25,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 2,
-              "maxDigits": 3,
-              "mid": 0.25,
+              "mid": 0.5,
               "min": 0,
               "nonlinearSlider": false,
               "showSign": false,
@@ -1028,105 +760,19 @@
               "unit": "",
               "wraparound": false
             },
-            "formulaHue": {
-              "alias": "",
-              "choices": [],
-              "def": 0.64,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.64,
-              "min": 0,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": true
-            },
-            "formulaGlow": {
-              "alias": "",
-              "choices": [],
-              "def": 0.85,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.85,
-              "min": 0,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            },
-            "formulaDots": {
-              "alias": "",
-              "choices": [],
-              "def": 0.55,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.55,
-              "min": 0,
-              "nonlinearSlider": false,
-              "showSign": false,
-              "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            }
-          },
-          "params": {
-            "formulaA": 1,
-            "formulaB": 2,
-            "formulaPetals": 1,
-            "formulaMix": 1,
-            "formulaScale": 0.633217649199426,
-            "formulaRotate": 0,
-            "formulaMorph": 0,
-            "formulaHue": 0.150867487065518,
-            "formulaGlow": 0.0377077868714293,
-            "formulaDots": 0.0847607807298457
-          },
-          "type": "formulaVisual",
-          "formulaVisual": {
-            "kind": "formulaVisual",
-            "language": "formula-xy-v1",
-            "preset": "hybrid",
-            "source": "formula.preset = hybrid;\nx = lissX * (1 - mix) + roseX * mix;\ny = lissY * (1 - mix) + roseY * mix;"
-          }
-        },
-        {
-          "gx": 2,
-          "gy": -8,
-          "id": "osc-1",
-          "paramMeta": {
-            "waveform": {
+            "transport": {
               "alias": "",
               "choices": [
-                "Saw",
-                "Square",
-                "Triangle",
-                "Sine",
-                "Noise"
+                "Off (reset)",
+                "Stop",
+                "Pause",
+                "Play",
+                "Loop"
               ],
-              "def": 0,
+              "def": 4,
               "displayChoices": true,
               "divideChoicesVisibly": true,
-              "kind": "waveform",
+              "kind": "decimal",
               "linearSmoothing": false,
               "max": 4,
               "maxDigits": 3,
@@ -1139,61 +785,44 @@
               "unboundedMin": false,
               "unit": "",
               "wraparound": false
-            },
-            "frequency": {
+            }
+          },
+          "params": {
+            "level": 1,
+            "speed": -998.090015581356,
+            "start": 0,
+            "end": 1,
+            "transport": 4
+          },
+          "type": "audioPlayer",
+          "widthGu": 8,
+          "ui": {
+            "buttonsHidden": false,
+            "displayHeightOffsetGu": 2,
+            "oscilloscopeHidden": false,
+            "slidersHidden": false,
+            "titleHidden": false
+          }
+        },
+        {
+          "gx": 12,
+          "gy": 5,
+          "id": "output",
+          "paramMeta": {
+            "volume": {
               "alias": "",
               "choices": [],
-              "def": 440,
+              "def": 0.1,
               "displayChoices": false,
               "divideChoicesVisibly": false,
-              "kind": "frequency",
+              "kind": "decimal_bipolar",
               "linearSmoothing": true,
-              "max": 20000,
-              "maxDigits": 5,
-              "mid": 440,
-              "min": 0,
-              "nonlinearSlider": true,
-              "showSign": false,
-              "step": 0,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "Hz",
-              "wraparound": false
-            },
-            "phase": {
-              "alias": "",
-              "choices": [],
-              "def": 0,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "phase",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.5,
-              "min": 0,
+              "max": 1.0001,
+              "maxDigits": 2,
+              "mid": 0,
+              "min": -1,
               "nonlinearSlider": false,
-              "showSign": false,
-              "step": 0.01,
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "cycle",
-              "wraparound": true
-            },
-            "level": {
-              "alias": "",
-              "choices": [],
-              "def": 1,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.5,
-              "min": 0,
-              "nonlinearSlider": false,
-              "showSign": false,
+              "showSign": true,
               "step": 0,
               "unboundedMax": false,
               "unboundedMin": false,
@@ -1202,12 +831,17 @@
             }
           },
           "params": {
-            "waveform": 2,
-            "frequency": 1,
-            "phase": 0,
-            "level": 1
+            "volume": 0.8
           },
-          "type": "osc"
+          "type": "output",
+          "widthGu": 5,
+          "ui": {
+            "buttonsHidden": false,
+            "displayHeightOffsetGu": 0,
+            "oscilloscopeHidden": true,
+            "slidersHidden": false,
+            "titleHidden": false
+          }
         }
       ],
       "requiredAssets": [],
@@ -1219,9 +853,9 @@
       },
       "uiItems": [],
       "view": {
-        "heightGu": 29,
-        "widthGu": 25,
-        "zoom": 0.8928571428571442
+        "heightGu": 22,
+        "widthGu": 20,
+        "zoom": 1
       },
       "visual": {
         "background": {

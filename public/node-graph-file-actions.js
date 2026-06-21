@@ -128,12 +128,19 @@ function setNodeGraphPatchDirtyState(state = "edited") {
 
 let nodeGraphWorkingPatchFileAutosaveTimer = 0;
 
-function scheduleNodeGraphWorkingPatchFileAutosave(text) {
+function scheduleNodeGraphWorkingPatchFileAutosave(text, options = {}) {
   if (typeof postNodeUiDevSettingsPreset !== "function") {
-    return;
+    return Promise.resolve(false);
   }
   if (nodeGraphWorkingPatchFileAutosaveTimer) {
     window.clearTimeout(nodeGraphWorkingPatchFileAutosaveTimer);
+  }
+  if (options.immediate) {
+    nodeGraphWorkingPatchFileAutosaveTimer = 0;
+    return postNodeUiDevSettingsPreset(text).then(() => true).catch(() => {
+      // Local settings already saved when possible; file sync is a best-effort fallback.
+      return false;
+    });
   }
   nodeGraphWorkingPatchFileAutosaveTimer = window.setTimeout(() => {
     nodeGraphWorkingPatchFileAutosaveTimer = 0;
@@ -141,9 +148,10 @@ function scheduleNodeGraphWorkingPatchFileAutosave(text) {
       // Local settings already saved; file sync is best-effort while dragging.
     });
   }, 350);
+  return Promise.resolve(true);
 }
 
-function saveNodeGraphWorkingPatchToUserSettings() {
+function saveNodeGraphWorkingPatchToUserSettings(options = {}) {
   if (
     typeof serializeNodeUiDevSettings !== "function" ||
     typeof saveNodeUiDevLocalDefaultSettings !== "function"
@@ -154,7 +162,10 @@ function saveNodeGraphWorkingPatchToUserSettings() {
   syncNodeGraphCurrentSavedPatchHeader();
   const text = serializeNodeUiDevSettings();
   const saved = saveNodeUiDevLocalDefaultSettings(text);
-  scheduleNodeGraphWorkingPatchFileAutosave(text);
+  const fileSave = scheduleNodeGraphWorkingPatchFileAutosave(text, { immediate: Boolean(options.immediateFile) });
+  if (options.returnFileSave) {
+    return Promise.resolve(fileSave).then((fileSaved) => ({ local: saved, file: Boolean(fileSaved) }));
+  }
   return saved;
 }
 
@@ -177,7 +188,7 @@ function initNodeGraphPatchFromDefault() {
     autosaveWorkingPatch: false,
     record: true,
     patchDirtyState: "untouched",
-    status: "default patch initialized",
+    status: "init patch loaded",
   });
   setNodeGraphCurrentSavedPatch("");
 }
@@ -215,7 +226,7 @@ function syncNodeGraphCurrentSavedPatchHeader() {
     ? `Current saved patch: ${filename}`
     : dirtyState === "edited"
       ? "Current patch has unsaved file changes, but is autosaved in UI settings."
-      : "Default patch";
+      : "Init patch";
   button.classList.toggle("unsaved", dirtyState !== "saved");
   button.dataset.patchDirtyState = dirtyState;
 }
@@ -289,6 +300,51 @@ function nodeGraphSavedPatchBankLabel(patch = null) {
   }
   const patchInfo = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch?.info);
   return nodeGraphOneLineText(patchInfo.bankName || "") || "Default Bank";
+}
+
+function nodeGraphSavedPatchBankIndex(patch = null) {
+  return normalizeNodeGraphSavedPatchBankIndex(patch?.bank ?? 0);
+}
+
+function nodeGraphSavedPatchBankGroups(patches = []) {
+  const groups = new Map();
+  for (const patch of patches) {
+    if (!patch?.filename) {
+      continue;
+    }
+    const bank = nodeGraphSavedPatchBankIndex(patch);
+    const current = groups.get(bank) || {
+      bank,
+      label: nodeGraphSavedPatchBankLabel(patch),
+      count: 0,
+      patches: [],
+    };
+    current.count += 1;
+    current.patches.push(patch);
+    if (!current.label || current.label === "Default Bank") {
+      current.label = nodeGraphSavedPatchBankLabel(patch);
+    }
+    groups.set(bank, current);
+  }
+  return [...groups.values()].sort((a, b) => a.bank - b.bank);
+}
+
+function setNodeGraphSavedPatchExplorerView(view = "banks") {
+  nodeGraphMvp.savedPatchExplorerView = view === "patches" ? "patches" : "banks";
+  if (typeof saveNodeGraphWorkspaceWindowStatesToUserSettings === "function") {
+    saveNodeGraphWorkspaceWindowStatesToUserSettings({ status: false });
+  }
+}
+
+function openNodeGraphSavedPatchBank(bank) {
+  nodeGraphMvp.savedPatchBankIndex = normalizeNodeGraphSavedPatchBankIndex(bank);
+  setNodeGraphSavedPatchExplorerView("patches");
+  renderNodeGraphDemoPatchRows(nodeGraphMvp.savedPatchEntries);
+}
+
+function showNodeGraphSavedPatchBanks() {
+  setNodeGraphSavedPatchExplorerView("banks");
+  renderNodeGraphDemoPatchRows(nodeGraphMvp.savedPatchEntries);
 }
 
 function nodeGraphSavedPatchMatchesTagFilters(patch = {}) {
@@ -766,6 +822,21 @@ async function copyNodeGraphScriptToClipboard() {
   }
 }
 
+async function copyNodeGraphShareLinkToClipboard(event) {
+  const button = event?.currentTarget;
+  if (!nodeGraphScriptReadyForGraphAction("share")) {
+    return;
+  }
+  try {
+    const link = nodeGraphShareLinkForPatch(nodeGraphPatchWithLiveHeaderInfo());
+    await navigator.clipboard.writeText(link);
+    setNodeGraphScriptStatus("share link copied", true);
+    flashNodeGraphDefaultButtonSaved(button);
+  } catch (error) {
+    setNodeGraphScriptStatus(`share link failed: ${error?.message || error}`, false);
+  }
+}
+
 function nodeGraphDownloadTextFile(filename, text, type = "application/json") {
   const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
@@ -793,8 +864,8 @@ async function pasteNodeGraphScriptFromClipboard() {
 
 async function setNodeGraphPatchAsDefaultFromButton(event) {
   if (!confirmNodeGraphDefaultButtonClick(event.currentTarget, () => {
-    setNodeGraphScriptStatus("click Confirm Default to save this patch as default", true);
-  })) {
+    setNodeGraphScriptStatus("click Confirm Init to save this patch as init", true);
+  }, { confirmText: "Confirm Init" })) {
     return;
   }
   flashNodeGraphDefaultButtonSaved(event.currentTarget);
@@ -904,7 +975,33 @@ function renderNodeGraphDemoPatchRows(patches = [], listId = "nodeSavedPatchWind
     syncNodeGraphSelectedSavedPatchEditor();
     return;
   }
-  safePatches.forEach((patch, index) => {
+  if (nodeGraphMvp.savedPatchExplorerView !== "patches") {
+    for (const group of nodeGraphSavedPatchBankGroups(safePatches)) {
+      const row = document.createElement("button");
+      row.className = "node-saved-patch-bank-row";
+      row.type = "button";
+      row.dataset.patchBank = String(group.bank);
+      row.addEventListener("click", () => openNodeGraphSavedPatchBank(group.bank));
+      const name = document.createElement("strong");
+      name.textContent = group.label || `Bank ${group.bank}`;
+      const count = document.createElement("span");
+      count.textContent = String(group.count);
+      row.append(name, count);
+      list.append(row);
+    }
+    syncNodeGraphSavedPatchRowSelection();
+    syncNodeGraphSelectedSavedPatchEditor();
+    return;
+  }
+  const bank = normalizeNodeGraphSavedPatchBankIndex(nodeGraphMvp.savedPatchBankIndex);
+  const back = document.createElement("button");
+  back.className = "node-saved-patch-bank-back";
+  back.type = "button";
+  back.textContent = "Back";
+  back.addEventListener("click", showNodeGraphSavedPatchBanks);
+  list.append(back);
+  const bankPatches = safePatches.filter((patch) => nodeGraphSavedPatchBankIndex(patch) === bank);
+  bankPatches.forEach((patch, index) => {
     const program = normalizeNodeGraphSavedPatchProgramIndex(patch.program ?? index);
     const row = document.createElement("button");
     row.className = "node-demo-patch-row";
@@ -937,35 +1034,9 @@ function normalizeNodeGraphSavedPatchGridColumns(value) {
   return Number.isFinite(columns) ? Math.max(1, Math.min(16, columns)) : 3;
 }
 
-function nodeGraphSavedPatchVisibleGridColumns(columns, patchCount = null) {
-  const count = Math.max(0, Math.round(Number(patchCount)));
-  if (!Number.isFinite(count) || count <= 0) {
-    return columns;
-  }
-  return Math.max(1, Math.min(columns, count));
-}
-
 function syncNodeGraphSavedPatchGridColumns() {
-  const patchCount = arguments.length > 0 ? arguments[0] : null;
-  const input = document.getElementById("nodeSavedPatchesFitInput");
-  const list = document.getElementById("nodeSavedPatchWindowList");
   const requestedColumns = normalizeNodeGraphSavedPatchGridColumns(nodeGraphMvp.savedPatchGridColumns);
-  const columns = nodeGraphSavedPatchVisibleGridColumns(requestedColumns, patchCount);
   nodeGraphMvp.savedPatchGridColumns = requestedColumns;
-  if (input) {
-    input.value = String(requestedColumns);
-  }
-  if (list) {
-    list.style.setProperty("--node-saved-patch-columns", String(columns));
-  }
-}
-
-function handleNodeGraphSavedPatchGridColumnsInput(event) {
-  nodeGraphMvp.savedPatchGridColumns = normalizeNodeGraphSavedPatchGridColumns(event.currentTarget?.value);
-  syncNodeGraphSavedPatchGridColumns();
-  if (typeof saveNodeGraphWorkspaceWindowStatesToUserSettings === "function") {
-    saveNodeGraphWorkspaceWindowStatesToUserSettings({ status: false });
-  }
 }
 
 async function loadNodeGraphDemoPatchEntries() {
@@ -1229,7 +1300,7 @@ function toggleNodeGraphSavedPatchesWindow() {
 }
 
 async function updateDefaultNodeGraphPreset() {
-  if (!nodeGraphScriptReadyForGraphAction("update default")) {
+  if (!nodeGraphScriptReadyForGraphAction("save init")) {
     return false;
   }
   const text = serializeNodeGraphPatch();
@@ -1246,23 +1317,23 @@ async function updateDefaultNodeGraphPreset() {
       throw new Error(result.error || `HTTP ${response.status}`);
     }
     nodeGraphMvp.defaultPatch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-    setNodeGraphScriptStatus("default preset updated", true);
+    setNodeGraphScriptStatus("init patch updated", true);
     return true;
   } catch (error) {
     if (saveNodeGraphLocalDefaultPreset(text)) {
       nodeGraphMvp.defaultPatch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-      setNodeGraphScriptStatus("local default preset updated", true);
+      setNodeGraphScriptStatus("local init patch updated", true);
       return true;
     }
-    setNodeGraphScriptStatus(`default update failed: ${error.message}`, false);
+    setNodeGraphScriptStatus(`init update failed: ${error.message}`, false);
     return false;
   }
 }
 
 async function handleUpdateDefaultNodeGraphPresetClick(event) {
   if (!confirmNodeGraphDefaultButtonClick(event.currentTarget, () => {
-    setNodeGraphScriptStatus("click Confirm Default to update default preset", true);
-  })) {
+    setNodeGraphScriptStatus("click Confirm Init to save this patch as init", true);
+  }, { confirmText: "Confirm Init" })) {
     return;
   }
   flashNodeGraphDefaultButtonSaved(event.currentTarget);

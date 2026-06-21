@@ -216,7 +216,7 @@ function createNodeUserUiSettingsModuleButtonsControl() {
 function createNodeUserUiSettingsModuleOscilloscopeControl() {
   return createNodeUserUiSettingsViewCheckbox({
     key: "moduleOscilloscopesVisible",
-    label: "Show oscilloscopes",
+    label: "Show displays",
     getValue: () => nodeGraphMvp.moduleOscilloscopesVisible !== false,
     setValue: (visible) => {
       nodeGraphMvp.moduleOscilloscopesVisible = visible;
@@ -229,7 +229,7 @@ function createNodeUserUiSettingsModuleScopeBrightnessControl() {
   const row = document.createElement("label");
   row.className = "node-user-ui-setting-control number";
   const title = document.createElement("span");
-  title.textContent = "Master oscilloscope brightness";
+  title.textContent = "Master display brightness";
   const input = document.createElement("input");
   input.type = "range";
   input.min = "0";
@@ -269,7 +269,7 @@ function createNodeUserUiSettingsModuleScopeLineThicknessControl() {
   const row = document.createElement("label");
   row.className = "node-user-ui-setting-control number";
   const title = document.createElement("span");
-  title.textContent = "Master oscilloscope line thickness";
+  title.textContent = "Master display line thickness";
   const input = document.createElement("input");
   input.type = "range";
   input.min = "0.25";
@@ -309,7 +309,7 @@ function createNodeUserUiSettingsModuleScopeFramesPerSecondControl() {
   const row = document.createElement("label");
   row.className = "node-user-ui-setting-control number";
   const title = document.createElement("span");
-  title.textContent = "Master oscilloscope FPS";
+  title.textContent = "Master display FPS";
   const input = document.createElement("input");
   input.type = "range";
   input.min = "1";
@@ -399,6 +399,19 @@ function renderNodeUserUiSettingsControls() {
   for (const section of nodeUiDevSettingSections) {
     const controls = [];
     if (section.title === "workspace") {
+      const clearStartupHint = document.createElement("div");
+      clearStartupHint.className = "node-user-ui-setting-control action";
+      const title = document.createElement("span");
+      title.textContent = "New user startup";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "Clear Startup";
+      button.addEventListener("click", (event) => {
+        document.getElementById("nodeUserUiSettingsClearStartup")?.click();
+        event.preventDefault();
+      });
+      clearStartupHint.append(title, button);
+      controls.push(clearStartupHint);
       controls.push(createNodeUserUiSettingsHideMouseWhileDraggingControl());
       controls.push(createNodeUserUiSettingsViewControl());
       controls.push(createNodeUserUiSettingsSliderAmountControl());

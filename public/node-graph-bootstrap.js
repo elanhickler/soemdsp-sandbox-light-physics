@@ -4,10 +4,25 @@ async function initNodeGraphMvp() {
   await loadNodeGraphTooltips();
   await bindNodeGraphMvpEvents();
   nodeGraphMvp.defaultPatch = await loadNodeGraphDefaultPresetPatch();
-  const startupPatch = nodeGraphMvp.workingPatch || nodeGraphMvp.defaultPatch;
-  const startupPatchDirtyState = nodeGraphMvp.workingPatch && ["saved", "edited", "untouched"].includes(nodeGraphMvp.patchDirtyState)
+  let startupPatch = nodeGraphMvp.workingPatch || nodeGraphMvp.defaultPatch;
+  let startupPatchDirtyState = nodeGraphMvp.workingPatch && ["saved", "edited", "untouched"].includes(nodeGraphMvp.patchDirtyState)
     ? nodeGraphMvp.patchDirtyState
     : "untouched";
+  try {
+    const sharePayload = typeof nodeGraphSharePayloadFromUrl === "function"
+      ? nodeGraphSharePayloadFromUrl()
+      : null;
+    if (sharePayload?.project_data) {
+      startupPatch = nodeGraphPatchFromShareProjectData(sharePayload.project_data);
+      startupPatchDirtyState = "untouched";
+    }
+  } catch (error) {
+    window.setTimeout(() => {
+      if (typeof setNodeGraphScriptStatus === "function") {
+        setNodeGraphScriptStatus(`share link failed: ${error?.message || error}`, false);
+      }
+    }, 0);
+  }
   commitNodeGraphPatch(cloneNodeGraphPatch(startupPatch), {
     autosaveWorkingPatch: false,
     markPending: false,
@@ -28,6 +43,8 @@ async function initNodeGraphMvp() {
   renderNodeGraphModuleVisibilityToggles();
   renderNodeGraphPatchTimingControls();
   renderNodeGraphVisibilityMenuButton();
+  bindNodeMetadataScriptBeforeUnload();
+  scheduleNodeMetadataScriptParserSelfTestStatus();
   renderNodeGraphModuleScopeBrightnessControl();
   renderNodeGraphSnapGridButton();
   renderNodeGraphTooltipToggle();

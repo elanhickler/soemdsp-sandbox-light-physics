@@ -50,6 +50,23 @@ function nodeGraphSelectedNodeIds(selection = nodeGraphMvp.selected) {
   return new Set();
 }
 
+function syncNodeGraphSelectionCountReadout(selection = nodeGraphMvp.selected) {
+  const readout = document.getElementById("nodeSelectionCountReadout");
+  if (!readout) {
+    return;
+  }
+  const count = nodeGraphSelectedNodeIds(selection).size;
+  const value = readout.querySelector("[data-selection-count-value]");
+  if (value) {
+    value.textContent = String(count);
+  }
+  readout.dataset.selectedModuleCount = String(count);
+  readout.setAttribute(
+    "aria-label",
+    `${count} selected module${count === 1 ? "" : "s"}`,
+  );
+}
+
 function nodeGraphSingleSelectedNodeId(selection = nodeGraphMvp.selected) {
   const selectedNodeIds = [...nodeGraphSelectedNodeIds(selection)];
   return selectedNodeIds.length === 1 ? selectedNodeIds[0] : null;
@@ -285,6 +302,7 @@ function pruneNodeGraphSelectionAfterPatch() {
 
 function renderNodeGraphSelection() {
   const selectedNodeIds = nodeGraphSelectedNodeIds();
+  syncNodeGraphSelectionCountReadout();
   for (const node of document.querySelectorAll(".dsp-node")) {
     node.classList.toggle("selected", selectedNodeIds.has(node.dataset.node));
   }

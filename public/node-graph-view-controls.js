@@ -86,6 +86,7 @@ function syncNodeGraphVisibleModuleGridHeights() {
     const heightGu = nodeGraphPatchNodeGridHeightUnits(patchNode);
     element.dataset.gridHeightGu = String(heightGu);
     element.style.setProperty("--node-grid-height-units", String(heightGu));
+    element.style.setProperty("--node-module-display-height-units", String(nodeGraphPatchNodeDisplayHeightUnits(patchNode)));
   }
 }
 
@@ -107,7 +108,7 @@ function renderNodeGraphModuleVisibilityToggles() {
     buttonsButton.removeAttribute("title");
   }
   if (scopesButton) {
-    scopesButton.textContent = scopesVisible ? "Hide Oscilloscopes" : "Show Oscilloscopes";
+    scopesButton.textContent = scopesVisible ? "Hide Displays" : "Show Displays";
     scopesButton.setAttribute("aria-pressed", scopesVisible ? "true" : "false");
     scopesButton.removeAttribute("title");
   }
@@ -571,6 +572,7 @@ function nodeGraphFloatingWindowPosition(element, x, y, options = {}) {
   if (!element) {
     return { left: 0, top: 0 };
   }
+  const wasHidden = element.hidden;
   element.hidden = false;
   const rect = element.getBoundingClientRect();
   const width = Math.max(1, Number(options.width) || rect.width || 1);
@@ -586,6 +588,7 @@ function nodeGraphFloatingWindowPosition(element, x, y, options = {}) {
   const maxTop = viewportHeight - visibleHeight;
   const left = Math.max(minLeft, Math.min(maxLeft, Number(x) || 0));
   const top = Math.max(minTop, Math.min(maxTop, Number(y) || 0));
+  element.hidden = wasHidden;
   return { left, top };
 }
 
@@ -611,8 +614,17 @@ function setNodeGraphVisibilityMenuOpen(open) {
   if (menu) {
     menu.hidden = !open;
     if (open) {
-      positionNodeGraphVisibilityMenuNearButton(menu);
+      applyNodeGraphVisibilityMenuSize(nodeGraphMvp.workspaceWindowStates?.visibilityMenu?.size);
+      if (
+        typeof positionNodeGraphWorkspaceWindowFromState !== "function" ||
+        !positionNodeGraphWorkspaceWindowFromState("visibilityMenu", menu)
+      ) {
+        positionNodeGraphVisibilityMenuNearButton(menu);
+      }
     }
+  }
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("visibilityMenu", menu, { open: Boolean(open) }, { status: false });
   }
   renderNodeGraphVisibilityMenuButton();
 }
@@ -633,10 +645,116 @@ function positionNodeGraphVisibilityMenu(menu, x, y) {
     return;
   }
   menu.style.position = "fixed";
-  const { left, top } = nodeGraphFloatingWindowPosition(menu, x, y);
+  const rect = menu.getBoundingClientRect();
+  const { left, top } = nodeGraphFloatingWindowPosition(menu, x, y, {
+    visibleWidth: rect.width,
+    visibleHeight: rect.height,
+  });
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
   menu.style.right = "auto";
+}
+
+function nodeGraphVisibilityMenuMinimumSize(menu = document.getElementById("nodeVisibilityMenu")) {
+  const sharedMinWidth = typeof nodeModuleActionsWindowDefaultSize !== "undefined" &&
+    Number.isFinite(Number(nodeModuleActionsWindowDefaultSize?.minWidth))
+    ? Number(nodeModuleActionsWindowDefaultSize.minWidth)
+    : 24;
+  const rootStyle = window.getComputedStyle(document.documentElement);
+  const sharedHeaderHeight = Number.parseFloat(
+    rootStyle.getPropertyValue("--node-floating-window-header-height"),
+  ) || 30;
+  const sharedButtonHeight = Number.parseFloat(
+    rootStyle.getPropertyValue("--node-floating-window-button-height"),
+  ) || 30;
+  const buttonCount = menu?.querySelectorAll?.(".node-visibility-menu-list button").length || 7;
+  const chromeHeight = 14;
+  return {
+    width: sharedMinWidth,
+    height: Math.ceil(chromeHeight + sharedHeaderHeight + (buttonCount * sharedButtonHeight)),
+  };
+}
+
+function nodeGraphVisibilityMenuSizeFromElement(menu = document.getElementById("nodeVisibilityMenu")) {
+  if (!menu) {
+    return null;
+  }
+  const rect = menu.getBoundingClientRect();
+  return {
+    width: Math.round(rect.width),
+  };
+}
+
+function applyNodeGraphVisibilityMenuSize(size = {}) {
+  const menu = document.getElementById("nodeVisibilityMenu");
+  if (!menu) {
+    return null;
+  }
+  const rect = menu.getBoundingClientRect();
+  const minimum = nodeGraphVisibilityMenuMinimumSize(menu);
+  const normalized = normalizeNodeGraphFloatingWindowSize(
+    {
+      width: Number(size.width) || rect.width,
+    },
+    {
+      minWidth: minimum.width,
+      maxWidth: 420,
+      minHeight: minimum.height,
+      maxHeight: 520,
+      width: 196,
+    },
+  );
+  menu.style.width = `${normalized.width}px`;
+  menu.style.minHeight = `${minimum.height}px`;
+  menu.style.removeProperty("height");
+  return normalized;
+}
+
+function beginNodeGraphVisibilityMenuResize(event) {
+  const menu = document.getElementById("nodeVisibilityMenu");
+  const drag = beginNodeGraphFloatingWindowResize(
+    event,
+    menu,
+    "visibilityMenuResizing",
+  );
+  if (drag && menu) {
+    const rect = menu.getBoundingClientRect();
+    const styleLeft = Number.parseFloat(menu.style.left);
+    const styleTop = Number.parseFloat(menu.style.top);
+    drag.startLeft = Number.isFinite(styleLeft) ? styleLeft : rect.left;
+    drag.startTop = Number.isFinite(styleTop) ? styleTop : rect.top;
+  }
+}
+
+function dragNodeGraphVisibilityMenuResize(event) {
+  const handled = dragNodeGraphFloatingWindowResize(
+    event,
+    "visibilityMenuResizing",
+    applyNodeGraphVisibilityMenuSize,
+    { height: false },
+  );
+  if (handled) {
+    const drag = nodeGraphMvp.visibilityMenuResizing;
+    const menu = document.getElementById("nodeVisibilityMenu");
+    if (drag && menu) {
+      menu.style.left = `${drag.startLeft}px`;
+      menu.style.top = `${drag.startTop}px`;
+      menu.style.right = "auto";
+    }
+  }
+}
+
+function endNodeGraphVisibilityMenuResize(event) {
+  endNodeGraphFloatingWindowResize(event, "visibilityMenuResizing", () => {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState(
+        "visibilityMenu",
+        document.getElementById("nodeVisibilityMenu"),
+        { size: nodeGraphVisibilityMenuSizeFromElement() },
+        { status: false },
+      );
+    }
+  });
 }
 
 function beginNodeGraphVisibilityMenuDrag(event) {
@@ -648,14 +766,17 @@ function beginNodeGraphVisibilityMenuDrag(event) {
     return;
   }
   const rect = menu.getBoundingClientRect();
+  const styleLeft = Number.parseFloat(menu.style.left);
+  const styleTop = Number.parseFloat(menu.style.top);
   nodeGraphMvp.visibilityMenuDragging = {
     handle: event.currentTarget,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    startLeft: Number.isFinite(styleLeft) ? styleLeft : rect.left,
+    startTop: Number.isFinite(styleTop) ? styleTop : rect.top,
     pointerId: event.pointerId ?? null,
   };
   event.currentTarget.classList.add("dragging");
-  positionNodeGraphVisibilityMenu(menu, rect.left, rect.top);
   if (event.pointerId !== undefined) {
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -671,11 +792,17 @@ function dragNodeGraphVisibilityMenu(event) {
   ) {
     return;
   }
-  positionNodeGraphVisibilityMenu(
-    document.getElementById("nodeVisibilityMenu"),
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
+  const menu = document.getElementById("nodeVisibilityMenu");
+  const next = nodeGraphFloatingWindowPosition(
+    menu,
+    drag.startLeft + event.clientX - drag.startClientX,
+    drag.startTop + event.clientY - drag.startClientY,
   );
+  if (menu) {
+    menu.style.left = `${next.left}px`;
+    menu.style.top = `${next.top}px`;
+    menu.style.right = "auto";
+  }
   event.preventDefault();
 }
 
@@ -692,6 +819,9 @@ function endNodeGraphVisibilityMenuDrag(event) {
     drag.handle.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.visibilityMenuDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("visibilityMenu", document.getElementById("nodeVisibilityMenu"), {}, { status: false });
+  }
 }
 
 function toggleNodeGraphVisibilityMenu() {
@@ -1582,7 +1712,7 @@ function toggleNodeGraphOscilloscopeVisibility() {
       closeNodeScopeContextMenu();
     }
   }
-  setNodeInteractionHelp(nodeGraphMvp.moduleOscilloscopesVisible ? "Oscilloscopes shown." : "Oscilloscopes hidden.");
+  setNodeInteractionHelp(nodeGraphMvp.moduleOscilloscopesVisible ? "Displays shown." : "Displays hidden.");
 }
 
 function toggleNodeGraphModuleSlidersVisibility() {

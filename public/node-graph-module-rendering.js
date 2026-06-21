@@ -218,9 +218,6 @@ function attachNodeGraphNodeEvents(node) {
       if (typeof scheduleNodeGraphFilterCurveDraw === "function") {
         scheduleNodeGraphFilterCurveDraw();
       }
-      if (typeof scheduleNodeGraphFormulaVisualDraw === "function") {
-        scheduleNodeGraphFormulaVisualDraw();
-      }
       scheduleNodeGraphLiveParameterSync();
     });
   }
@@ -263,51 +260,6 @@ function attachNodeGraphNodeEvents(node) {
   screenSpaceShaderSource?.addEventListener("input", (event) => {
     refreshNodeGraphScreenSpaceShaderBodyStatus(event.currentTarget.closest(".node-screen-space-shader-body"));
   });
-  node.querySelector("[data-formula-visual-apply]")?.addEventListener("click", applyNodeGraphFormulaVisualScript);
-  const formulaVisualPreset = node.querySelector("[data-formula-visual-preset]");
-  formulaVisualPreset?.addEventListener("pointerdown", (event) => {
-    event.stopPropagation();
-  });
-  formulaVisualPreset?.addEventListener("change", applyNodeGraphFormulaVisualPreset);
-  const formulaVisualSource = node.querySelector("[data-formula-visual-source]");
-  formulaVisualSource?.addEventListener("pointerdown", (event) => {
-    event.stopPropagation();
-  });
-  formulaVisualSource?.addEventListener("keydown", (event) => {
-    event.stopPropagation();
-  });
-}
-
-function applyNodeGraphFormulaVisualPreset(event) {
-  const body = event.currentTarget?.closest?.(".node-formula-visual-body");
-  const preset = event.currentTarget?.value || "custom";
-  const editor = body?.querySelector?.("[data-formula-visual-source]");
-  if (editor && Object.hasOwn(nodeGraphFormulaVisualPresetSources, preset)) {
-    editor.value = nodeGraphFormulaVisualPresetSources[preset];
-  }
-  return applyNodeGraphFormulaVisualScript(event);
-}
-
-function applyNodeGraphFormulaVisualScript(event) {
-  const body = event.currentTarget?.closest?.(".node-formula-visual-body");
-  const nodeId = body?.dataset?.node || "";
-  const source = body?.querySelector?.("[data-formula-visual-source]")?.value || "";
-  const targetNode = nodeGraphPatchNode(nodeId);
-  if (!targetNode || targetNode.type !== "formulaVisual") {
-    return false;
-  }
-  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-  const node = patch.nodes.find((candidate) => candidate.id === nodeId);
-  if (!node) {
-    return false;
-  }
-  node.formulaVisual = normalizeNodeGraphFormulaVisualScript({
-    ...node.formulaVisual,
-    source,
-  });
-  commitNodeGraphPatch(patch, { status: "formula visual applied" });
-  scheduleNodeGraphFormulaVisualDraw();
-  return true;
 }
 
 function applyNodeGraphScreenSpaceShaderScript(event) {
@@ -400,15 +352,12 @@ function nodeGraphModuleLayoutClassNames(type, definition, layout) {
   const layoutClasses = {
     clapPlugin: "clap-plugin-layout",
     filterCurve: "filter-curve-layout",
-    formulaVisual: "formula-visual-layout",
     graph: "graph-node-layout",
     image: "image-node-layout",
     keyboardController: "keyboard-controller-layout",
     knobWidget: "knob-widget-layout",
     led: "led-layout",
     macroControls: "macro-controls-layout",
-    moduleHome: "module-home-layout",
-    moduleShop: "module-shop-layout",
     patchCommand: "patch-command-layout",
     pitchModWheel: "pitch-mod-wheel-layout",
     screenSpaceShader: "screen-space-shader-layout",
@@ -446,9 +395,16 @@ function createNodeGraphModuleElement(type, node) {
   article.dataset.gridHeightGu = String(heightGu);
   article.style.setProperty("--node-grid-width-units", String(widthGu));
   article.style.setProperty("--node-grid-height-units", String(heightGu));
+  article.style.setProperty("--node-module-display-height-units", String(nodeGraphPatchNodeDisplayHeightUnits(patchNode)));
+  article.style.setProperty("--node-module-interface-controls-height-units", String(nodeGraphPatchNodeInterfaceControlsHeightUnits(patchNode)));
   if (layout === "knobWidget" && widthGu <= 1 && heightGu <= 1) {
     article.classList.add("knob-widget-compact");
   }
+  const patchNodeUi = nodeGraphEffectivePatchNodeUi(patchNode.ui);
+  article.classList.toggle("buttons-hidden", patchNodeUi.buttonsHidden);
+  article.classList.toggle("oscilloscope-hidden", patchNodeUi.oscilloscopeHidden);
+  article.classList.toggle("sliders-hidden", patchNodeUi.slidersHidden);
+  article.classList.toggle("title-hidden", patchNodeUi.titleHidden);
 
   if (layout === "led") {
     const ledFace = createNodeGraphLedFace(node, type);
@@ -483,15 +439,6 @@ function createNodeGraphModuleElement(type, node) {
     const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
     ioSection.append(inputColumn || document.createElement("div"));
     ioSection.append(document.createElement("div"));
-    article.append(ioSection);
-  } else if (layout === "formulaVisual") {
-    article.append(createNodeGraphFormulaVisualBody(node));
-    const ioSection = document.createElement("div");
-    ioSection.className = "dsp-node-io-section";
-    const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
-    const outputColumn = createNodeGraphIoColumn(node, type, outputPorts, "output");
-    ioSection.append(inputColumn || document.createElement("div"));
-    ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
   } else if (definition.layout === "canvas") {
     const canvasBody = createNodeGraphCanvasBody(node);
@@ -561,10 +508,6 @@ function createNodeGraphModuleElement(type, node) {
     ioSection.append(inputColumn || document.createElement("div"));
     ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
-  } else if (definition.layout === "moduleShop") {
-    article.append(createNodeGraphModuleShopBody(node));
-  } else if (definition.layout === "moduleHome") {
-    article.append(createNodeGraphModuleHomeBody(node));
   } else if (definition.layout === "patchCommand") {
     article.append(createNodeGraphPatchCommandBody(node));
     const ioSection = document.createElement("div");
@@ -595,7 +538,9 @@ function createNodeGraphModuleElement(type, node) {
     ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
   } else if (definition.layout === "filterCurve") {
-    article.append(createNodeGraphFilterCurveDisplay(node, type));
+    if (!patchNodeUi.oscilloscopeHidden) {
+      article.append(createNodeGraphFilterCurveDisplay(node, type));
+    }
 
     const ioSection = document.createElement("div");
     ioSection.className = "dsp-node-io-section";
@@ -605,9 +550,8 @@ function createNodeGraphModuleElement(type, node) {
     ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
   } else {
-    const oscilloscopeHidden = normalizeNodeGraphPatchNodeUi(patchNode.ui).oscilloscopeHidden;
     let scopeSection = null;
-    if (!oscilloscopeHidden) {
+    if (!patchNodeUi.oscilloscopeHidden) {
       scopeSection = createNodeGraphModuleScopeSection(node, type);
       article.append(scopeSection);
     }

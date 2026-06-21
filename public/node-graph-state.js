@@ -5,7 +5,7 @@ let nodeMetadataKindTemplates = Object.freeze(Object.fromEntries(
   ]),
 ));
 
-const nodeGraphMvp = {
+var nodeGraphMvp = {
   activeNodes: new Set(nodeGraphDefaultPatch.nodes.map((node) => node.id)),
   audioContext: null,
   badValueMonitor: {
@@ -119,7 +119,6 @@ const nodeGraphMvp = {
   moduleActionResizing: null,
   moduleActionWindowSize: null,
   moduleActionWindowPosition: null,
-  lastModuleActionTargetNode: null,
   moduleCatalogVisibility: defaultNodeGraphModuleCatalogVisibility(),
   workspaceWindowStates: {},
   moduleButtonsVisible: false,
@@ -145,7 +144,6 @@ const nodeGraphMvp = {
   scopeBloomEnabled: false,
   moduleStoreDepartment: "",
   moduleStoreDepartmentSearch: "",
-  moduleStoreGridColumns: 4,
   sampleBuffers: new Map(),
   sampleLoadErrors: new Map(),
   sampleRuntimeStatus: new Map(),
@@ -228,6 +226,7 @@ const nodeGraphMvp = {
   savedPatchBankIndex: 0,
   savedPatchBankName: "",
   savedPatchGridColumns: 3,
+  savedPatchExplorerView: "banks",
   selectedSavedPatchProgram: 0,
   savedPatchTagFilters: [],
   savedPatchEntries: [],
@@ -274,7 +273,6 @@ const nodeGraphMvp = {
     visualBloom: 0,
     visualBrightness: 0,
     visualGlow: 0,
-    formulaVisual: {},
     x: 0,
     y: 0,
   },

@@ -1,5 +1,5 @@
 const nodeUiDevDefaultSettingsUrl = "./public/presets/useruisettings.json";
-const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v8";
+const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v9";
 
 const nodeGraphWorkspaceWindowStateKeys = Object.freeze([
   "commandCenter",
@@ -8,6 +8,7 @@ const nodeGraphWorkspaceWindowStateKeys = Object.freeze([
   "oscilloscopeSettings",
   "patchExplorer",
   "moduleBrowser",
+  "visibilityMenu",
   "uiSettings",
   "uiDev",
 ]);
@@ -19,6 +20,7 @@ const nodeGraphWorkspaceWindowElements = Object.freeze({
   oscilloscopeSettings: "nodeGlobalScopeMenu",
   patchExplorer: "nodeSavedPatchesWindow",
   moduleBrowser: "nodeModuleShopView",
+  visibilityMenu: "nodeVisibilityMenu",
   uiSettings: "nodeUserUiSettingsPanel",
   uiDev: "nodeUiDevHelper",
 });
@@ -111,6 +113,26 @@ function normalizeNodeGraphWorkspaceViewState(view = {}) {
   };
 }
 
+function normalizeNodeGraphModuleStoreDepartmentState(value = "") {
+  const department = String(value || "").trim();
+  if (!department) {
+    return "";
+  }
+  if (
+    Array.isArray(window.nodeGraphModuleStoreDepartments) &&
+    window.nodeGraphModuleStoreDepartments.includes(department)
+  ) {
+    return department;
+  }
+  if (
+    typeof nodeGraphModuleStoreDepartments !== "undefined" &&
+    nodeGraphModuleStoreDepartments.includes?.(department)
+  ) {
+    return department;
+  }
+  return "";
+}
+
 function nodeGraphWorkspaceWindowPositionFromElement(element) {
   if (!element) {
     return null;
@@ -185,6 +207,9 @@ function applyNodeGraphWorkspaceWindowStateToElement(key) {
   }
   if (key === "moduleBrowser" && typeof applyNodeGraphModuleShopWindowSize === "function") {
     applyNodeGraphModuleShopWindowSize(state.size);
+  }
+  if (key === "visibilityMenu" && typeof applyNodeGraphVisibilityMenuSize === "function") {
+    applyNodeGraphVisibilityMenuSize(state.size);
   }
   if (key === "metaparameters" && typeof applyNodeMetadataPopoverSize === "function") {
     applyNodeMetadataPopoverSize(state.size);
@@ -354,10 +379,14 @@ function normalizeNodeUiDevSettings(settings = {}) {
       zoom: view.workspaceZoom ?? nodeGraphMvp.zoom,
     },
   );
+  const moduleStoreDepartment = normalizeNodeGraphModuleStoreDepartmentState(
+    view.moduleStoreDepartment ?? nodeGraphMvp.moduleStoreDepartment,
+  );
   let workingPatch = null;
   if (view.workingPatch && typeof view.workingPatch === "object") {
     try {
       workingPatch = cloneNodeGraphPatch(validateNodeGraphPatch(view.workingPatch));
+      workingPatch = sanitizeNodeUiDevWorkingPatchForStartup(workingPatch);
     } catch {
       workingPatch = null;
     }
@@ -377,6 +406,7 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const savedPatchBankName = typeof nodeGraphOneLineText === "function"
     ? nodeGraphOneLineText(view.savedPatchBankName ?? nodeGraphMvp.savedPatchBankName ?? "")
     : String(view.savedPatchBankName ?? nodeGraphMvp.savedPatchBankName ?? "").trim();
+  const savedPatchExplorerView = view.savedPatchExplorerView === "patches" ? "patches" : "banks";
   return {
     format: {
       kind: "soemdsp-sandbox-user-ui-settings",
@@ -424,9 +454,11 @@ function normalizeNodeUiDevSettings(settings = {}) {
       workspaceWindowStatesVersion: 1,
       workspaceWindowStates,
       workspaceView,
+      moduleStoreDepartment,
       savedPatchBankIndex,
       savedPatchBankName,
       savedPatchGridColumns,
+      savedPatchExplorerView,
       workingPatch,
       currentSavedPatchFilename,
       patchDirtyState,
@@ -499,6 +531,8 @@ function readNodeUiDevSettingsFromControls() {
         pan: nodeGraphMvp.pan,
         zoom: typeof nodeGraphZoom === "function" ? nodeGraphZoom() : nodeGraphMvp.zoom,
       }),
+      moduleStoreDepartment: normalizeNodeGraphModuleStoreDepartmentState(nodeGraphMvp.moduleStoreDepartment),
+      savedPatchExplorerView: nodeGraphMvp.savedPatchExplorerView === "patches" ? "patches" : "banks",
       workingPatch: nodeGraphMvp.workingPatch
         ? cloneNodeGraphPatch(nodeGraphMvp.workingPatch)
         : null,
@@ -594,6 +628,9 @@ function applyNodeUiDevSettings(settings) {
   const workspaceView = normalizeNodeGraphWorkspaceViewState(normalized.view.workspaceView);
   nodeGraphMvp.pan = { ...workspaceView.pan };
   nodeGraphMvp.zoom = workspaceView.zoom;
+  nodeGraphMvp.moduleStoreDepartment = normalizeNodeGraphModuleStoreDepartmentState(
+    normalized.view.moduleStoreDepartment,
+  );
   nodeGraphMvp.savedPatchBankIndex = typeof normalizeNodeGraphSavedPatchBankIndex === "function"
     ? normalizeNodeGraphSavedPatchBankIndex(normalized.view.savedPatchBankIndex)
     : Math.max(0, Math.min(127, Math.round(Number(normalized.view.savedPatchBankIndex) || 0)));
@@ -603,6 +640,7 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.savedPatchGridColumns = typeof normalizeNodeGraphSavedPatchGridColumns === "function"
     ? normalizeNodeGraphSavedPatchGridColumns(normalized.view.savedPatchGridColumns)
     : Math.max(1, Math.min(16, Math.round(Number(normalized.view.savedPatchGridColumns) || 3)));
+  nodeGraphMvp.savedPatchExplorerView = normalized.view.savedPatchExplorerView === "patches" ? "patches" : "banks";
   nodeGraphMvp.workingPatch = normalized.view.workingPatch
     ? cloneNodeGraphPatch(normalized.view.workingPatch)
     : null;
@@ -660,6 +698,26 @@ function loadNodeUiDevLocalDefaultSettings() {
   }
 }
 
+function sanitizeNodeUiDevWorkingPatchForStartup(patch) {
+  if (!patch || typeof patch !== "object") {
+    return null;
+  }
+  if (Array.isArray(patch.nodes)) {
+    patch = {
+      ...patch,
+      nodes: patch.nodes.filter((node) => !(node?.type === "moduleHome" || node?.type === "moduleShop")),
+    };
+  }
+  if (
+    typeof nodeGraphMissingSampleAssets === "function" &&
+    typeof cloneNodeGraphPatch === "function" &&
+    nodeGraphMissingSampleAssets(patch).length
+  ) {
+    return cloneNodeGraphPatch(nodeGraphDefaultPatch);
+  }
+  return patch;
+}
+
 function loadNodeUiDevBundledDefaultSettings() {
   let bundled = window.nodeUiDevBundledDefaultSettings;
   if (!bundled) {
@@ -687,8 +745,79 @@ function saveNodeUiDevLocalDefaultSettings(text) {
     window.localStorage.setItem(nodeUiDevDefaultSettingsStorageKey, text);
     return true;
   } catch {
+    try {
+      window.localStorage.removeItem(nodeUiDevDefaultSettingsStorageKey);
+    } catch {
+      // If storage is blocked entirely, the server-side settings file remains the fallback.
+    }
     return false;
   }
+}
+
+function clearNodeUserStartupLocalStorage() {
+  if (!nodeGraphLocalDefaultPresetAllowed()) {
+    return 0;
+  }
+  const prefixes = [
+    "soemdsp-sandbox",
+    "soemdsp-sandbox-",
+    "soemdsp-sandbox.",
+  ];
+  const exactKeys = [
+    "nodeGraphClapHostBaseUrl",
+    "signalPlotSettings",
+  ];
+  let removed = 0;
+  try {
+    const keys = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (
+        key &&
+        (prefixes.some((prefix) => key.startsWith(prefix)) || exactKeys.includes(key))
+      ) {
+        keys.push(key);
+      }
+    }
+    for (const key of keys) {
+      window.localStorage.removeItem(key);
+      removed += 1;
+    }
+  } catch {
+    // Storage can be blocked in some browser contexts. The bundled preset still
+    // remains the startup fallback.
+  }
+  return removed;
+}
+
+function clearNodeUserStartupRuntimeState() {
+  nodeGraphMvp.workingPatch = null;
+  nodeGraphMvp.currentSavedPatchFilename = "";
+  nodeGraphMvp.patchDirtyState = "untouched";
+  nodeGraphMvp.workspaceWindowStates = closeNodeGraphWorkspaceWindowStates({});
+  nodeGraphMvp.pan = { x: 0, y: 0 };
+  nodeGraphMvp.zoom = 1;
+  nodeGraphMvp.moduleStoreDepartment = "";
+  nodeGraphMvp.moduleScopeSettings = {};
+  nodeGraphMvp.savedPatchExplorerView = "banks";
+  if (typeof applyNodeGraphWorkspaceWindowStates === "function") {
+    applyNodeGraphWorkspaceWindowStates();
+  }
+}
+
+function clearNodeUserStartupState() {
+  const removed = clearNodeUserStartupLocalStorage();
+  clearNodeUserStartupRuntimeState();
+  if (
+    typeof serializeNodeUiDevSettings === "function" &&
+    typeof saveNodeUiDevLocalDefaultSettings === "function"
+  ) {
+    saveNodeUiDevLocalDefaultSettings(serializeNodeUiDevSettings());
+  }
+  setNodeUiDevSettingsStatus(`startup cleared (${removed} local keys)`, true);
+  window.setTimeout(() => {
+    window.location.reload();
+  }, 120);
 }
 
 let nodeGraphWorkspaceViewAutosaveTimer = 0;
@@ -885,4 +1014,14 @@ async function handleSaveNodeUserUiSettingsDefaultClick(event) {
   if (!saved) {
     event.currentTarget.textContent = "Save UI Settings";
   }
+}
+
+function handleClearNodeUserStartupStateClick(event) {
+  if (!confirmNodeGraphDefaultButtonClick(
+    event.currentTarget,
+    () => setNodeUiDevSettingsStatus("click Confirm Clear Startup for new-user startup", true),
+  )) {
+    return;
+  }
+  clearNodeUserStartupState();
 }

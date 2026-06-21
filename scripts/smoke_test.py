@@ -524,7 +524,6 @@ REQUIRED_SHELL_IDS = {
     "nodeModuleShopDragHandle",
     "nodeModuleDepartmentSearch",
     "nodeModuleDepartmentSearchShell",
-    "nodeModuleShopFitInput",
     "nodeModuleDepartmentList",
     "nodeModuleGroups",
     "nodeModuleGroupList",
@@ -548,6 +547,8 @@ REQUIRED_SHELL_IDS = {
     "patchTagsValue",
     "patchVisualModeValue",
     "downloadNodeGraphScriptButton",
+    "metadataAdvancedToggle",
+    "metadataAliasValue",
     "metadataDefaultValue",
     "metadataDivideChoicesValue",
     "metadataDisplayChoicesValue",
@@ -556,6 +557,9 @@ REQUIRED_SHELL_IDS = {
     "metadataMaxDigitsValue",
     "metadataNonlinearSliderValue",
     "metadataChoicesValue",
+    "metadataCloseDiscard",
+    "metadataClosePrompt",
+    "metadataCloseSave",
     "metadataMaxValue",
     "metadataMidLabel",
     "metadataMidValue",
@@ -580,6 +584,8 @@ REQUIRED_SHELL_IDS = {
     "metadataScriptStatus",
     "metadataScriptTarget",
     "metadataScriptToDesktop",
+    "metadataSaveFieldsButton",
+    "metadataRestoreFieldsButton",
     "metadataWraparoundValue",
     "metadataStepValue",
     "metadataUnitValue",
@@ -3431,6 +3437,15 @@ def require_node_graph_mvp_contract() -> None:
         for label, source_text in overdraw_removed_sources.items():
             require(snippet not in source_text, f"removed overdraw artifact still present in {label}: {snippet}")
 
+    default_ui_settings_payload = json.loads(DEFAULT_UI_SETTINGS.read_text(encoding="utf-8-sig"))
+    default_ui_view = default_ui_settings_payload.get("view", {})
+    require(default_ui_view.get("workingPatch") is None, "default ui settings should not embed a working patch")
+    require(default_ui_view.get("patchDirtyState") == "untouched", "default ui settings should start untouched")
+    require(
+        all(not entry.get("open") for entry in default_ui_view.get("workspaceWindowStates", {}).values()),
+        "default ui settings should not open floating windows on first load",
+    )
+
     require(
         '<script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>' in index_source,
         "color standards script tag missing from index",
@@ -3761,10 +3776,6 @@ def require_node_graph_mvp_contract() -> None:
             graph_contract_sources["index"],
             [
                 "nodeSceneGraphControls",
-                "nodeSceneTextBoxHeightControls",
-                "nodeSceneTextBoxHeightDecrease",
-                "nodeSceneTextBoxHeightValue",
-                "nodeSceneTextBoxHeightIncrease",
                 "nodeSceneGraphCursorX",
                 "nodeSceneGraphPreviousNode",
                 "nodeSceneGraphNodeIndex",
@@ -3918,12 +3929,6 @@ def require_node_graph_mvp_contract() -> None:
             [
                 "const targetIsGraphType = nodeGraphModuleIsGraphType(targetNode?.type)",
                 "graphControls.hidden = !(moduleMode && !multiModuleMode && targetIsGraphType)",
-                "const canResizeHeight = moduleMode && hasModuleActionTarget",
-                "textBoxHeightControls.hidden = !canResizeHeight",
-                "`${nodeGraphModuleHeightOffsetLabel(heightOffsetGu)} height`",
-                "textBoxHeightValue.textContent = multiModuleMode ? `${selectedNodeIds.size} modules` : `${nodeGraphModuleHeightOffsetLabel(heightOffsetGu)} height`",
-                "Make this module one grid unit shorter.",
-                "Make this module one grid unit taller.",
                 "syncNodeGraphGraphControls(nodeGraphGraphForNode(targetNode))",
                 "nodeSceneGraphCursorX",
                 "nodeSceneGraphPreviousNode",
@@ -3963,10 +3968,6 @@ def require_node_graph_mvp_contract() -> None:
                 "copyNodeGraphGraphFromContext",
                 "nodeSceneGraphPaste",
                 "pasteNodeGraphGraphFromContext",
-                "nodeSceneTextBoxHeightDecrease",
-                "nodeSceneTextBoxHeightIncrease",
-                "adjustNodeGraphModuleHeightFromContext(-1)",
-                "adjustNodeGraphModuleHeightFromContext(1)",
                 "nodeSceneGraphPreviousNode",
                 "selectNodeGraphGraphNodeOffsetFromContext(-1)",
                 "nodeSceneGraphNextNode",
@@ -3998,11 +3999,10 @@ def require_node_graph_mvp_contract() -> None:
                 "event.preventDefault()",
                 "deleteSelectedNodeGraphItem()",
                 "function nodeGraphCanvasScriptSourceWithGridUnits(source, widthGu, heightGu)",
-                "function resizeNodeGraphCanvasModuleOnGrid(patchNode, axis, delta)",
+                "function resizeNodeGraphCanvasModuleOnGrid(patchNode, delta)",
                 'patchNode.type === "canvas"',
                 "delete patchNode.widthGu;",
                 "delete patchNode.heightGu;",
-                "patchNode.heightOffsetGu = nextOffsetGu;",
             ],
         ),
         (
@@ -4010,7 +4010,7 @@ def require_node_graph_mvp_contract() -> None:
             "\n".join([graph_contract_sources["index"], graph_contract_sources["state"], graph_contract_sources["runtime"]]),
             [
                 "ellipsoid-xy-1",
-                "height-widget-registry-1",
+                "clear-startup-1",
                 "node-graph-graph-utils.js",
                 "graphNodeDragging: null",
                 "graphClipboard: null",
@@ -4087,7 +4087,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=formula-visual-params-1'],
+            ['node-live-audio-worklet.js?v=module-home-actions-1'],
         ),
     ]:
         for snippet in snippets:
@@ -5889,9 +5889,9 @@ def require_node_graph_mvp_contract() -> None:
         "<span>Load</span><span>Patch</span>",
         "<span>View</span><span>Script</span>",
         "<span>Save</span><span>Patch</span>",
-        "<span>Update</span><span>Default</span>",
+        "<span>Save</span><span>Init</span>",
         "Patch Utility",
-        "Raw patch JSON for load, save, defaults, and recovery.",
+        "Raw patch JSON for load, save, init, and recovery.",
         "Patch script editor actions",
         "Update Default",
         ">Copy</button>",
@@ -5911,10 +5911,10 @@ def require_node_graph_mvp_contract() -> None:
         "nodeCurrentSavedPatchButton",
         "nodePatchInitButton",
         "nodePatchSaveButton",
+        "nodePatchShareLinkButton",
         "nodeSceneOpenSavedPatches",
         "nodeSavedPatchesWindow",
         "nodeSavedPatchesWindowHeading",
-        "nodeSavedPatchesFitInput",
         "nodeSavedPatchesCopyPatch",
         "nodeSavedPatchesPastePatch",
         "nodeSavedPatchesResizeHandle",
@@ -5940,7 +5940,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeUiDevModularShaderEnabled",
         "modular shader glow",
         "nodeUiDevScopeBloomEnabled",
-        "scope bloom glow",
+        "display bloom glow",
         "nodeUserUiSettingsButton",
         "<span>UI</span><span>Settings</span>",
         "nodeDonateFiveButton",
@@ -5993,6 +5993,10 @@ def require_node_graph_mvp_contract() -> None:
         "modular background color",
         "nodeUiDevSettingsHeaderTopRatio",
         "nodeUiDevSettingsHeaderPadding",
+        "nodeUiDevFloatingWindowHeaderHeight",
+        "nodeUiDevFloatingWindowHeaderHeightValue",
+        "floating window header height",
+        "nodeUiDevFloatingWindowHeaderHeightValue\" for=\"nodeUiDevFloatingWindowHeaderHeight\">30px",
         "nodeUiDevModuleTitleFont",
         "nodeUiDevModuleTitleFontValue",
         "module title font",
@@ -6122,6 +6126,10 @@ def require_node_graph_mvp_contract() -> None:
         "Visibility",
         "node-toolbar-subline",
         "nodeVisibilityMenu",
+        "nodeVisibilityMenuDragHandle",
+        "Move visibility menu",
+        "nodeVisibilityMenuResizeHandle",
+        "Resize visibility menu",
         "nodeVisibilityMenuClose",
         "Workspace visibility",
         "nodeGridToggleButton",
@@ -6131,21 +6139,21 @@ def require_node_graph_mvp_contract() -> None:
         "nodeModuleButtonsToggleButton",
         "Show Module Buttons",
         "nodeOscilloscopeToggleButton",
-        "Show Oscilloscopes",
+        "Show Displays",
         "nodeSceneOpenModuleActions",
         "nodeSceneOpenMetaparameters",
         "nodeSceneOpenOscilloscopeSettings",
         "nodeSceneOpenUiSettings",
         "nodeSceneOpenPostProcessing",
         "scene-context-window-button",
-        "floating-window-drag-area-1",
-        "required-assets-1",
+        "clear-startup-1",
+        "share-link-1",
         "wire-feedback-route-1",
         "module-home-actions-1",
         "Module Actions",
         "Metaparameters",
-        "Oscilloscope Settings",
-        "timing-flat-controls-1",
+        "Display Settings",
+        "display-language-1",
         "nodeMasterScopeLineThickness",
         "nodeMasterScopeDotCore1Enabled",
         "nodeMasterScopeDotCore1Size",
@@ -6176,11 +6184,11 @@ def require_node_graph_mvp_contract() -> None:
         'aria-pressed="false">Dot 1</button>',
         'aria-pressed="true">Dot 2</button>',
         "nodeMasterScopeDotPreview",
-        "Generated oscilloscope dot 1 image preview",
-        "Generated oscilloscope dot 2 image preview",
-        "Generated oscilloscope combined dot image preview",
+        "Generated display dot 1 image preview",
+        "Generated display dot 2 image preview",
+        "Generated display combined dot image preview",
         "nodeMasterScopeBackgroundColor",
-        "oscilloscope background",
+        "display background",
         "nodeGlobalScopeMenu",
         "node-scope-global-settings",
         "Global Settings",
@@ -6227,6 +6235,9 @@ def require_node_graph_mvp_contract() -> None:
         "nodeModuleScopeCanvas",
         "nodeSelectionMarquee",
         "node-selection-marquee",
+        "nodeSelectionCountReadout",
+        "node-selection-count-readout",
+        "data-selection-count-value",
         "nodePalette",
         "nodeSceneContextMenu",
         "nodeModuleShopView",
@@ -6235,20 +6246,15 @@ def require_node_graph_mvp_contract() -> None:
         "nodeModuleShopResizeHandle",
         "nodeModuleDepartmentSearch",
         "nodeModuleDepartmentBack",
+        "Back to module categories",
+        "&larr;",
         "nodeModuleDepartmentTitle",
-        "nodeModuleShopFitControl",
-        "nodeModuleShopFitInput",
-        "nodeModuleHomeShelfShell",
+            "nodeModuleHomeShelfShell",
         "nodeModuleHomeShelf",
         "nodeModuleDepartmentList",
-        "nodeModuleDeveloperListShell",
-        "nodeModuleDeveloperList",
         "nodeModuleGroups",
         "nodeModuleGroupList",
-        "unfinished modules",
         "Search modules...",
-        "node-module-store-grid",
-        "Module buttons fit horizontally",
         "nodeSceneOpenModuleBrowser",
         "scene-context-window-button",
         "Patch Explorer",
@@ -6265,6 +6271,10 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneWidthDecrease",
         "nodeSceneWidthValue",
         "nodeSceneWidthIncrease",
+        "nodeSceneDisplayHeightControls",
+        "nodeSceneDisplayHeightDecrease",
+        "nodeSceneDisplayHeightValue",
+        "nodeSceneDisplayHeightIncrease",
         "nodeIndividualScopeControls",
         "nodeSceneScopeControls",
         "nodeModuleScopeLightCanvas",
@@ -6290,10 +6300,6 @@ def require_node_graph_mvp_contract() -> None:
         'data-scope-control="oscillatorTraceMode"',
         'data-scope-control="outputTraceMode"',
         "freq reset",
-        "nodeSceneTextBoxHeightControls",
-        "nodeSceneTextBoxHeightDecrease",
-        "nodeSceneTextBoxHeightValue",
-        "nodeSceneTextBoxHeightIncrease",
         "nodeSceneTextBoxTextSizeControls",
         "nodeSceneTextBoxTextSizeDecrease",
         "nodeSceneTextBoxTextSizeValue",
@@ -6302,12 +6308,11 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneTextBoxTextInput",
         "nodeSceneToggleButtons",
         "nodeSceneToggleOscilloscope",
+        "nodeSceneToggleSliders",
         "nodeSceneToggleTitle",
         "nodeSceneImageControls",
-        "nodeSceneImageLoad",
         "nodeSceneImageSave",
         "nodeSceneImageRefresh",
-        "nodeSceneImageFileInput",
         "nodeSceneTextBoxControls",
         "nodeSceneTextBoxSingleLine",
         "nodeSceneTextBoxMultiline",
@@ -6319,6 +6324,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneTextBoxVerticalAlign",
         "nodeSceneTextBoxVerticalAlignValue",
         "nodeSceneDeleteModule",
+        '<button id="nodeSceneDeleteModule" class="scene-context-danger" type="button" role="menuitem" hidden>\n          <span>Delete</span>\n        </button>',
         "Delete",
         "nodeModuleActionsWindow",
         "nodeModuleActionsWindowHeading",
@@ -6335,7 +6341,7 @@ def require_node_graph_mvp_contract() -> None:
         "Seconds",
         "toggleDebugButton",
         '<body class="debug-collapsed node-boot-loading">',
-        '<script src="./public/boot-loading.js?v=minimal-loading-screen-1"></script>',
+        '<script src="./public/boot-loading.js?v=loading-watchdog-1"></script>',
         "node-boot-loading-screen",
         'aria-label="loading"',
         "nodeBootLoadingLabel",
@@ -6352,15 +6358,15 @@ def require_node_graph_mvp_contract() -> None:
         "Close",
         'aria-pressed="false">Show Evidence</button>',
         "nodeParameterMetadataPopover",
-        "origin-marker-uidev-1",
+        "floating-window-header-height-1",
         "nodeMissingSampleAssetsDialog",
         "Patch Assets Required",
         "Missing Samples",
         "nodeMissingSampleAssetsList",
         "nodeMissingSampleAssetsClose",
         "dismissNodeGraphMissingSampleAssetsDialog()",
-        "missing-sample-dismiss-1",
-        "required-assets-1",
+        "interface-controls-height-1",
+        "share-link-1",
         "wire-feedback-route-1",
         "module-home-actions-1",
         "ui-window-resize-limits-2",
@@ -6397,10 +6403,8 @@ def require_node_graph_mvp_contract() -> None:
         "metadataPopoverDragHandle",
         "metadataPopoverSubtitle",
         "Set Defaults from Kind",
-        "Module Browser",
         "nodeModuleDepartmentList",
-        "nodeModuleShopFitInput",
-        "node-live-toggle-palette",
+            "node-live-toggle-palette",
         "<span>Input</span>",
         "<span>Output</span>",
         "<span>(Off)</span>",
@@ -6446,7 +6450,7 @@ def require_node_graph_mvp_contract() -> None:
         'data-scope-gpu-debug="summary"',
         "main fps",
         "heap",
-        "scope fps",
+        "display fps",
         "node-settings-script-action-group",
         "Script actions",
         "node-settings-feedback-action-group",
@@ -6553,7 +6557,8 @@ def require_node_graph_mvp_contract() -> None:
     ]
     require(
         command_center_button_positions == sorted(command_center_button_positions)
-        and ">Metaparameter</button>" in scene_context_source,
+        and '<span class="scene-context-window-button-label">Metaparameter</span>' in scene_context_source
+        and "scene-context-window-button-icon" in scene_context_source,
         "command center buttons should use the requested order and singular Metaparameter label",
     )
     require(
@@ -6625,18 +6630,20 @@ def require_node_graph_mvp_contract() -> None:
         and 'node-saved-patches-actions' not in patch_explorer_source
         and 'node-saved-patches-slot-editor' not in patch_explorer_source
         and 'node-saved-patches-tag-filter' not in patch_explorer_source
-        and 'node-saved-patches-command-row' not in patch_explorer_source,
-        "patch explorer should be patch-grid only without edit/search/bank controls",
+        and 'node-saved-patches-command-row' not in patch_explorer_source
+        and 'nodeSavedPatchesFitInput' not in patch_explorer_source
+        and '>Rows<' not in patch_explorer_source,
+        "patch explorer should be patch-list only without edit/search/bank/rows controls",
     )
     patch_control_source = index_source[
         index_source.index('class="node-sample-identity"'):
         index_source.index('id="audioTitle"')
     ]
     require(
-        'class="node-patch-clipboard-controls node-saved-patches-title-actions"' in patch_explorer_source
+        'class="node-patch-clipboard-controls node-saved-patches-clipboard-row"' in patch_explorer_source
         and 'id="nodeSavedPatchesCopyPatch" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>' in patch_explorer_source
         and 'id="nodeSavedPatchesPastePatch" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>' in patch_explorer_source,
-        "patch copy/paste controls should live in the patch explorer title bar",
+        "patch copy/paste controls should live in their own patch explorer button row",
     )
     require(
         'data-patch-header-info-field="name"' in patch_control_source
@@ -6650,10 +6657,31 @@ def require_node_graph_mvp_contract() -> None:
     require(
         "patches.filter((patch) => patch?.filename)" in script_sources["./public/node-graph-file-actions.js"]
         and "empty.textContent = \"No saved patches\"" not in script_sources["./public/node-graph-file-actions.js"]
+        and "function nodeGraphSavedPatchBankGroups(patches = [])" in script_sources["./public/node-graph-file-actions.js"]
+        and "row.className = \"node-saved-patch-bank-row\"" in script_sources["./public/node-graph-file-actions.js"]
+        and "row.addEventListener(\"click\", () => openNodeGraphSavedPatchBank(group.bank))" in script_sources["./public/node-graph-file-actions.js"]
+        and "back.addEventListener(\"click\", showNodeGraphSavedPatchBanks)" in script_sources["./public/node-graph-file-actions.js"]
         and "bank.className = \"node-demo-patch-bank\"" in script_sources["./public/node-graph-file-actions.js"]
         and "row.append(bank, name)" in script_sources["./public/node-graph-file-actions.js"]
         and "node-demo-patch-tags" not in script_sources["./public/node-graph-file-actions.js"],
-        "patch explorer should render saved patch cards only and stay blank when empty",
+        "patch explorer should render banks first, drill into saved patches, and stay blank when empty",
+    )
+    patch_list_style = style_source[
+        style_source.index(".node-demo-patch-list {"):
+        style_source.index(".node-demo-patch-status {")
+    ]
+    require(
+        "grid-template-columns: minmax(0, 1fr);" in patch_list_style
+        and "grid-template-columns: repeat(var(--node-saved-patch-columns" not in patch_list_style
+        and "aspect-ratio: auto;" in patch_list_style
+        and "min-height: 34px;" in patch_list_style,
+        "patch explorer should use one-column descriptive rectangles instead of grid tiles",
+    )
+    require(
+        ".node-saved-patch-bank-row" in style_source
+        and ".node-saved-patch-bank-back" in style_source
+        and "grid-template-columns: minmax(0, 1fr) 4ch;" in style_source,
+        "patch explorer bank rows should match the compact category-row pattern",
     )
     patch_active_style = style_source[
         style_source.index(".node-demo-patch-row.active {"):
@@ -6701,8 +6729,30 @@ def require_node_graph_mvp_contract() -> None:
         "module cards should not render a separate plus/add action strip",
     )
     require(
-        "developerList.append(createNodeGraphModuleStoreButton(entry))" not in script_sources["./public/node-graph-module-store.js"],
-        "unfinished developer modules should stay hidden from the module browser UI",
+        "entry.implemented &&" not in script_sources["./public/node-graph-module-store.js"][
+            script_sources["./public/node-graph-module-store.js"].index("function nodeGraphModuleStorePublicEntriesByDepartment"):
+            script_sources["./public/node-graph-module-store.js"].index("const nodeGraphModuleShopWindowDefaultSize")
+        ]
+        and 'card.classList.add("under-construction")' in script_sources["./public/node-graph-module-store.js"]
+        and 'status.textContent = "Under construction"' in script_sources["./public/node-graph-module-store.js"]
+        and '.scene-context-store-card.under-construction' in style_source,
+        "unfinished modules should render inside their category as disabled under-construction cards",
+    )
+    require(
+        ".sort(([a], [b]) => {" in script_sources["./public/node-graph-module-store.js"]
+        and "nodeGraphModuleStoreDepartments.indexOf(a)" in script_sources["./public/node-graph-module-store.js"],
+        "module category rows should follow the explicit department order",
+    )
+    require(
+        "const nodeGraphModuleStoreVisualGroups = Object.freeze([" in script_sources["./public/node-graph-module-store.js"]
+        and 'label: "Generate"' in script_sources["./public/node-graph-module-store.js"]
+        and 'label: "Process"' in script_sources["./public/node-graph-module-store.js"]
+        and 'label: "Interact"' in script_sources["./public/node-graph-module-store.js"]
+        and 'label: "Memory"' in script_sources["./public/node-graph-module-store.js"]
+        and "renderNodeGraphModuleStoreDepartmentGroup(" in script_sources["./public/node-graph-module-store.js"]
+        and "for (const group of nodeGraphModuleStoreVisualGroups)" in script_sources["./public/node-graph-module-store.js"]
+        and ".scene-context-store-visual-group" in style_source,
+        "module category landing page should be split into visual groups",
     )
 
     for snippet in [
@@ -6905,6 +6955,10 @@ def require_node_graph_mvp_contract() -> None:
                 "normalizedNode.sample = { id: normalizeNodeGraphSampleId(node.sample?.id) }",
                 "samples: typeof normalizeNodeGraphPatchSamples === \"function\"",
                 "requiredAssets: typeof nodeGraphRequiredAssetsForPatch === \"function\"",
+                'const nodeGraphAssetKinds = Object.freeze(["text", "video", "image", "audio"])',
+                "function normalizeNodeGraphAssetKind",
+                "function normalizeNodeGraphAssetFile(file = {}, fallback = {})",
+                "function normalizeNodeGraphAssetMetadata(metadata = {}, depth = 0)",
                 "function normalizeNodeGraphRequiredAsset",
                 "function nodeGraphRequiredAssetsForPatch",
                 "function nodeGraphMissingSampleAssets",
@@ -6915,11 +6969,16 @@ def require_node_graph_mvp_contract() -> None:
                 "function loadNodeGraphMissingSampleAssetFromPath",
                 "nodeGraphMissingAssetSearchNames",
                 "nodeGraphMissingAssetPrimaryNodeId",
+                "saveNodeGraphWorkingPatchToUserSettings({ immediateFile: true, returnFileSave: true })",
+                "renderNodeGraphMissingSampleAssetsDialog(nodeGraphMvp.patch)",
+                "Browser storage was too small, so the patch was flushed to the settings file.",
                 "node-missing-sample-assets-controls",
                 "Search Path",
                 "/api/audio-file/find",
                 "sourcePath",
                 "sourceName",
+                "file",
+                "metadata",
                 "nodeIds",
                 "missing sample:",
                 "type === \"audioPlayer\" && key === \"transport\"",
@@ -6946,7 +7005,7 @@ def require_node_graph_mvp_contract() -> None:
                 "audioPlayer: counts.audioPlayer || 0",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=formula-visual-params-1',
+                'node-live-audio-worklet.js?v=module-home-actions-1',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
@@ -6954,6 +7013,7 @@ def require_node_graph_mvp_contract() -> None:
             "rendering",
             "\n".join([
                 audio_player_contract_sources["rendering"],
+                audio_player_contract_sources["samples"],
                 audio_player_contract_sources["sizing"],
                 audio_player_contract_sources["styles"],
             ]),
@@ -6963,13 +7023,21 @@ def require_node_graph_mvp_contract() -> None:
                 'classes.push("sample-module-layout")',
                 'classes.push("audio-player-layout")',
                 "createNodeGraphSampleModuleBody",
+                "node-module-interface-controls",
+                "function nodeGraphModuleTypeHasInterfaceControls(type)",
+                "function nodeGraphModuleInterfaceControlsHeightGu(type, ui = {})",
+                "function nodeGraphPatchNodeInterfaceControlsHeightUnits(node)",
+                'if (type === "audioPlayer")',
+                "return 4;",
                 ".node-sample-path-loader",
                 ".sample-module-layout .node-sample-module-body",
                 ".sample-module-layout .dsp-node-io-section",
                 ".sample-module-layout .dsp-node-body",
                 "clip-path: inset(50%)",
                 'type === "audioPlayer"',
-                "defaultGridUnits + 4",
+                '{ id: "interfaceControls", heightGu: nodeGraphModuleInterfaceControlsHeightGu(type, ui), visible: interfaceControlsVisible }',
+                '"--node-module-interface-controls-height-units"',
+                "--node-module-interface-controls-height",
                 ".node-sample-phase-readout",
             ],
         ),
@@ -7083,25 +7151,36 @@ def require_node_graph_mvp_contract() -> None:
         require(snippet in fallback_waveform_source, f"fallback waveform metadata missing {snippet}")
 
     for snippet in [
+        "nodeSceneImageLoad",
+        "nodeSceneImageFileInput",
+        'type="file"\n          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"',
+        'bindNodeGraphSceneElementEvent("nodeSceneImageLoad"',
+        'bindNodeGraphSceneElementEvent("nodeSceneImageFileInput"',
+        "input.click();",
+    ]:
+        require(
+            snippet not in index_source
+            and snippet not in script_sources["./public/node-graph-context-menu.js"]
+            and snippet not in script_sources["./public/node-graph-module-actions.js"]
+            and snippet not in script_sources["./public/node-graph-scene-menu-event-bindings.js"],
+            f"module actions should not expose native image file picker path: {snippet}",
+        )
+
+    for snippet in [
+        'createNodeGraphPatchNode("audioPlayer", { id: "audioPlayer-1"',
         'createNodeGraphPatchNode("output", { id: "output"',
-        'createNodeGraphPatchNode("canvas", { alias: "Origin", id: "canvas-origin"',
-        'createNodeGraphPatchNode("moduleHome", { id: "home"',
-        'createNodeGraphPatchNode("moduleShop", { id: "shop"',
         'destinationNode: "output"',
-        'sourcePort: "Saw"',
+        'sourceNode: "audioPlayer-1"',
+        'sourcePort: "Left"',
+        'sourcePort: "Right"',
         "nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node }))",
         "connections: nodeGraphDefaultConnections.map((connection) => ({ ...connection }))",
         "nodeGraphEmptyModuleButton",
         "openNodeGraphModuleShop(null)",
         "workspace?.classList.toggle(\"empty-patch\", visiblePatchNodeCount === 0)",
         "emptyButton.hidden = true",
-        "moduleShop: \"Module Browser\"",
-        "layout: \"moduleShop\"",
-        "moduleHome: \"Home\"",
-        "layout: \"moduleHome\"",
-        "createNodeGraphModuleShopBody",
-        "createNodeGraphModuleHomeBody",
-        "configureNodeSceneContextMenu(\"home\")",
+        "nodeModuleShopView",
+        "nodeSceneOpenModuleBrowser",
         "positionNodeSceneContextMenuHeaderAtPoint(",
         "createNodeGraphKeyboardControllerBody",
         "createNodeGraphMacroControlsBody",
@@ -7117,22 +7196,14 @@ def require_node_graph_mvp_contract() -> None:
         "node-performance-wheels-module",
         "node-speaker-protection-body",
         "data-speaker-protection-status",
-        "node-module-shop-open-button",
-        "node-module-home-open-button",
-        "Module Browser",
-        "Open Module Browser",
-        "Offline Modules: Hidden",
-        "module-shop-layout",
-        "module-home-layout",
-        "nodes.some((node) => node.id === \"home\")",
         "nodeGraphOriginMarker",
         "node-graph-origin-marker",
         "origin-marker-visible",
         "workspace.origin",
         "nodeGraphApplyTooltip(marker, \"workspace.origin\")",
         "World origin: X 0, Y 0",
-        "Patch-local button that opens the module browser.",
-        "if (!nodes.some((node) => node.type === \"moduleShop\"))",
+        'node?.type === "moduleHome" || node?.type === "moduleShop"',
+        'const retiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"])',
         "timing: {",
         "tempoBpm: 120",
         "timeSignatureDenominator: 4",
@@ -7316,15 +7387,14 @@ def require_node_graph_mvp_contract() -> None:
         "chromaColor: \"Chroma Color\"",
         "image: \"Image\"",
         "canvas: \"Canvas\"",
-        "formulaVisual: \"Formula Visual\"",
-        "visualOscilloscope: \"Oscilloscope\"",
+        "visualOscilloscope: \"Display\"",
         "sandboxVisuals: {",
         'inputs: ["Shake", "X", "Y", "Dim", "Red", "Green", "Blue", "Scope Off", "Pause", "Trace Image"]',
         "inputAliases: {",
         '"Screen Shake": "Shake"',
         '"Screen Dim": "Dim"',
-        '"Turn Off Oscilloscope Traces": "Scope Off"',
-        '"Pause Oscilloscopes": "Pause"',
+        '"Turn Off Display Traces": "Scope Off"',
+        '"Pause Displays": "Pause"',
         '"Trace Texture": "Trace Image"',
         "visualInputs: [",
         'key: "screenShake"',
@@ -7410,20 +7480,7 @@ def require_node_graph_mvp_contract() -> None:
         "canvas.face.screen = #000000;",
         'bufferInput("a_buffer")',
         'input("a not buffer")',
-        "formulaVisual: {",
-        'layout: "formulaVisual"',
         'outputs: ["RGBA"]',
-        'key: "formulaA"',
-        'label: "A"',
-        'key: "formulaPetals"',
-        'label: "Petals"',
-        'key: "formulaMorph"',
-        'label: "Morph"',
-        'key: "formulaGlow"',
-        'label: "Glow"',
-        "const nodeGraphFormulaVisualPresetSources = Object.freeze({",
-        "function normalizeNodeGraphFormulaVisualScript(formulaVisual = {})",
-        "normalizedNode.formulaVisual = normalizeNodeGraphFormulaVisualScript(node.formulaVisual)",
         "function parseNodeGraphCanvasScriptGrid",
         "function parseNodeGraphCanvasScriptFace",
         "function parseNodeGraphCanvasScriptLayout",
@@ -7951,6 +8008,15 @@ def require_node_graph_mvp_contract() -> None:
         "const snapOptions = { halfGrid: options.halfGrid === true }",
         "function applyNodeGraphPatchToDom()",
         "function serializeNodeGraphPatch(patch = nodeGraphMvp.patch)",
+        "function nodeGraphShareProjectData(patch = nodeGraphMvp.patch)",
+        'kind: "sandbox_patch"',
+        "patch_data: JSON.parse(serializeNodeGraphPatch(patchToShare))",
+        "function nodeGraphEncodeSharePayload(payload)",
+        "function nodeGraphDecodeSharePayload(encoded = \"\")",
+        "function nodeGraphPatchFromShareProjectData(projectData = {})",
+        "function nodeGraphSharePayloadFromUrl(search = window.location.search)",
+        "function nodeGraphShareLinkForPatch(patch = nodeGraphMvp.patch)",
+        "https://soundemote.io/sandbox",
         "audio: normalizeNodeGraphPatchAudio(patch.audio)",
         "bypassedNodes: patch.bypassedNodes || []",
         "function nodeGraphRuntimeBypassedNodeIds(patch = nodeGraphMvp.patch)",
@@ -7979,7 +8045,9 @@ def require_node_graph_mvp_contract() -> None:
         "options.autosaveWorkingPatch !== false",
         "nodeGraphMvp.patchDirtyState = \"edited\"",
         "saveNodeGraphWorkingPatchToUserSettings()",
-        "const startupPatchDirtyState = nodeGraphMvp.workingPatch && [\"saved\", \"edited\", \"untouched\"].includes(nodeGraphMvp.patchDirtyState)",
+        "let startupPatchDirtyState = nodeGraphMvp.workingPatch && [\"saved\", \"edited\", \"untouched\"].includes(nodeGraphMvp.patchDirtyState)",
+        "nodeGraphSharePayloadFromUrl()",
+        "nodeGraphPatchFromShareProjectData(sharePayload.project_data)",
         "patchDirtyState: startupPatchDirtyState",
         "function nodeGraphPatchScriptStatus(message = \"script synced\", ok = true)",
         "message: `${message}; schedule blocked`, ok: false",
@@ -8032,18 +8100,16 @@ def require_node_graph_mvp_contract() -> None:
         "} else if (!modularMode) {\n    moduleShopView.hidden = true;",
         "nodeSceneOpenModuleBrowser",
         "openNodeGraphModuleShop(nodeGraphMvp.sceneContextPoint)",
-        "const closeNodeGraphModuleBrowser = () =>",
-        "document.getElementById(\"nodeModuleShopView\").hidden = true;",
-        "nodeModuleShopClose",
+        "function closeNodeGraphModuleShop()",
+        "panel.hidden = true;",
+        'bindNodeGraphSceneElementEvent("nodeModuleShopClose", "click", closeNodeGraphModuleShop)',
         "nodeModuleShopHeading",
         "nodeModuleShopResizeHandle",
         "nodeModuleDepartmentBack",
         "setNodeGraphModuleStoreDepartment(\"\")",
-        "nodeModuleShopFitInput",
-        "handleNodeGraphModuleShopFitInput",
-        "closeNodeGraphModuleBrowser();",
+        "closeNodeGraphModuleShop();",
         "openNodeGraphModuleShop(null);",
-        ".getElementById(\"nodeModuleShopView\")\n    .addEventListener(\"pointerdown\", beginNodeGraphModuleShopViewDrag);",
+        'bindNodeGraphSceneElementEvent("nodeModuleShopView", "pointerdown", beginNodeGraphModuleShopViewDrag)',
         'bindNodeGraphSceneElementEvent("nodeModuleShopView", "keydown", handleNodeGraphModuleStoreKeydown)',
         "function applyNodeGraphModuleShopWindowSize(size = {})",
         'applyNodeGraphFloatingWindowSizeVars(panel, "node-module-shop", nodeGraphModuleShopWindowDefaultSize, normalized)',
@@ -8086,7 +8152,7 @@ def require_node_graph_mvp_contract() -> None:
         "flashNodeGraphDefaultButtonSaved(event.currentTarget);\n  await updateDefaultNodeGraphPreset();",
         "flashNodeGraphDefaultButtonSaved(event.currentTarget);\n  await updateDefaultNodeUiDevSettingsPreset();",
         'fetch("/api/presets/default"',
-        "nodeGraphScriptReadyForGraphAction(\"update default\")",
+        "nodeGraphScriptReadyForGraphAction(\"save init\")",
         "nodeGraphMvp.defaultPatch = cloneNodeGraphPatch(nodeGraphMvp.patch)",
         "updateDefaultPresetButton",
         "const nodeGraphPatchPresetStorageKey = \"soemdsp-sandbox.patchPresets.v1\"",
@@ -8109,6 +8175,7 @@ def require_node_graph_mvp_contract() -> None:
         "function selectNodeGraphSavedPatch(filename = \"\", program = null)",
         "savedPatchBankIndex: 0",
         "savedPatchGridColumns: 3",
+        "savedPatchExplorerView: \"banks\"",
         "savedPatchTagFilters: []",
         "savedPatchEntries: []",
         "function normalizeNodeGraphSavedPatchBankIndex(value)",
@@ -8147,8 +8214,7 @@ def require_node_graph_mvp_contract() -> None:
         "name.textContent = patch.name || nodeGraphSavedPatchDisplayName(patch.filename) || \"Patch\"",
         "function normalizeNodeGraphSavedPatchGridColumns(value)",
         "function syncNodeGraphSavedPatchGridColumns()",
-        "function handleNodeGraphSavedPatchGridColumnsInput(event)",
-        "list.style.setProperty(\"--node-saved-patch-columns\", String(columns))",
+        "nodeGraphMvp.savedPatchGridColumns = requestedColumns;",
         "function loadNodeGraphDemoPatchEntries()",
         "function loadNodeGraphDemoPatch(filename)",
         "async function loadSelectedNodeGraphSavedPatch()",
@@ -8160,11 +8226,13 @@ def require_node_graph_mvp_contract() -> None:
         "function toggleNodeGraphSavedPatchesWindow()",
         "function setNodeGraphSavedPatchesWindowVisible(visible)",
         "function setNodeGraphPatchDirtyState(state = \"edited\")",
-        "function saveNodeGraphWorkingPatchToUserSettings()",
+        "function saveNodeGraphWorkingPatchToUserSettings(options = {})",
         "if (typeof saveNodeGraphWorkingPatchToUserSettings === \"function\")",
-        "function scheduleNodeGraphWorkingPatchFileAutosave(text)",
-        "postNodeUiDevSettingsPreset(text).catch(() => {",
-        "scheduleNodeGraphWorkingPatchFileAutosave(text)",
+        "function scheduleNodeGraphWorkingPatchFileAutosave(text, options = {})",
+        "if (options.immediate) {",
+        "return postNodeUiDevSettingsPreset(text).then(() => true).catch(() => {",
+        "if (options.returnFileSave) {",
+        "scheduleNodeGraphWorkingPatchFileAutosave(text, { immediate: Boolean(options.immediateFile) })",
         "function clearNodeGraphWorkingPatchFromUserSettings()",
         "function initNodeGraphPatchFromDefault()",
         "function confirmAndInitNodeGraphPatchFromDefault(event)",
@@ -8204,11 +8272,11 @@ def require_node_graph_mvp_contract() -> None:
         "document.getElementById(\"nodeSavedPatchesWindowHeading\").addEventListener(\"pointerdown\", beginNodeGraphSavedPatchesWindowDrag)",
         "document.getElementById(\"nodeSavedPatchesDragHandle\").addEventListener(\"pointerdown\", beginNodeGraphSavedPatchesWindowDrag)",
         "document.getElementById(\"nodeSavedPatchesResizeHandle\").addEventListener(\"pointerdown\", beginNodeGraphSavedPatchesWindowResize)",
-        "document.getElementById(\"nodeSavedPatchesFitInput\").addEventListener(\"input\", handleNodeGraphSavedPatchGridColumnsInput)",
         "document.getElementById(\"nodeSavedPatchesCopyPatch\").textContent = \"Copy\"",
         "document.getElementById(\"nodeSavedPatchesPastePatch\").textContent = \"Paste\"",
         "document.getElementById(\"nodeSavedPatchesCopyPatch\").addEventListener(\"click\", copyNodeGraphScriptToClipboard)",
         "document.getElementById(\"nodeSavedPatchesPastePatch\").addEventListener(\"click\", pasteNodeGraphScriptFromClipboard)",
+        'document.getElementById("nodePatchShareLinkButton").addEventListener("click", copyNodeGraphShareLinkToClipboard)',
         "document.addEventListener(\"pointermove\", dragNodeGraphSavedPatchesWindowResize)",
         "document.addEventListener(\"pointerup\", endNodeGraphSavedPatchesWindowResize)",
         "function applyNodeGraphSavedPatchesWindowSize(size = {})",
@@ -8220,6 +8288,8 @@ def require_node_graph_mvp_contract() -> None:
         "function endNodeGraphSavedPatchesWindowResize(event)",
         "function loadNodeGraphScript()",
         "function handleNodeGraphScriptFileLoad(event)",
+        "async function copyNodeGraphShareLinkToClipboard(event)",
+        "nodeGraphShareLinkForPatch(nodeGraphPatchWithLiveHeaderInfo())",
         'field.addEventListener("change", commitNodeGraphSettingsHistory)',
         "serializeNodeGraphPatch()",
         "function syncNodeGraphPatchMetadataFromSlider(slider, options = {})",
@@ -8294,22 +8364,38 @@ def require_node_graph_mvp_contract() -> None:
         "function setNodeGraphTextBoxVerticalAlignFromContext",
         "function normalizeNodeGraphPatchNodeUi(ui = {})",
         "oscilloscopeHidden: Boolean(source.oscilloscopeHidden)",
+        "slidersHidden: Boolean(source.slidersHidden)",
+        "function nodeGraphEffectivePatchNodeUi(ui = {})",
+        "function nodeGraphPatchNodeSectionVisible(localHidden, globalVisible)",
+        "return !Boolean(localHidden) && globalVisible !== false;",
+        "buttonsHidden: !nodeGraphPatchNodeSectionVisible(",
+        "oscilloscopeHidden: !nodeGraphPatchNodeSectionVisible(",
+        "slidersHidden: !nodeGraphPatchNodeSectionVisible(",
         "function normalizeNodeGraphPatchNodeAlias(alias)",
         "function nodeGraphPatchNodeTitle(node)",
         "function setNodeGraphModuleAliasFromContext",
+        "const selectionStart = input?.selectionStart ?? null",
+        "if (document.activeElement !== aliasInput) {",
         "function toggleNodeGraphModuleButtonsFromContext()",
         "function toggleNodeGraphModuleOscilloscopeFromContext()",
+        "function toggleNodeGraphModuleSlidersFromContext()",
         "function toggleNodeGraphModuleTitleFromContext()",
-        "const buttonsHidden = targetNodeUi.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false",
-        "const oscilloscopeHidden = targetNodeUi.oscilloscopeHidden",
+        "const effectiveTargetNodeUi = nodeGraphEffectivePatchNodeUi(targetNode?.ui)",
+        "const buttonsHidden = effectiveTargetNodeUi.buttonsHidden",
+        "const oscilloscopeHidden = effectiveTargetNodeUi.oscilloscopeHidden",
+        'const visualFaceLabel = "display"',
+        "? `Show ${visualFaceLabel}`",
+        ": `Hide ${visualFaceLabel}`",
+        "const slidersHidden = effectiveTargetNodeUi.slidersHidden",
         "nodeGraphPatchNodeHasHideableOscilloscope",
-        "if (nodeGraphMvp.moduleButtonsVisible === false) {",
-        "ui.buttonsHidden = false",
-        "setNodeGraphModuleButtonsVisibility(true, { clearNodeOverrides: false, help: false })",
+        "nodeGraphModuleTypeHasHideableSliders",
+        "ui.buttonsHidden = !ui.buttonsHidden",
+        "ui.slidersHidden = !ui.slidersHidden",
         "targetNode.alias = alias",
         "delete targetNode.alias",
         "buttonsHidden",
         "oscilloscopeHidden",
+        "slidersHidden",
         "titleHidden",
         "node-text-box-body",
         "node-text-box-input",
@@ -8321,6 +8407,7 @@ def require_node_graph_mvp_contract() -> None:
         "return definition?.parameters?.length || 0",
         "function nodeGraphModuleVisibleBodyRowCount(type)",
         "return nodeGraphModuleBodyRowCount(type)",
+        "function nodeGraphModuleTypeHasHideableSliders(type)",
         "function nodeGraphModuleGridWidthUnits(type)",
         "const nodeGraphModuleWidthLimits",
         "function normalizeNodeGraphModuleWidthUnits(type, widthGu)",
@@ -8331,16 +8418,20 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphPatchNodeGridWidthUnits(node)",
         "function nodeGraphPatchNodeGridHeightUnits(node)",
         "function nodeGraphModuleHeightWidgetUnits(type, ui = {})",
-        "function normalizeNodeGraphModuleHeightOffsetUnits(offsetGu)",
-        "function nodeGraphPatchNodeHeightOffsetUnits(node)",
-        "function nodeGraphModuleHeightOffsetLabel(offsetGu)",
+        "const nodeGraphModuleDisplayHeightLimits",
+        "minGu: 1",
+        "stepGu: 1",
+        "function normalizeNodeGraphModuleDisplayHeightUnits(heightGu)",
+        "function normalizeNodeGraphModuleDisplayHeightOffsetUnits(offsetGu)",
+        "function nodeGraphModuleConfiguredDisplayHeightUnits(type, ui = {})",
+        "function nodeGraphModuleDisplayVisibleForUi(type, ui = {})",
+        "function nodeGraphModuleDisplayHeightUnits(type, ui = {})",
         "function nodeGraphModuleScopeExtraHeightUnits(type, ui = {})",
-        "nodeGraphMvp?.moduleOscilloscopesVisible === false",
-        "return nodeGraphModuleLayout.moduleScopeHeightGu",
-        "buttonsHidden: node?.ui?.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false",
-        "const autoHeightGu = nodeGraphModuleGridHeightUnitsForUi(node?.type, effectiveUi)",
-        'Object.hasOwn(node || {}, "heightOffsetGu")',
-        "autoHeightGu + normalizeNodeGraphModuleHeightOffsetUnits(node.heightOffsetGu)",
+        "return nodeGraphModuleDisplayHeightUnits(type, ui)",
+        "nodeGraphModuleLayout.moduleScopeHeightGu + normalizedUi.displayHeightOffsetGu",
+        "+ normalizedUi.displayHeightOffsetGu",
+        "function nodeGraphPatchNodeDisplayHeightUnits(node)",
+        "const autoHeightGu = nodeGraphModuleGridHeightUnitsForUi(node?.type, node?.ui)",
         "const nodeGraphModuleLayout",
         "bodyRowGapGu: 1 / 28",
         "ioPaddingYGu: 4 / 28",
@@ -8352,13 +8443,15 @@ def require_node_graph_mvp_contract() -> None:
         "if (rows <= 0)",
         "function nodeGraphModuleIoRowCount(type)",
         "function nodeGraphModuleIoSectionHeightGu(type)",
+        "function nodeGraphModuleTypeHasInterfaceControls(type)",
+        "function nodeGraphModuleInterfaceControlsHeightGu(type, ui = {})",
         "function nodeGraphModuleRequiredHeightUnits(type)",
         "function nodeGraphModuleGridHeightUnits(type)",
         'nodeGraphModuleDefinitions[type]?.layout === "knobWidget"',
         "return 4;",
         "const roughGridUnits = 4 + nodeGraphModuleVisibleBodyRowCount(type) * 1.25",
         "Math.max(roughGridUnits, requiredGridUnits)",
-        "Math.min(nodeGraphModuleHeightLimitsForType(type).maxGu, defaultGridUnits + 4)",
+        "return defaultGridUnits;",
         "function createNodeGraphKnobWidgetBody(node, type)",
         "node-knob-widget-body",
         "node-knob-widget-control",
@@ -8386,8 +8479,6 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphModuleTitleBypassModifierActive(event)",
         "function toggleNodeGraphModuleBypassFromNode(node, event)",
         "adjustNodeGraphModuleWidthFromContext",
-        "adjustNodeGraphModuleHeightFromContext",
-        "targetNode.heightOffsetGu = nextOffsetGu",
         "adjustNodeGraphTextBoxTextSizeFromContext",
         'nodeGraphApplyTooltip(actionButton, "module.actionsTitle", {}, { title: false })',
         "--node-grid-width-units",
@@ -8517,6 +8608,7 @@ def require_node_graph_mvp_contract() -> None:
         "syncNodeMetadataScriptReference();",
         "metadata-script-reference-key",
         "metadata-script-reference-kind",
+        "function resizeNodeMetadataScriptEditorToContent()",
         "role=\"button\" tabindex=\"0\"",
         "param.${paramKey}.${key} = ${value};",
         "param.${paramKey}.kind = ${normalizeNodeMetadataKind(kind)};",
@@ -8603,7 +8695,24 @@ def require_node_graph_mvp_contract() -> None:
         "scriptRefresh.textContent = \"Restore\"",
         "syncNodeMetadataScriptFromFields({ force: true })",
         "function applyNodeMetadataEditor()",
+        "function restoreNodeMetadataEditorFields()",
         "function closeNodeMetadataPopover()",
+        "function finishCloseNodeMetadataPopover()",
+        "function saveAndCloseNodeMetadataPopover()",
+        "function discardAndCloseNodeMetadataPopover()",
+        "metadataCloseSaveBound",
+        "metadataCloseDiscardBound",
+        "metadataSaveFieldsBound",
+        "metadataRestoreFieldsBound",
+        "metadataAdvancedBound",
+        "function setNodeMetadataFieldsDirty(dirty)",
+        "applyNodeMetadataEditor(options = {})",
+        "applyNodeMetadataEditor({ keepDirty: true })",
+        "function setNodeMetadataAdvancedScriptVisible(visible)",
+        "function toggleNodeMetadataAdvancedScript()",
+        "function metadataStepperQuantum(input)",
+        "const fraction = normalized.split(\".\")[1]?.replace(/0+$/g, \"\") || \"\"",
+        "function stepNodeMetadataField(event)",
         "function bindNodeGraphMetadataPopoverEvents()",
         "metadataPopoverBound",
         "metadataCloseBound",
@@ -8614,6 +8723,7 @@ def require_node_graph_mvp_contract() -> None:
         "function closeNodeSceneContextMenu(options = {})",
         "const nodeSceneContextWindowDefaultSize = Object.freeze",
         "const nodeModuleActionsWindowDefaultSize = Object.freeze",
+        "minWidth: 24",
         "maxWidth: 360",
         "maxHeight: 520",
         "function normalizeNodeSceneContextWindowSize(size = {})",
@@ -8621,6 +8731,8 @@ def require_node_graph_mvp_contract() -> None:
         "function applyNodeSceneContextWindowSize(size = nodeGraphMvp.sceneContextWindowSize)",
         "function applyNodeModuleActionsWindowSize(size = nodeGraphMvp.moduleActionWindowSize)",
         "function saveNodeSceneContextWindowSizeToUserSettings()",
+        "function saveNodeModuleActionsWindowStateToUserSettings()",
+        'rememberNodeGraphWorkspaceWindowState(\n      "moduleActions"',
         "function positionNodeSceneContextMenu(menu, x, y, remember = false)",
         "function positionNodeSceneContextMenuHeaderAtPoint(menu, x, y, remember = false)",
         "(Number(x) || 0) - (menuRect.width * 0.5)",
@@ -8643,12 +8755,16 @@ def require_node_graph_mvp_contract() -> None:
         "function dragNodeModuleActionsWindowResize(event)",
         'dragNodeGraphFloatingWindowResize(event, "moduleActionResizing", applyNodeModuleActionsWindowSize)',
         "function endNodeModuleActionsWindowResize(event)",
+        'endNodeGraphFloatingWindowResize(event, "moduleActionResizing", saveNodeModuleActionsWindowStateToUserSettings)',
         "function beginNodeScopeContextMenuDrag(event)",
         "function dragNodeScopeContextMenu(event)",
         "function endNodeScopeContextMenuDrag(event)",
         "function beginNodeGraphVisibilityMenuDrag(event)",
         "function dragNodeGraphVisibilityMenu(event)",
         "function endNodeGraphVisibilityMenuDrag(event)",
+        "function beginNodeGraphVisibilityMenuResize(event)",
+        "function dragNodeGraphVisibilityMenuResize(event)",
+        "function endNodeGraphVisibilityMenuResize(event)",
         "function positionNodeGraphVisibilityMenu(menu, x, y)",
         "function stopNodeGraphRenderedPlayback()",
         "stopNodeGraphRenderedPlayback();",
@@ -8711,11 +8827,18 @@ def require_node_graph_mvp_contract() -> None:
         "modulePlacement: null",
         "function showNodeGraphModule(node, point = null, options = {})",
         "return id",
+        "function nodeGraphClientPointInsideWorkspace(event)",
+        "function cancelNodeGraphModulePlacement(status = \"module placement cancelled\")",
         "function beginNodeGraphModulePlacement(type, point = null)",
+        "function beginNodeGraphModuleStorePointerPlacement(event)",
         "function dragNodeGraphModulePlacement(event)",
         "function completeNodeGraphModulePlacement(event)",
+        "function releaseNodeGraphModuleStorePointerPlacement(event)",
+        "function cancelNodeGraphModuleStorePointerPlacement(event)",
         "positionNodeGraphNode(element, point, { clamp: false, snap: false })",
         "document.addEventListener(\"pointerdown\", completeNodeGraphModulePlacement, true)",
+        "document.addEventListener(\"pointerup\", releaseNodeGraphModuleStorePointerPlacement)",
+        "document.addEventListener(\"pointercancel\", cancelNodeGraphModuleStorePointerPlacement)",
         "finishNodeGraphModulePlacementAtCurrentPosition()",
         "clearNodeGraphSelection();",
         'element?.classList.add("placing", "dragging")',
@@ -8733,6 +8856,7 @@ def require_node_graph_mvp_contract() -> None:
         "\"additiveOsc\"",
         "\"gpuAdditiveOsc\"",
         'category: "Additive"',
+        "developerOnly: true",
         "Harmonic additive tone source using SOEMDSP waveform partial recipes.",
         "\"distortionOscillator\"",
         "\"dsfOscillator\"",
@@ -8839,11 +8963,11 @@ def require_node_graph_mvp_contract() -> None:
         "layer compositor",
         "RGBA output",
         "shader script",
-        "Oscilloscope",
+        "Display",
         "shake input",
         "scope pause",
         "trace texture",
-        "square scope",
+        "square display",
         "function renderNodeGraphModuleStoreCatalog()",
         "kind: \"moduleGroup\"",
         "function normalizeNodeGraphModuleGroup(value = {})",
@@ -8866,18 +8990,20 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphNormalizeModuleDepartmentSearch(value = \"\")",
         "function handleNodeGraphModuleDepartmentSearchInput(event)",
         "function handleNodeGraphModuleDepartmentSearchKeydown(event)",
-        "function normalizeNodeGraphModuleStoreGridColumns(value)",
         "function nodeGraphModuleStoreEntryMatchesSearch(entry, query)",
         "function nodeGraphModuleStoreDepartmentMatchesSearch(department, entries, query)",
+        "function nodeGraphModuleStoreSearchResultOrder(a, b)",
+        "const implementedDelta = Number(Boolean(b?.implemented)) - Number(Boolean(a?.implemented))",
         "function nodeGraphModuleStorePublicEntriesByDepartment(entries = [])",
-        "function syncNodeGraphModuleShopGridColumns()",
-        "function handleNodeGraphModuleShopFitInput(event)",
+        "const searchingAllModules = !selectedDepartment",
+        "const visibleModuleEntries = selectedDepartment || departmentSearch",
+        "[...publicEntries].sort(nodeGraphModuleStoreSearchResultOrder)",
         "shopView.classList.toggle(\"department-selected\", Boolean(selectedDepartment))",
-        "fitControl.hidden = true",
-        "createNodeGraphModuleDepartmentButton(department, departmentEntries)",
+        "departmentTitle.textContent = selectedDepartment || \"\"",
+        "createNodeGraphModuleDepartmentButton(department, entries)",
         "available.classList.add(\"scene-context-store-department-list\")",
-        "available.classList.toggle(\"node-module-store-list\", Boolean(selectedDepartment))",
-        "available.classList.remove(\"node-module-store-grid\")",
+        "available.classList.toggle(\"node-module-store-list\", Boolean(selectedDepartment || searchingAllModules))",
+        "if (selectedDepartment || searchingAllModules)",
         "No modules match this search.",
         "function positionNodeGraphModuleShopView(x, y)",
         "function beginNodeGraphModuleShopViewDrag(event)",
@@ -8901,17 +9027,18 @@ def require_node_graph_mvp_contract() -> None:
         "soemdsp-sandbox.moduleCatalogVisibility.v2",
         "developer: true",
         "home: false",
-        "developerVisible: nodeGraphModuleIsStoreVisible(type, \"developer\")",
-        "homeVisible: nodeGraphModuleIsStoreVisible(type, \"home\") && Object.hasOwn(nodeGraphModuleDefinitions, type)",
-        "shopVisible: Object.hasOwn(nodeGraphModuleDefinitions, type)",
-        "visible: Object.hasOwn(nodeGraphModuleDefinitions, type)",
+        "const developerVisible = nodeGraphModuleIsStoreVisible(type, \"developer\")",
+        "const developerOnly = nodeGraphModuleStoreCatalog[type]?.developerOnly === true",
+        "const publicVisible = !developerOnly",
+        "developerOnly,",
+        "developerVisible,",
+        "homeVisible: nodeGraphModuleIsStoreVisible(type, \"home\") && implemented",
+        "shopVisible: publicVisible",
+        "visible: publicVisible",
         "return true;",
         "const homeEntries = entries.filter((entry) => entry.implemented && entry.homeVisible)",
         "const publicEntries = matchingEntries.filter((entry) =>",
         "(!selectedDepartment || entry.category === selectedDepartment)",
-        "developerShell.hidden = true",
-        "const labelSizeRem = Math.max(0.54, Math.min(1.02, 1.02 - ((columns - 1) * 0.07)))",
-        "panel?.style.setProperty(\"--node-module-shop-label-size\", `${labelSizeRem.toFixed(3)}rem`)",
         "function listenToNodeGraphModuleStoreDemo(entry)",
         "function watchNodeGraphModuleStoreDemo(entry)",
         "function editNodeGraphModuleStoreDemo(entry)",
@@ -8927,24 +9054,28 @@ def require_node_graph_mvp_contract() -> None:
         "function setNodeGraphModuleCatalogVisibility(type, visible, shelf = \"shop\")",
         "const nodeGraphModuleStoreDepartments = Object.freeze([",
         "\"Oscillator\"",
-        "\"Additive\"",
-        "\"Drum Machines\"",
-        "\"Filter\"",
-        "\"Delay\"",
-        "\"Clock\"",
-        "\"Sequencer\"",
-        "\"Chord Sequencer\"",
-        "\"Arpeggiator\"",
-        "\"Time\"",
-        "\"Dynamics\"",
-        "\"Envelope Systems\"",
-        "\"Modulators\"",
-        "\"Knobs\"",
-        "\"Sliders\"",
-        "\"Controllers\"",
-        "\"Samples\"",
-        "\"Random\"",
+        "\"Noise\"",
         "\"Chaos\"",
+        "\"Filter\"",
+        "\"Envelope\"",
+        "\"Modulators\"",
+        "\"Time\"",
+        "\"Delay\"",
+        "\"Drum\"",
+        "\"Dynamics\"",
+        "\"Sequencer\"",
+        "\"Audio\"",
+        "\"Visual\"",
+        "\"Controllers\"",
+        "\"Portals\"",
+        "\"Loops\"",
+        "\"Samples\"",
+        "\"Debug\"",
+        "nodeGraphModuleStoreVisualGroups",
+        "Generate",
+        "Process",
+        "Interact",
+        "Memory",
         "DistortionOscillator",
         "DSFOscillator",
         "Ellipsoid",
@@ -10042,6 +10173,11 @@ def require_node_graph_mvp_contract() -> None:
         "function drawNodeRenderedSignalPlot()",
         "function setNodeGraphSelection(selection)",
         "function nodeGraphSelectedNodeIds(selection = nodeGraphMvp.selected)",
+        "function syncNodeGraphSelectionCountReadout(selection = nodeGraphMvp.selected)",
+        'document.getElementById("nodeSelectionCountReadout")',
+        'readout.querySelector("[data-selection-count-value]")',
+        "nodeGraphSelectedNodeIds(selection).size",
+        "syncNodeGraphSelectionCountReadout();",
         "function setNodeGraphNodeSelection(ids)",
         "function selectAllNodeGraphModules()",
         "setNodeGraphNodeSelection(nodeGraphMvp.patch.nodes.map((node) => node.id))",
@@ -10049,7 +10185,7 @@ def require_node_graph_mvp_contract() -> None:
         "const additiveSelection = event.ctrlKey || event.metaKey || event.shiftKey",
         "function nodeGraphSelectionHelpText()",
         "function composeNodeInteractionHelpText(text = \"\")",
-        "modules selected",
+        "Modules selected",
         "function renderNodeGraphMarqueeSelection()",
         "function nodeGraphWireSelectionExists(selection = nodeGraphMvp.selected)",
         "function nodeGraphNodeCanBeDeleted(node)",
@@ -10233,11 +10369,45 @@ def require_node_graph_mvp_contract() -> None:
         'hidden.className = "node-toolbar-subline"',
         'hidden.textContent = `(${hiddenCount} hidden)`',
         'getElementById("nodeVisibilityMenuClose")',
+        'getElementById("nodeVisibilityMenuResizeHandle")',
+        'addEventListener("pointerdown", beginNodeGraphVisibilityMenuResize)',
+        'addEventListener("pointermove", dragNodeGraphVisibilityMenuResize)',
+        'addEventListener("pointerup", endNodeGraphVisibilityMenuResize)',
         "function renderNodeGraphVisibilityMenuButton()",
         "function setNodeGraphVisibilityMenuOpen(open)",
         "positionNodeGraphVisibilityMenuNearButton(menu)",
         "function positionNodeGraphVisibilityMenuNearButton",
         "rect.right - menuRect.width",
+        "applyNodeGraphVisibilityMenuSize(nodeGraphMvp.workspaceWindowStates?.visibilityMenu?.size)",
+        'positionNodeGraphWorkspaceWindowFromState("visibilityMenu", menu)',
+        "function nodeGraphVisibilityMenuMinimumSize",
+        'typeof nodeModuleActionsWindowDefaultSize !== "undefined"',
+        "Number(nodeModuleActionsWindowDefaultSize.minWidth)",
+        ": 24",
+        'rootStyle.getPropertyValue("--node-floating-window-header-height")',
+        'rootStyle.getPropertyValue("--node-floating-window-button-height")',
+        'querySelectorAll?.(".node-visibility-menu-list button").length',
+        "chromeHeight + sharedHeaderHeight + (buttonCount * sharedButtonHeight)",
+        "width: sharedMinWidth",
+        "function nodeGraphVisibilityMenuSizeFromElement",
+        'menu.style.removeProperty("height")',
+        "startClientX: event.clientX",
+        "startClientY: event.clientY",
+        "startLeft: Number.isFinite(styleLeft) ? styleLeft : rect.left",
+        "startTop: Number.isFinite(styleTop) ? styleTop : rect.top",
+        "drag.startLeft + event.clientX - drag.startClientX",
+        "drag.startTop + event.clientY - drag.startClientY",
+        "const styleLeft = Number.parseFloat(menu.style.left)",
+        "const styleTop = Number.parseFloat(menu.style.top)",
+        "drag.startLeft = Number.isFinite(styleLeft) ? styleLeft : rect.left",
+        "drag.startTop = Number.isFinite(styleTop) ? styleTop : rect.top",
+        'menu.style.left = `${drag.startLeft}px`',
+        'menu.style.top = `${drag.startTop}px`',
+        'menu.style.right = "auto"',
+        "{ height: false }",
+        'rememberNodeGraphWorkspaceWindowState("visibilityMenu"',
+        "visibleWidth: rect.width",
+        "visibleHeight: rect.height",
         "function toggleNodeGraphVisibilityMenu()",
         "function resetNodeGraphStartupView()",
         "setNodeGraphViewMode(\"modular\")",
@@ -10372,6 +10542,10 @@ def require_node_graph_mvp_contract() -> None:
         "function applyNodeGraphStaticTooltips(root = document)",
         "function nodeInteractionHelpText(target)",
         "[data-interaction-help], [data-tooltip-key]",
+        "function normalizeNodeInteractionButtonLabel(value = \"\")",
+        "function nodeInteractionButtonLabel(button)",
+        'button.getAttribute("aria-label")',
+        'button.getAttribute("title")',
         "function nodeInteractionMouseHint(element)",
         "nodeGraphElementTooltipText(element)",
         "const alias = element.dataset.alias || \"\"",
@@ -10402,12 +10576,21 @@ def require_node_graph_mvp_contract() -> None:
         "function toggleNodeUserUiSettings()",
         "let nodeUserUiSettingsActiveMirrorKey = null",
         "function syncNodeUserUiSettingsMirrorControls()",
+        "nodeUserUiSettingsClearStartup",
+        "function clearNodeUserStartupLocalStorage()",
+        "function clearNodeUserStartupRuntimeState()",
+        "function clearNodeUserStartupState()",
+        "saveNodeUiDevLocalDefaultSettings(serializeNodeUiDevSettings())",
+        "function handleClearNodeUserStartupStateClick(event)",
         "let nodeUserUiSettingsDragging = null",
         "function beginNodeUserUiSettingsDrag(event)",
         "function dragNodeUserUiSettings(event)",
         "function endNodeUserUiSettingsDrag(event)",
         "const nodeUiDevDefaultSettingsUrl = \"./public/presets/useruisettings.json\"",
-        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v8\"",
+        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v9\"",
+        "function sanitizeNodeUiDevWorkingPatchForStartup(patch)",
+        'node?.type === "moduleHome" || node?.type === "moduleShop"',
+        "nodeGraphMissingSampleAssets(patch).length",
         "moduleOscilloscopesVisible: false",
         "\"moduleOscilloscopesVisible\": false",
         "soemdsp-sandbox-user-ui-settings",
@@ -10442,9 +10625,15 @@ def require_node_graph_mvp_contract() -> None:
         "applyNodeModuleActionsWindowSize(nodeGraphMvp.moduleActionWindowSize)",
         "workspaceWindowStates",
         "workspaceWindowStatesVersion: 1",
+        '"visibilityMenu"',
+        'visibilityMenu: "nodeVisibilityMenu"',
+        'if (key === "visibilityMenu" && typeof applyNodeGraphVisibilityMenuSize === "function")',
+        "moduleStoreDepartment",
+        "normalizeNodeGraphModuleStoreDepartmentState",
         "savedPatchBankIndex",
         "savedPatchBankName",
         "savedPatchGridColumns",
+        "savedPatchExplorerView",
         "...(size && (size.width || size.height) ? { size } : {})",
         "workingPatch",
         "currentSavedPatchFilename",
@@ -10526,6 +10715,7 @@ def require_node_graph_mvp_contract() -> None:
         "workspaceView: normalizeNodeGraphWorkspaceViewState",
         "nodeGraphMvp.pan = { ...workspaceView.pan }",
         "nodeGraphMvp.zoom = workspaceView.zoom",
+        "nodeGraphMvp.moduleStoreDepartment = normalizeNodeGraphModuleStoreDepartmentState",
         "function saveNodeGraphWorkspaceViewToUserSettings(options = {})",
         "function loadNodeUiDevBundledDefaultSettings()",
         "window.nodeUiDevBundledDefaultSettings",
@@ -10541,6 +10731,7 @@ def require_node_graph_mvp_contract() -> None:
         "function handleUpdateDefaultNodeUiDevSettingsPresetClick(event)",
         "function handleSaveNodeUserUiSettingsDefaultClick(event)",
         "saveNodeUiDevLocalDefaultSettings(text);",
+        "window.localStorage.removeItem(nodeUiDevDefaultSettingsStorageKey);",
         'fetch("/api/presets/useruisettings"',
         "\"useruisettings.json\"",
         "let nodeLiveToggleTextResizeObserver = null",
@@ -10661,6 +10852,7 @@ def require_node_graph_mvp_contract() -> None:
         "attachNodeInteractionHelpTarget(element)",
         "function toggleDebugSections()",
         "document.addEventListener(\"keydown\", handleNodeGraphKeydown)",
+        "handleNodeGraphFloatingWindowKeyboardNudge(event)",
         "if (nodeGraphSelectionCanDelete()) {\n    event.preventDefault();\n    deleteSelectedNodeGraphItem();",
         "missing Output speaker input",
         "const mixInput = (nodeId, port = \"In\")",
@@ -10995,7 +11187,6 @@ def require_node_graph_mvp_contract() -> None:
         "bindNodeGraphSceneElementEvent(\"nodeSceneCanvasScript\", \"click\", openNodeGraphCanvasScriptFromContext)",
         "function createNodeGraphCanvasBody(nodeId)",
         "function nodeGraphVisualOscilloscopeOutputDataUrl(nodeId)",
-        "function nodeGraphFormulaVisualOutputDataUrl(nodeId)",
         "function nodeGraphRgbaOutputDataUrlForConnection(connection",
         "function nodeGraphCanvasLayerSourceConnection(nodeId, inputPort)",
         "function nodeGraphDrawCanvasLayerImage(context, surface, layer, image)",
@@ -11007,8 +11198,6 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphCanvasLayerSourceConnection(nodeId, layer.input)",
         "sourceNode.type === \"visualOscilloscope\"",
         "return nodeGraphVisualOscilloscopeOutputDataUrl(sourceNode.id)",
-        "sourceNode.type === \"formulaVisual\"",
-        "return nodeGraphFormulaVisualOutputDataUrl(sourceNode.id)",
         "return nodeGraphRgbaOutputDataUrlForConnection(connection)",
         "node-canvas-layers",
         "node-canvas-frame",
@@ -11709,7 +11898,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphModuleScopeLightCanvas()",
         "return document.getElementById(\"nodeModuleScopeLightCanvas\")",
         "lightDisplayStates: new Map()",
-        "nodeGraphMvp?.moduleOscilloscopesVisible === false",
+        "function nodeGraphEffectivePatchNodeUi(ui = {})",
         "function nodeGraphModuleScopeTraceImageTexture(renderer)",
         "nodeGraphTraceImageDataUrl()",
         "return nodeGraphModuleScopeGeneratedDotTexture(renderer)",
@@ -11862,9 +12051,11 @@ def require_node_graph_mvp_contract() -> None:
         "port.addEventListener(\"pointerdown\", toggleNodeGraphMonitorFromPortEvent, true)",
         "function createNodeGraphModuleScopeSection(node, type)",
         "className = \"node-module-scope-window\"",
-        "if (!oscilloscopeHidden)",
+        "if (!patchNodeUi.oscilloscopeHidden)",
         "visualScope: \"visual-scope-layout\"",
         "filterCurve: \"filter-curve-layout\"",
+        "} else if (definition.layout === \"filterCurve\") {",
+        "if (!patchNodeUi.oscilloscopeHidden) {\n      article.append(createNodeGraphFilterCurveDisplay(node, type));\n    }",
         "scopeSection.classList.add(\"node-module-square-scope-window\")",
         "createNodeGraphFilterCurveDisplay(node, type)",
         "function drawNodeGraphFilterCurveDisplay(section)",
@@ -11932,9 +12123,9 @@ def require_node_graph_mvp_contract() -> None:
         require(snippet in node_graph_source, f"node graph source missing {snippet}")
 
     require(
-        "const connections = Array.isArray(patch.connections) ? patch.connections.flatMap((connection) => {" in script_sources["./public/node-graph-patch-core.js"]
+        "const connections = (Array.isArray(patch.connections) ? patch.connections : []).flatMap((connection) => {" in script_sources["./public/node-graph-patch-core.js"]
         and "if (connectionKeys.has(key)) {\n      return [];\n    }" in script_sources["./public/node-graph-patch-core.js"]
-        and ".concat(migratedModulations)\n    .flatMap((modulation) => {" in script_sources["./public/node-graph-patch-core.js"]
+        and "const modulations = (Array.isArray(patch.modulations) ? patch.modulations : [])\n    .flatMap((modulation) => {" in script_sources["./public/node-graph-patch-core.js"]
         and "if (modulationKeys.has(key)) {\n        return [];\n      }" in script_sources["./public/node-graph-patch-core.js"],
         "patch validation should skip duplicate saved wires/modulations instead of blanking the app",
     )
@@ -11943,8 +12134,27 @@ def require_node_graph_mvp_contract() -> None:
     shop_add_end = module_actions_source.index("function nodeGraphModulePlacementPixelFromCursor", shop_add_start)
     shop_add_source = module_actions_source[shop_add_start:shop_add_end]
     require(
-        "beginNodeGraphModulePlacement(type, point)" in shop_add_source,
-        "module browser add should begin drag placement",
+        "showNodeGraphModule(type, point, { status: \"module added\" })" in shop_add_source
+        and "setNodeGraphNodeSelection([nodeId])" in shop_add_source
+        and "rect.left + rect.width * 0.5" in shop_add_source,
+        "keyboard module browser add should place at the visible workspace center",
+    )
+    require(
+        "beginNodeGraphModuleStorePointerPlacement" in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        and "releaseNodeGraphModuleStorePointerPlacement" in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        and "cancelNodeGraphModuleStorePointerPlacement" in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        and "nodeGraphClientPointInsideWorkspace(event)\n    ? finishNodeGraphModulePlacementAtCurrentPosition()" in module_actions_source
+        and "event.target.closest(\"[data-context-module]\")" in module_actions_source
+        and "event.preventDefault();\n    event.stopPropagation();\n    return;" in module_actions_source,
+        "pointer module browser add should hold a ghost, release in workspace to place, and swallow synthetic click",
+    )
+    event_bindings_source = script_sources["./public/node-graph-event-bindings.js"]
+    require(
+        "async function bindNodeGraphMvpEventGroup(label, binder)" in event_bindings_source
+        and 'await bindNodeGraphMvpEventGroup("scene-menu", bindNodeGraphSceneMenuEvents);' in event_bindings_source
+        and 'await bindNodeGraphMvpEventGroup("header", bindNodeGraphHeaderControlEvents);' in event_bindings_source
+        and "Node graph event binding failed:" in event_bindings_source,
+        "node graph event binding should isolate failures so windows still bind",
     )
     require(
         'setNodeGraphViewMode("modular")' not in shop_add_source,
@@ -11977,6 +12187,23 @@ def require_node_graph_mvp_contract() -> None:
         require(
             removed_module_browser_snippet not in script_sources["./public/node-graph-module-store.js"],
             f"module browser catalog should not render old preview/action UI: {removed_module_browser_snippet}",
+        )
+    for retired_shell_module_snippet in [
+        'moduleHome: "Home"',
+        'moduleShop: "Module Browser"',
+        'layout: "moduleHome"',
+        'layout: "moduleShop"',
+        "function createNodeGraphModuleHomeBody",
+        "function createNodeGraphModuleShopBody",
+        "module-home-layout",
+        "module-shop-layout",
+    ]:
+        require(
+            retired_shell_module_snippet not in node_graph_source
+            and retired_shell_module_snippet not in script_sources["./public/node-graph-module-definitions.js"]
+            and retired_shell_module_snippet not in script_sources["./public/node-graph-module-rendering.js"]
+            and retired_shell_module_snippet not in script_sources["./public/node-graph-module-factories.js"],
+            f"retired patch-local shell module should stay removed: {retired_shell_module_snippet}",
         )
     for removed_module_browser_style in [
         ".scene-context-store-preview",
@@ -12165,6 +12392,12 @@ def require_node_graph_mvp_contract() -> None:
         node_graph_source.index("function nodeGraphModuleScopeHasModelDisplay()"):
         node_graph_source.index("function resetNodeGraphModuleScopeFrameClocks()")
     ]
+
+    require(
+        "selectedDepartmentCount" not in script_sources["./public/node-graph-module-store.js"]
+        and "`${selectedDepartment} ·" not in script_sources["./public/node-graph-module-store.js"],
+        "module browser selected category title should not append module count",
+    )
     require(
         'slot.type === "noise"' not in model_display_source
         and 'slot.type === "stereoNoise"' not in model_display_source,
@@ -12664,9 +12897,29 @@ def require_node_graph_mvp_contract() -> None:
         "metadata script preview should not style a fake more/less row",
     )
     require(
-        "delete targetNode.heightGu" in script_sources["./public/node-graph-module-actions.js"]
-        and "targetNode.heightOffsetGu = nextOffsetGu" in script_sources["./public/node-graph-module-actions.js"],
-        "module action height resize should store signed height offsets and clear legacy explicit height",
+        "nodeSceneTextBoxHeightControls" not in index_source
+        and "nodeSceneTextBoxHeightDecrease" not in index_source
+        and "nodeSceneTextBoxHeightIncrease" not in index_source
+        and "adjustNodeGraphModuleHeightFromContext" not in script_sources["./public/node-graph-module-actions.js"]
+        and "adjustNodeGraphModuleHeightFromContext" not in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        and "heightOffsetGu" not in script_sources["./public/node-graph-module-sizing.js"]
+        and "heightOffsetGu" not in script_sources["./public/node-graph-patch-core.js"]
+        and "heightOffsetGu" not in script_sources["./public/node-graph-keyboard-shortcuts.js"]
+        and "heightGu invalid" not in script_sources["./public/node-graph-patch-core.js"],
+        "manual module height resizing should be removed; module height should come from visible content widgets",
+    )
+    require(
+        "nodeSceneDisplayHeightControls" in index_source
+        and "function adjustNodeGraphModuleDisplayHeightFromContext(delta)" in script_sources["./public/node-graph-module-actions.js"]
+        and "delta * nodeGraphModuleDisplayHeightLimits.stepGu" in script_sources["./public/node-graph-module-actions.js"]
+        and "ui.displayHeightOffsetGu = nextOffsetGu;" in script_sources["./public/node-graph-module-actions.js"]
+        and 'bindNodeGraphSceneElementEvent("nodeSceneDisplayHeightDecrease", "click", () => adjustNodeGraphModuleDisplayHeightFromContext(-1));' in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        and 'bindNodeGraphSceneElementEvent("nodeSceneDisplayHeightIncrease", "click", () => adjustNodeGraphModuleDisplayHeightFromContext(1));' in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        and "displayHeightControls.hidden = !(moduleMode && !multiModuleMode && nodeGraphPatchNodeHasHideableOscilloscope(targetNode));" in script_sources["./public/node-graph-context-menu.js"]
+        and "displayHeightGu <= nodeGraphModuleDisplayHeightLimits.minGu" in script_sources["./public/node-graph-context-menu.js"]
+        and "displayHeightGu >= nodeGraphModuleDisplayHeightLimits.maxGu" in script_sources["./public/node-graph-context-menu.js"]
+        and "displayHeightValue.textContent = `${displayHeightGu} display gu`;" in script_sources["./public/node-graph-context-menu.js"],
+        "module actions should adjust display height without restoring arbitrary module height controls",
     )
     ui_view_source = script_sources["./public/node-graph-ui-view.js"]
     patch_normalizers_source = script_sources["./public/node-graph-patch-normalizers.js"]
@@ -12697,6 +12950,12 @@ def require_node_graph_mvp_contract() -> None:
         "function beginNodeGraphFloatingWindowResize(event, element, stateKey)",
         "function dragNodeGraphFloatingWindowResize(event, stateKey, applySize, axes = {})",
         "function endNodeGraphFloatingWindowResize(event, stateKey, onEnd = null)",
+        "function nodeGraphFloatingWindowKeyboardTargets()",
+        "function handleNodeGraphFloatingWindowKeyboardNudge(event)",
+        'draggingKey: "sceneContextDragging"',
+        "sizeAxes: { width: true, height: false }",
+        "event.shiftKey\n    ? resizeNodeGraphFloatingWindowByKeyboard",
+        "{ status: false }",
     ):
         require(snippet in floating_window_helper_source, f"shared floating window helper missing {snippet}")
     require(
@@ -12772,10 +13031,11 @@ def require_node_graph_mvp_contract() -> None:
     require(
         "body.node-hide-mouse-while-dragging,\nbody.node-hide-mouse-while-dragging * {\n  cursor: none !important;\n}" in style_source
         and "body.node-slider-dragging.node-hide-mouse-while-dragging::after" in style_source
-        and style_source.count("cursor:") == 1
+        and style_source.count("cursor: none !important;") == 1
+        and style_source.count("cursor: ew-resize;") == 1
         and "style.cursor" not in shader_script_source
         and "cursor:" not in color_widget_source,
-        "sandbox cursor policy should only hide the cursor through the drag setting",
+        "sandbox cursor policy should only hide the cursor through the drag setting and explicit resize grips",
     )
 
     require(
@@ -12820,6 +13080,14 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphMvp.moduleOscilloscopesVisible === false) {\n    setNodeGraphModuleScopesEnabled(false)" not in node_graph_source
         and "typeof clearNodeGraphModuleScopeCanvas === \"function\") {\n      clearNodeGraphModuleScopeCanvas();" not in node_graph_source,
         "hiding oscilloscopes should pause drawing rather than clearing or changing the screen",
+    )
+    require(
+        "function nodeGraphModuleScopeSlotIgnoresGlobalHide(slot)" in node_graph_source
+        and 'return ["visualOscilloscope", "canvas"].includes(slot?.type);' in node_graph_source
+        and "function nodeGraphVisibleModuleScopeSlots()" in node_graph_source
+        and "return slots.filter(nodeGraphModuleScopeSlotIgnoresGlobalHide);" in node_graph_source
+        and "nodeGraphMvp.moduleOscilloscopesVisible === false && !nodeGraphVisibleModuleScopeSlots().length" in node_graph_source,
+        "visual oscilloscope and canvas scope faces should keep drawing when global module scopes are hidden",
     )
 
     require(
@@ -12930,9 +13198,27 @@ def require_node_graph_mvp_contract() -> None:
         "hiding module buttons globally should not switch modules to auto height",
     )
     require(
-        ".node-graph-workspace.module-oscilloscopes-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.formula-visual-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)" in style_source
+        ".dsp-node.filter-curve-layout.oscilloscope-hidden .node-filter-curve-display" in style_source
+        and ".node-graph-workspace.module-oscilloscopes-hidden .dsp-node.filter-curve-layout,\n.dsp-node.filter-curve-layout.oscilloscope-hidden" in style_source
+        and "grid-template-rows:\n    var(--node-header-height)\n    minmax(var(--node-io-section-min-height), auto)\n    minmax(0, 1fr);" in style_source
+        and ".node-graph-workspace.module-oscilloscopes-hidden\n  .dsp-node:not(.canvas-node-layout):not(.visual-scope-layout) {\n  --node-module-scope-height: 0px;" in style_source
+        and ".node-graph-workspace.module-oscilloscopes-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.filter-curve-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)" in style_source
         and "grid-template-rows: var(--node-header-height) minmax(var(--node-io-section-min-height), auto) minmax(0, 1fr);" in style_source,
-        "hiding oscilloscopes globally should switch normal modules to a no-scope IO/body grid",
+        "hiding displays globally should collapse only hideable display rows and keep normal modules on a no-display IO/body grid",
+    )
+    hideable_scope_source = script_sources["./public/node-graph-module-sizing.js"][
+        script_sources["./public/node-graph-module-sizing.js"].index("function nodeGraphModuleTypeHasHideableOscilloscope"):
+        script_sources["./public/node-graph-module-sizing.js"].index("function nodeGraphPatchNodeHasHideableOscilloscope")
+    ]
+    require(
+        '"filterCurve"' not in hideable_scope_source,
+        "filter curve modules should expose the show/hide display action",
+    )
+    require(
+        "const structuralUiSignature = patchNodeUi.oscilloscopeHidden ? \"scope-hidden\" : \"scope-visible\";" in script_sources["./public/node-graph-patch-core.js"]
+        and "element.dataset.structuralUiSignature !== structuralUiSignature" in script_sources["./public/node-graph-patch-core.js"]
+        and "element.dataset.structuralUiSignature = structuralUiSignature;" in script_sources["./public/node-graph-patch-core.js"],
+        "show/hide display should rebuild module body when its visual face was previously omitted",
     )
     state_read_style = style_source[
         style_source.index(".node-wire-path.state-read {"):
@@ -12943,86 +13229,39 @@ def require_node_graph_mvp_contract() -> None:
         "state-read feedback wires should be solid; only inactive wires should be dashed",
     )
     require(
-        "oscilloscopeHidden && nodeGraphModuleTypeHasHideableOscilloscope" not in script_sources["./public/node-graph-module-sizing.js"],
-        "per-module oscilloscope hidden state should not reduce reserved module grid height",
-    )
-    for snippet in [
-        '"formulaVisual"',
-        'formulaVisual: "Formula Visual"',
-        "formulaVisual: {",
-        'category: "Visual"',
-        "Visual sinks, RGBA sources, canvas layers, and formula tiles",
-        "Formula-driven pattern tile",
-        "formula presets",
-        'formulaVisual: "formula-visual-layout"',
-        'layout === "formulaVisual"',
-        'layout === "formulaVisual") {\n    return 8;',
-        'layout === "formulaVisual") {\n    return { ...nodeGraphModuleHeightLimits, maxGu: 36 };',
-        "createNodeGraphFormulaVisualBody(node)",
-        "createNodeGraphIoColumn(node, type, inputPorts, \"input\")",
-        "createNodeGraphIoColumn(node, type, outputPorts, \"output\")",
-        "function createNodeGraphFormulaVisualBody(node)",
-        "function compileNodeGraphFormulaVisualExpression",
-        "function applyNodeGraphFormulaVisualScript(event)",
-        "function applyNodeGraphFormulaVisualPreset(event)",
-        "data-formula-visual-source",
-        "function drawNodeGraphFormulaVisualCanvas",
-        "function scheduleNodeGraphFormulaVisualDraw",
-        "function nodeGraphFormulaVisualSample(node, runtime, nodeId, sampleRate, frame = 0, frames = 1, frameValues = new Map())",
-        "nodeGraphMvp.visualControls?.formulaVisual?.[nodeId]?.[key]",
-        "if (Number.isFinite(liveValue))",
-        ".dsp-node.formula-visual-layout",
-        ".node-formula-visual-body",
-        ".node-formula-visual-canvas",
-        ".node-formula-visual-controls",
-        "{ id: \"visual\", heightGu: 8, visible: true }",
-        "{ id: \"io\", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true }",
-    ]:
-        require(
-            snippet in node_graph_source or snippet in style_source,
-            f"formula visual round 1 missing anchor: {snippet}",
-        )
-    formula_visual_draw_source = script_sources["./public/node-graph-module-factories.js"][
-        script_sources["./public/node-graph-module-factories.js"].index("function drawNodeGraphFormulaVisualCanvas"):
-        script_sources["./public/node-graph-module-factories.js"].index("function drawNodeGraphFormulaVisuals")
-    ]
-    require(
-        "return morph >" not in formula_visual_draw_source,
-        "formula visual morph=0 should not stop the animation scheduler",
+        "function nodeGraphModuleDisplayVisibleForUi(type, ui = {})" in script_sources["./public/node-graph-module-sizing.js"]
+        and "return !nodeGraphEffectivePatchNodeUi(ui).oscilloscopeHidden;" in script_sources["./public/node-graph-module-sizing.js"]
+        and '{ id: "curve", heightGu: nodeGraphModuleDisplayHeightUnits(type, ui) * 1.5, visible: displayVisible }' in script_sources["./public/node-graph-module-sizing.js"]
+        and '{ id: "scope", heightGu: nodeGraphModuleDisplayHeightUnits(type, ui), visible: displayVisible }' in script_sources["./public/node-graph-module-sizing.js"],
+        "module height should reserve display rows only when final display visibility is true",
     )
     require(
-        'const petals = Math.max(1, param("formulaPetals", 5));' in formula_visual_draw_source
-        and 'Math.round(param("formulaPetals"' not in formula_visual_draw_source,
-        "formula visual Petals metadata should be able to use decimal values",
-    )
-    require(
-        "formulaVisual: values.formulaVisual && typeof values.formulaVisual === \"object\"" in script_sources["./public/node-graph-workspace-view.js"]
-        and "formulaVisual: message.formulaVisual && typeof message.formulaVisual === \"object\"" in script_sources["./public/node-graph-live-runtime.js"]
-        and "const nodeLiveFormulaVisualParameters = Object.freeze([" in worklet_source
-        and "formulaVisualSample(node, rate = sampleRate" in worklet_source,
-        "formula visual parameters should drive live per-node visual values",
-    )
-    require(
-        'inputs: ["A", "B", "Petals", "Mix", "Scale", "Rotate", "Morph", "Hue", "Glow", "Dots"]' not in script_sources["./public/node-graph-module-definitions.js"]
-        and 'visualInputs: [\n      { key: "formulaA"' not in script_sources["./public/node-graph-module-definitions.js"],
-        "formula visual should not duplicate parameters as dedicated input jacks",
-    )
-    require(
-        "readNodeGraphLiveEffectiveParam(" in script_sources["./public/node-graph-live-frame-evaluator.js"]
-        and "node,\n      key," in script_sources["./public/node-graph-live-frame-evaluator.js"]
-        and "this.readEffectiveParameter(" in worklet_source
-        and "parameter.key," in worklet_source
-        and "legacyFormulaVisualInputParams" in script_sources["./public/node-graph-patch-core.js"],
-        "formula visual live runtime should read effective parameters and migrate legacy duplicate input wires",
+        'retiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"])' in script_sources["./public/node-graph-patch-core.js"]
+        and "formulaVisual" not in script_sources["./public/node-graph-module-definitions.js"]
+        and "formulaVisual" not in script_sources["./public/node-graph-module-store.js"]
+        and "formulaVisual" not in script_sources["./public/node-graph-module-factories.js"]
+        and "formulaVisual" not in script_sources["./public/node-graph-live-frame-evaluator.js"]
+        and "formulaVisual" not in worklet_source,
+        "formula visual should be retired while stale saved nodes are scrubbed",
     )
     require(
         "const modulations = Array.isArray(patch.modulations) ? patch.modulations.map((modulation) => {" not in script_sources["./public/node-graph-patch-core.js"]
-        and "const modulations = (Array.isArray(patch.modulations) ? patch.modulations : [])\n    .concat(migratedModulations)\n    .flatMap((modulation) => {" in script_sources["./public/node-graph-patch-core.js"],
-        "patch core should not contain the old modulation map tail after flatMap migration",
+        and "const modulations = (Array.isArray(patch.modulations) ? patch.modulations : [])\n    .flatMap((modulation) => {" in script_sources["./public/node-graph-patch-core.js"],
+        "patch validation should keep duplicate-safe modulation flatMap without formula migration",
     )
     require(
         "nodeMetadataScriptAliases" not in script_sources["./public/node-graph-metadata-editor.js"],
         "metadata script editor should not expose leftover default-to-def aliases",
+    )
+    metadata_editor_source = script_sources["./public/node-graph-metadata-editor.js"]
+    metadata_editor_tail = metadata_editor_source[metadata_editor_source.rfind("function handleNodeMetadataEditorInput"):]
+    require(
+        "bindNodeGraphMetadataPopoverEvents();" not in metadata_editor_tail
+        and "bindNodeMetadataScriptBeforeUnload();" not in metadata_editor_tail
+        and "scheduleNodeMetadataScriptParserSelfTestStatus();" not in metadata_editor_tail
+        and "bindNodeMetadataScriptBeforeUnload();" in script_sources["./public/node-graph-bootstrap.js"]
+        and "scheduleNodeMetadataScriptParserSelfTestStatus();" in script_sources["./public/node-graph-bootstrap.js"],
+        "metadata editor should bind during node graph bootstrap after nodeGraphMvp exists",
     )
     require(
         'document.body.classList.remove("node-boot-loading")' in boot_loading_source
@@ -13031,10 +13270,12 @@ def require_node_graph_mvp_contract() -> None:
         and 'document.body.classList.add("node-boot-ready")' in boot_loading_source
         and "}, 333);" in boot_loading_source
         and "function setNodeBootLoadingProgress(value, label = \"\")" in boot_loading_source
+        and 'document.body.dataset.nodeBootFinished = "watchdog";' in boot_loading_source
+        and "}, 10000);" in boot_loading_source
         and 'window.addEventListener("nodeSandboxStartupProgress"' in boot_loading_source
         and 'window.addEventListener("nodeSandboxInterfaceReady", finishNodeBootLoading, { once: true });' in boot_loading_source
         and 'document.body.dataset.nodeBootFinished = "interface-ready";' in boot_loading_source,
-        "boot loading veil should fade after the interface ready event",
+        "boot loading veil should fade after the interface ready event or watchdog timeout",
     )
     require(
         "--node-module-primary-text-color: rgba(243, 241, 236, 0.76);" in style_source
@@ -13074,6 +13315,8 @@ def require_node_graph_mvp_contract() -> None:
 
     for snippet in [
         ".node-graph-workspace",
+        "scrollbar-gutter: stable both-edges",
+        "overflow-y: auto",
         "body.node-boot-loading",
         "body.node-boot-fading",
         "body.node-boot-loading .shell",
@@ -13145,8 +13388,8 @@ def require_node_graph_mvp_contract() -> None:
         ".node-module-scope-canvas",
         ".node-graph-workspace.module-scopes-enabled .node-module-scope-canvas",
         ".node-graph-workspace.module-oscilloscopes-hidden",
-        ".node-graph-workspace.module-oscilloscopes-hidden .node-module-scope-canvas",
-        ".node-graph-workspace.module-oscilloscopes-hidden .node-module-scope-window",
+        ".node-graph-workspace.module-oscilloscopes-hidden\n  .dsp-node:not(.canvas-node-layout):not(.visual-scope-layout) {\n  --node-module-scope-height: 0px;",
+        ".node-graph-workspace.module-oscilloscopes-hidden\n  .dsp-node:not(.canvas-node-layout):not(.visual-scope-layout)\n  .node-module-scope-window",
         ".node-canvas-layers",
         ".node-canvas-layer",
         "--node-canvas-layer-x",
@@ -13168,14 +13411,14 @@ def require_node_graph_mvp_contract() -> None:
         "height: auto",
         ".node-modular-shader-canvas",
         ".node-graph-workspace.shader-enabled .node-modular-shader-canvas",
-        "--node-module-scope-height: calc(var(--node-grid-height) * 2)",
-        "--node-scope-port-band-overlap: var(--node-io-section-min-height)",
+        "--node-module-scope-height: calc(var(--node-grid-height) * var(--node-module-display-height-units, 2))",
+        "--node-scope-port-band-overlap: 0px",
         ".dsp-node.visual-scope-layout",
         ".visual-scope-layout .node-module-square-scope-window",
-        "height: calc(100% + var(--node-scope-port-band-overlap))",
+        "height: 100%",
         "align-self: stretch",
         ".node-module-scope-window",
-        "height: calc(var(--node-module-scope-height) + var(--node-scope-port-band-overlap))",
+        "height: 100%",
         ".node-module-scope-window-surface",
         "--node-scope-background",
         "background: var(--node-scope-background, #000)",
@@ -13250,29 +13493,43 @@ def require_node_graph_mvp_contract() -> None:
         ".node-module-shop-column",
         ".node-module-department-search-placeholder",
         ".node-module-shop-view.department-selected .node-module-shop-controls",
-        "grid-template-columns: minmax(54px, 0.42fr) minmax(0, 1fr)",
+        "grid-template-columns: minmax(54px, 0.32fr) minmax(0, 1fr)",
         ".node-module-shop-view:not(.department-selected) .node-module-department-search-placeholder",
         "grid-column: 1 / -1",
-        ".node-module-shop-view.department-selected .node-module-shop-fit-control span",
         "display: none",
         ".node-module-department-search-placeholder input:disabled",
         ".node-module-department-back-button",
+        "font: 1.05rem/1 var(--mono)",
         ".node-module-department-title",
+        "color: rgba(127, 199, 217, 0.9)",
+        "font-size: 0.78rem",
+        "font-weight: 650",
+        "text-transform: none",
         ".node-scene-context-menu.node-module-collections-menu",
         ".node-module-collection-card",
         ".node-module-shop-section",
         ".node-module-shop-section-title",
         ".node-module-shop-section-title small",
         ".node-module-shop-heading .panel-close-button",
-        ".node-module-store-grid .scene-context-store-card strong",
         ".node-module-store-list",
         ".node-module-store-list .scene-context-store-card",
         ".node-module-store-list .scene-context-store-card strong",
         "grid-template-columns: minmax(0, 1fr)",
+        "grid-auto-rows: var(--node-floating-window-button-height)",
+        "height: var(--node-floating-window-button-height)",
+        "max-height: var(--node-floating-window-button-height)",
+        "border: 1px solid var(--line)",
+        "background: rgb(3, 5, 7)",
+        "border-color: rgba(127, 199, 217, 0.36)",
+        "background: rgb(6, 9, 11)",
+        "user-select: none",
+        "-webkit-user-select: none",
+        ".node-module-store-list .scene-context-store-card[data-context-module] strong",
+        "color: var(--node-module-primary-text-color) !important",
+        "--node-header-title-font-family",
+        "font-weight: 400",
         ".scene-context-store-department-count",
         ".node-module-shop-resize-handle",
-        "--node-module-shop-columns",
-        "--node-module-shop-label-size",
         "width: 100%",
         "place-items: center",
         "white-space: normal",
@@ -13334,16 +13591,15 @@ def require_node_graph_mvp_contract() -> None:
         ".node-preset-controls input",
         ".node-patch-clipboard-controls",
         ".node-patch-clipboard-controls button",
-        "--node-saved-patch-columns",
         "container-type: inline-size",
         "grid-auto-rows: auto",
-        "aspect-ratio: 1 / 1",
+        "aspect-ratio: auto",
         "overflow-y: auto",
         "overscroll-behavior: contain",
         ".node-demo-patch-list",
         ".node-demo-patch-row",
         ".node-demo-patch-bank",
-        "grid-template-rows: minmax(0, 0.78fr) minmax(0, 2.2fr)",
+        "grid-template-columns: minmax(7ch, 0.34fr) minmax(0, 1fr)",
         "align-self: center",
         ".node-demo-patch-status",
         ".node-script-grid-settings",
@@ -13398,13 +13654,20 @@ def require_node_graph_mvp_contract() -> None:
         "grid-template-rows: var(--node-header-title-row-height) minmax(0, 1fr)",
         "border-radius: 5px",
         "grid-template-rows: var(--node-header-height) var(--node-module-scope-height) auto minmax(0, 1fr)",
+        ".dsp-node.filter-curve-layout",
+        "grid-template-rows:\n    var(--node-header-height)\n    calc(var(--node-module-scope-height) * 1.5)\n    minmax(var(--node-io-section-min-height), auto)\n    minmax(0, 1fr)",
+        ".node-graph-workspace.module-oscilloscopes-hidden .dsp-node.filter-curve-layout,\n.dsp-node.filter-curve-layout.oscilloscope-hidden",
+        "grid-template-rows:\n    var(--node-header-height)\n    minmax(var(--node-io-section-min-height), auto)\n    minmax(0, 1fr);",
         ".dsp-node-body",
         "grid-auto-rows: minmax(var(--node-body-row-height), 1fr)",
-        ".node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.formula-visual-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)",
+        ".node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)",
         "grid-template-rows: var(--node-header-height) var(--node-module-scope-height) auto auto minmax(0, 1fr)",
         ".dsp-node.sample-module-layout.oscilloscope-hidden",
         "--node-module-scope-height: 0px",
-        ".node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.formula-visual-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)::after",
+        ".dsp-node.sample-module-layout,\n.dsp-node.sample-module-layout.oscilloscope-hidden",
+        "grid-template-rows:\n    var(--node-header-height)\n    var(--node-module-scope-height)\n    auto\n    minmax(var(--node-io-section-min-height), auto)\n    auto;",
+        "align-content: start;",
+        ".node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)::after",
         "grid-auto-rows: var(--node-body-row-height)",
         "gap: var(--node-body-row-gap)",
         ".dsp-node-io-section",
@@ -13439,9 +13702,10 @@ def require_node_graph_mvp_contract() -> None:
         ".scene-context-alias-control input",
         ".dsp-node.buttons-hidden",
         ".dsp-node.oscilloscope-hidden",
-        ".dsp-node.oscilloscope-hidden .node-module-scope-window",
+        ".dsp-node.oscilloscope-hidden:not(.canvas-node-layout):not(.visual-scope-layout) .node-module-scope-window",
         ".node-graph-workspace.module-buttons-hidden .dsp-node .node-header-actions",
-        ".node-graph-workspace.module-sliders-hidden .node-param-row",
+        ".node-graph-workspace.module-sliders-hidden .node-parameter-row",
+        ".dsp-node.sliders-hidden .dsp-node-body",
         ".dsp-node.title-hidden",
         ".node-graph-workspace.module-buttons-hidden .dsp-node:not(.title-hidden)",
         ".dsp-node.buttons-hidden.title-hidden",
@@ -13679,20 +13943,34 @@ def require_node_graph_mvp_contract() -> None:
         "max-width: min(var(--metadata-popover-max-width, 900px), calc(100vw - 12px))",
         "max-height: min(var(--metadata-popover-max-height, 820px), calc(100vh - 12px))",
         ".metadata-popover-heading",
-        "grid-template-columns: 34px minmax(0, 1fr) 34px",
+        "--node-floating-window-header-height: 30px",
+        "grid-template-columns:\n    var(--node-floating-window-header-height)\n    minmax(0, 1fr)\n    var(--node-floating-window-header-height)",
+        "min-height: var(--node-floating-window-header-height)",
         ".metadata-popover-title-group",
         ".metadata-popover-heading #metadataPopoverSubtitle",
         ".metadata-popover-drag-handle",
         ".metadata-popover-drag-handle.dragging",
         ".metadata-popover-corner-drag",
         ".metadata-popover-corner-drag.dragging",
+        ".metadata-close-prompt",
+        ".metadata-close-prompt[hidden]",
         ".metadata-popover-heading.dragging",
         ".metadata-choices-label",
         ".metadata-checkbox-label",
+        ".metadata-field-actions",
+        ".metadata-field-actions button.dirty",
+        ".metadata-field-section",
+        ".metadata-toggle-section",
+        ".metadata-section-title",
+        ".metadata-advanced-toggle",
+        ".metadata-stepper-control",
+        "grid-template-columns: minmax(0, 1fr) 30px 30px",
         ".metadata-popover-grid",
-        ".metadata-popover-grid {\n  display: none;",
+        ".metadata-popover-grid {\n  display: grid;",
         ".metadata-popover-grid button.armed",
         ".metadata-script-panel",
+        ".metadata-script-panel {\n  display: none;",
+        ".node-parameter-metadata-popover.metadata-script-open .metadata-script-panel",
         ".metadata-script-editor",
         ".metadata-script-highlight",
         ".metadata-script-preview",
@@ -13711,10 +13989,13 @@ def require_node_graph_mvp_contract() -> None:
         ".metadata-script-reference code:hover",
         ".metadata-token-link",
         "@keyframes nodeTextCaretBlink",
+        'input[type="text"]',
+        '):not(.node-text-box-input)',
         "animation: nodeTextCaretBlink 2s steps(1, end) infinite;",
         ".metadata-script-actions",
         ".metadata-script-panel textarea",
-        "resize: vertical;",
+        "resize: none;",
+        "overflow: hidden;",
         "min-height: 286px;",
         ".metadata-token-property",
         ".metadata-token-assignment",
@@ -13728,14 +14009,21 @@ def require_node_graph_mvp_contract() -> None:
         ".node-visibility-menu",
         "position: fixed",
         "width: min(196px, calc(100vw - 28px))",
+        "min-width: var(--node-module-actions-min-width, 24px)",
+        "grid-template-columns:\n    var(--node-floating-window-header-height)\n    minmax(0, 1fr)\n    var(--node-floating-window-header-height)",
+        "min-height: var(--node-floating-window-header-height)",
         ".node-visibility-menu-heading.dragging",
+        ".node-visibility-menu-drag-handle",
         ".node-visibility-menu-list",
-        "min-height: 24px",
-        "padding: 3px 7px",
+        ".node-visibility-menu-resize-handle",
+        "cursor: ew-resize",
+        "min-height: var(--node-floating-window-button-height)",
+        "padding: 0 7px",
         "width: min(430px, calc(100vw - 28px))",
         "max-height: min(760px, calc(100vh - 28px))",
         "#nodeSceneContextMenu",
         "width: min(var(--node-scene-context-width, 215px), calc(100vw - 28px))",
+        "min-width: var(--node-scene-context-min-width, var(--node-module-actions-min-width, 24px))",
         "padding: 0",
         ".node-module-actions-window",
         "width: clamp(",
@@ -13745,10 +14033,19 @@ def require_node_graph_mvp_contract() -> None:
         "height: var(--node-module-actions-height, auto)",
         "min-width: var(--node-module-actions-min-width, 24px)",
         "max-width: min(var(--node-module-actions-max-width, 360px), calc(100vw - 28px))",
+        "display: flex",
+        "flex-direction: column",
         ".node-module-actions-window *,",
-        "grid-template-columns: minmax(0, 18px) minmax(0, 1fr) minmax(0, 18px)",
-        "max-inline-size: 18px",
+        ".node-module-actions-window-body",
+        "flex: 1 1 auto",
+        "flex-direction: column",
+        ".node-module-actions-window-body > *",
+        "flex: 0 0 auto",
+        "grid-template-columns:\n    var(--node-floating-window-header-height)\n    minmax(0, 1fr)\n    var(--node-floating-window-header-height)",
+        "max-inline-size: var(--node-floating-window-header-height)",
         "overflow: hidden auto",
+        ".node-module-actions-window .scene-context-resize-handle",
+        "position: absolute",
         "#nodeSceneContextMenu .scene-context-heading",
         "margin: 0",
         "background: rgb(3, 5, 7)",
@@ -13756,7 +14053,8 @@ def require_node_graph_mvp_contract() -> None:
         ".scene-context-text-box-controls:not(#nodeSceneWindowControls)",
         "background: rgb(7, 10, 13)",
         "button:not(.scene-context-drag-handle):not(.panel-close-button):not(.scene-context-resize-handle)",
-        "linear-gradient(180deg, rgb(24, 31, 36), rgb(10, 14, 17))",
+        "background: rgb(16, 22, 26)",
+        "background: rgb(22, 32, 38)",
         ".node-scene-context-menu[hidden]",
         ".scene-context-heading",
         ".scene-context-heading > .panel-close-button",
@@ -13766,17 +14064,24 @@ def require_node_graph_mvp_contract() -> None:
         ".scene-context-resize-handle",
         ".scene-context-resize-handle.dragging",
         ".scene-context-title",
-        "grid-template-columns: 34px minmax(0, 1fr) 34px",
-        "min-height: 34px",
+        "grid-template-columns:\n    var(--node-floating-window-header-height)\n    minmax(0, 1fr)\n    var(--node-floating-window-header-height)",
+        "min-height: 28px",
         ".scene-context-title > span",
         ".scene-context-title > small",
         "justify-items: center",
         "text-align: center",
+        "--node-floating-window-button-height: 30px",
         ".scene-context-store-ledger",
         ".scene-context-store-department-list",
         ".scene-context-store-department-card",
         ".scene-context-store-department-symbol",
         ".scene-context-store-department-title",
+        "--node-module-category-stroke: rgba(127, 199, 217, 0.22)",
+        "border: 0",
+        "inset 1px 0 0 var(--node-module-category-stroke)",
+        "inset -1px 0 0 var(--node-module-category-stroke)",
+        "inset 0 1px 0 var(--node-module-category-stroke)",
+        "inset 0 -1px 0 var(--node-module-category-stroke)",
         ".scene-context-store-list",
         ".scene-context-store-row",
         ".scene-context-store-department-heading",
@@ -13796,12 +14101,8 @@ def require_node_graph_mvp_contract() -> None:
         "--node-saved-patches-min-height",
         "--node-saved-patches-max-height",
         ".node-saved-patches-heading",
-        "grid-template-columns: 34px minmax(0, 1fr) 34px",
-        "grid-template-columns: 28px minmax(0, 1fr) minmax(68px, auto) 28px",
-        ".node-saved-patches-row-control",
-        ".node-saved-patches-fit-control",
-        ".node-saved-patches-row-control .node-saved-patches-fit-control",
-        ".node-saved-patches-title-actions",
+        "grid-template-columns:\n    var(--node-floating-window-header-height)\n    minmax(0, 1fr)\n    var(--node-floating-window-header-height)",
+        ".node-saved-patches-clipboard-row",
         ".node-saved-patches-drag-handle",
         ".node-saved-patches-resize-handle",
         "touch-action: none",
@@ -13812,6 +14113,8 @@ def require_node_graph_mvp_contract() -> None:
         "border: 0",
         "border-radius: 0",
         "#nodeSceneWindowControls .scene-context-window-button",
+        "background: rgba(16, 22, 26, 0.94)",
+        "background: rgba(22, 32, 38, 0.96)",
         "#nodeSceneWindowControls .scene-context-window-button:first-child",
         "#nodeSceneWindowControls .scene-context-window-button:last-child",
         ".scene-context-scope-fields",
@@ -13862,6 +14165,10 @@ def require_node_graph_mvp_contract() -> None:
         "container-type: size",
         ".scene-context-danger",
         ".node-scene-context-menu button kbd",
+        "justify-content: center",
+        "text-align: center",
+        ".node-module-actions-window .scene-context-alias-control input",
+        "text-align: left",
         "display: none;",
         ".disconnect-wire-button",
         ".node-connection-list li.selected",
@@ -13883,13 +14190,42 @@ def require_node_graph_mvp_contract() -> None:
             style_source.index(".node-module-shop-view {"):
             style_source.index(".node-module-shop-view *", style_source.index(".node-module-shop-view {"))
         ]
-        and "  overflow: hidden;\n  padding: 14px;" in style_source
+        and "  overflow: hidden;\n  padding: 0;" in style_source
         and "  position: relative;\n  z-index: 82;" in style_source
-        and ".node-module-shop-heading {\n  gap: 0;\n  min-width: 0;\n  margin: -14px -14px 0;" in style_source
+        and ".node-module-shop-heading {\n  position: relative;\n  grid-template-columns:\n    var(--node-floating-window-header-height)\n    minmax(0, 1fr)\n    var(--node-floating-window-header-height);" in style_source
+        and ".node-module-shop-heading .node-module-shop-drag-handle {\n  position: static;" in style_source
+        and ".node-module-shop-heading > div:first-of-type {\n  grid-column: 2;" in style_source
         and ".node-module-shop-column {\n  display: grid;" in style_source
-        and "  min-height: 0;\n  overflow: auto;\n  padding-bottom: 18px;" in style_source
+        and "  grid-template-rows: auto auto minmax(0, 1fr);" in style_source
+        and "  min-height: 0;\n  overflow: hidden;\n  padding: 0;" in style_source
+        and ".node-module-shop-controls {\n  display: grid;" in style_source
+        and "  min-height: var(--node-floating-window-button-height);\n  max-height: var(--node-floating-window-button-height);" in style_source
+        and ".node-module-shop-section {\n  display: grid;" in style_source
+        and "  min-height: 0;\n  overflow: auto;" in style_source
         and ".node-module-shop-resize-handle {\n  position: absolute;\n  right: 0;\n  bottom: 0;" in style_source,
         "module browser resize grip should be glued to the panel corner while content scrolls separately",
+    )
+    module_department_title_style = style_source[
+        style_source.index(".node-module-department-title {"):
+        style_source.index(".node-module-department-title[hidden]")
+    ]
+    module_category_row_title_style = style_source[
+        style_source.index(".scene-context-store-department-title {"):
+        style_source.index(".scene-context-store-department-count")
+    ]
+    module_group_title_style = style_source[
+        style_source.index(".scene-context-store-visual-group {"):
+        style_source.index(".scene-context-store-visual-group:first-child")
+    ]
+    require(
+        "color: rgba(226, 168, 109, 0.9)" in module_group_title_style
+        and "color: rgba(127, 199, 217, 0.9)" in module_department_title_style
+        and "font-size: 0.78rem" in module_department_title_style
+        and "font-weight: 650" in module_department_title_style
+        and "color: rgba(127, 199, 217, 0.9)" in module_category_row_title_style
+        and "font-size: 0.78rem" in module_category_row_title_style
+        and "font-weight: 650" in module_category_row_title_style,
+        "module browser group headers should be orange while clickable category rows stay blue",
     )
 
     for snippet in [
@@ -14473,6 +14809,7 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(not missing, f"node metadata kind templates missing meta.hpp kinds: {sorted(missing)}")
     amplitude = templates.get("amplitude")
     decibels = templates.get("decibels")
+    decimal = templates.get("decimal")
     decimal_bipolar = templates.get("decimal_bipolar")
     frequency = templates.get("frequency")
     phase = templates.get("phase")
@@ -14485,6 +14822,7 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     momentary = templates.get("momentary")
     require(isinstance(amplitude, dict), "amplitude metadata kind missing")
     require(isinstance(decibels, dict), "decibels metadata kind missing")
+    require(isinstance(decimal, dict), "decimal metadata kind missing")
     require(isinstance(decimal_bipolar, dict), "decimal_bipolar metadata kind missing")
     require(isinstance(frequency, dict), "frequency metadata kind missing")
     require(isinstance(phase, dict), "phase metadata kind missing")
@@ -14501,6 +14839,8 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(amplitude.get("maxDigits") == 3, "amplitude maxDigits mismatch")
     require(decibels.get("label") == "Decibels", "decibels metadata label mismatch")
     require(decibels.get("unit") == "dB", "decibels metadata unit mismatch")
+    require(decimal.get("step") == 0.0001, "decimal metadata step mismatch")
+    require(decimal.get("maxDigits") == 4, "decimal maxDigits mismatch")
     require(decimal_bipolar.get("unit") == "", "decimal_bipolar metadata unit mismatch")
     require(decimal_bipolar.get("showPlusMinus") is True, "decimal_bipolar showPlusMinus mismatch")
     require("showPlusMinus" not in decibels, "decibels should not default showPlusMinus")

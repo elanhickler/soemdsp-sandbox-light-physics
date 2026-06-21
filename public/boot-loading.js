@@ -33,6 +33,15 @@ window.addEventListener("nodeSandboxStartupProgress", (event) => {
 });
 window.addEventListener("nodeSandboxInterfaceReady", finishNodeBootLoading, { once: true });
 
+window.setTimeout(() => {
+  if (!document.body.classList.contains("node-boot-loading")) {
+    return;
+  }
+  setNodeBootLoadingProgress(100, "ready");
+  document.body.dataset.nodeBootFinished = "watchdog";
+  finishNodeBootLoading();
+}, 10000);
+
 if (window.nodeSandboxInterfaceReady) {
   finishNodeBootLoading();
 }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=formula-visual-6">
+  <link rel="stylesheet" href="./public/styles.css?v=metadata-save-dirty-1">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -68,7 +68,7 @@
         onclick="dismissNodeGraphMissingSampleAssetsDialog()">Close</button>
     </div>
   </div>
-  <script src="./public/boot-loading.js?v=minimal-loading-screen-1"></script>
+  <script src="./public/boot-loading.js?v=loading-watchdog-1"></script>
   <main class="shell">
     <section class="status-strip" aria-label="Sandbox status">
       <div>
@@ -116,9 +116,17 @@
               type="button"
               aria-pressed="false"><span>Modular</span><span>Only</span></button>
           </span>
+          <button
+            id="nodeModuleShopButton"
+            type="button"
+            aria-pressed="false"><span>Module</span><span>Browser</span></button>
           <span id="nodeWorldPositionReadout" class="node-world-position-readout" aria-label="World position" aria-live="polite">
             <span>X 0</span>
             <span>Y 0</span>
+          </span>
+          <span id="nodeSelectionCountReadout" class="node-selection-count-readout" aria-label="0 selected modules" aria-live="polite">
+            <span>SEL</span>
+            <span data-selection-count-value>0</span>
           </span>
           <span class="node-zoom-controls" role="group" aria-label="Node graph zoom">
             <span class="node-zoom-label">zoom</span>
@@ -161,6 +169,11 @@
           aria-label="Workspace visibility"
           hidden>
           <div class="node-visibility-menu-heading">
+            <button
+              id="nodeVisibilityMenuDragHandle"
+              class="node-visibility-menu-drag-handle node-drag-handle"
+              type="button"
+              aria-label="Move visibility menu">&#x2725;</button>
             <span>Visibility</span>
             <button id="nodeVisibilityMenuClose" class="panel-close-button" type="button" aria-label="Close visibility menu">
               <span aria-hidden="true">&times;</span>
@@ -169,12 +182,17 @@
           <div class="node-visibility-menu-list">
             <button id="nodeGridToggleButton" type="button" role="menuitem" aria-pressed="false">Show Grid</button>
             <button id="nodeModuleButtonsToggleButton" type="button" role="menuitem" aria-pressed="false">Show Module Buttons</button>
-            <button id="nodeOscilloscopeToggleButton" type="button" role="menuitem" aria-pressed="false">Show Oscilloscopes</button>
+            <button id="nodeOscilloscopeToggleButton" type="button" role="menuitem" aria-pressed="false">Show Displays</button>
             <button id="nodeModuleSlidersToggleButton" type="button" role="menuitem" aria-pressed="true">Hide Sliders</button>
             <button id="nodeTooltipToggleButton" type="button" role="menuitem" aria-pressed="true">Hide Tips</button>
             <button id="nodeSliderAmountToggleButton" type="button" role="menuitem" aria-pressed="false">Show Amount Slider</button>
             <button id="nodeSliderPositionToggleButton" type="button" role="menuitem" aria-pressed="true">Hide Position Slider</button>
           </div>
+          <button
+            id="nodeVisibilityMenuResizeHandle"
+            class="node-visibility-menu-resize-handle"
+            type="button"
+            aria-label="Resize visibility menu"></button>
         </div>
         <section
           id="nodeSavedPatchesWindow"
@@ -190,26 +208,13 @@
             <div>
               <span>Patch Explorer</span>
             </div>
-            <div class="node-patch-clipboard-controls node-saved-patches-title-actions" role="group" aria-label="Patch clipboard">
-              <button id="nodeSavedPatchesCopyPatch" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>
-              <button id="nodeSavedPatchesPastePatch" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>
-            </div>
             <button id="nodeSavedPatchesCloseButton" class="panel-close-button" type="button" aria-label="Close patch explorer">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <div class="node-saved-patches-row-control">
-            <label class="node-saved-patches-fit-control">
-              <span>Rows</span>
-              <input
-                id="nodeSavedPatchesFitInput"
-                type="number"
-                min="1"
-                max="16"
-                step="1"
-                value="3"
-                aria-label="Patch explorer modules per row">
-            </label>
+          <div class="node-patch-clipboard-controls node-saved-patches-clipboard-row" role="group" aria-label="Patch clipboard">
+            <button id="nodeSavedPatchesCopyPatch" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>
+            <button id="nodeSavedPatchesPastePatch" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>
           </div>
           <div
             id="nodeSavedPatchWindowList"
@@ -257,7 +262,7 @@
               <span>constrained</span>
             </label>
             <span id="nodeScopeGpuMetrics" class="node-constraint-metrics node-scope-gpu-metrics" aria-live="polite">
-              <span>scope fps <strong data-scope-gpu-metric="fps">--</strong></span>
+              <span>display fps <strong data-scope-gpu-metric="fps">--</strong></span>
               <span>points <strong data-scope-gpu-metric="points">--</strong></span>
               <span class="node-scope-resource-debug node-scope-gpu-debug" data-scope-gpu-debug="summary">debug --</span>
             </span>
@@ -441,7 +446,7 @@
               <div id="nodeShaderScriptCameraViewport" class="node-camera-preview-viewport node-shader-script-camera-viewport" aria-label="Current module camera feed">
                 <div id="nodeShaderScriptCameraSurface" class="node-camera-preview-surface" aria-hidden="true"></div>
               </div>
-              <p id="nodeShaderScriptPreviewStatus">No scope selected.</p>
+              <p id="nodeShaderScriptPreviewStatus">No display selected.</p>
             </aside>
             <div class="node-shader-script-editor">
               <pre
@@ -523,12 +528,14 @@
               id="nodeModuleDepartmentBack"
               class="node-module-department-back-button"
               type="button"
-              hidden>Back</button>
+              aria-label="Back to module categories"
+              title="Back to module categories"
+              hidden>&larr;</button>
             <section id="nodeModuleHomeShelfShell" class="node-module-home-shelf" hidden>
               <div class="node-module-shop-section-title">
                 <span>Home</span>
               </div>
-              <div id="nodeModuleHomeShelf" class="scene-context-store-list node-module-store-grid" aria-label="Home modules"></div>
+              <div id="nodeModuleHomeShelf" class="scene-context-store-list node-module-store-list" aria-label="Home modules"></div>
             </section>
             <label id="nodeModuleDepartmentSearchShell" class="node-module-department-search-placeholder">
               <input
@@ -538,27 +545,9 @@
                 autocomplete="off"
                 spellcheck="false">
             </label>
-            <label id="nodeModuleShopFitControl" class="node-module-shop-fit-control">
-              <span>Fit</span>
-              <input
-                id="nodeModuleShopFitInput"
-                type="number"
-                min="1"
-                max="16"
-                step="1"
-                value="4"
-                aria-label="Module buttons fit horizontally">
-            </label>
           </div>
           <div id="nodeModuleDepartmentTitle" class="node-module-department-title" hidden></div>
-          <section id="nodeModuleDepartmentList" class="node-module-shop-section scene-context-store-list node-module-store-grid" aria-label="Modules"></section>
-          <section id="nodeModuleDeveloperListShell" class="node-module-shop-section scene-context-store-hidden" hidden>
-            <div class="node-module-shop-section-title">
-              <span>Developer</span>
-              <strong>unfinished modules</strong>
-            </div>
-            <div id="nodeModuleDeveloperList" class="scene-context-store-list node-module-store-grid" aria-label="Developer modules"></div>
-          </section>
+          <section id="nodeModuleDepartmentList" class="node-module-shop-section scene-context-store-list" aria-label="Modules"></section>
           <section id="nodeModuleGroups" class="node-module-shop-section scene-context-store-hidden" hidden>
             <div class="node-module-shop-section-title">
               <span>Saved circuits</span>
@@ -580,7 +569,7 @@
             <span>Patch Utility</span>
             <strong>Patch Script</strong>
           </div>
-          <small>Raw patch JSON for load, save, defaults, and recovery.</small>
+          <small>Raw patch JSON for load, save, init, and recovery.</small>
         </div>
         <div class="node-script-actions" aria-label="Patch script editor actions">
           <button
@@ -733,7 +722,7 @@
             <button
               id="updateDefaultPresetButton"
               type="button"
-              data-tooltip-key="script.updateDefault"><span>Update</span><span>Default</span></button>
+              data-tooltip-key="script.updateDefault"><span>Save</span><span>Init</span></button>
           </div>
           <div class="node-settings-view-action-group" role="group" aria-label="Developer views">
             <button
@@ -995,7 +984,7 @@
             <input
               id="nodeUiDevScopeBloomEnabled"
               type="checkbox">
-            <span>scope bloom glow</span>
+            <span>display bloom glow</span>
           </label>
           <label class="node-ui-dev-control">
             <span>settings header text size</span>
@@ -1161,6 +1150,19 @@
                 step="1"
                 value="2">
               <output id="nodeUiDevSettingsHeaderPaddingValue" for="nodeUiDevSettingsHeaderPadding">2px</output>
+            </div>
+          </label>
+          <label class="node-ui-dev-control">
+            <span>floating window header height</span>
+            <div class="node-ui-dev-control-row">
+              <input
+                id="nodeUiDevFloatingWindowHeaderHeight"
+                type="range"
+                min="20"
+                max="48"
+                step="1"
+                value="30">
+              <output id="nodeUiDevFloatingWindowHeaderHeightValue" for="nodeUiDevFloatingWindowHeaderHeight">30px</output>
             </div>
           </label>
           <label class="node-ui-dev-control node-ui-dev-dot-control">
@@ -1581,6 +1583,9 @@
         </div>
         <div class="node-user-ui-settings-actions" aria-label="user UI settings actions">
           <button
+            id="nodeUserUiSettingsClearStartup"
+            type="button">Clear Startup</button>
+          <button
             id="nodeUserUiSettingsSaveDefault"
             type="button">Save UI Settings</button>
           <output
@@ -1626,13 +1631,34 @@
         </button>
         <div id="nodeSceneWindowControls" class="scene-context-text-box-controls scene-context-window-controls">
           <div>
-            <button id="nodeSceneOpenSavedPatches" class="scene-context-window-button" type="button">Patch Explorer</button>
-            <button id="nodeSceneOpenModuleBrowser" class="scene-context-window-button" type="button">Module Browser</button>
-            <button id="nodeSceneOpenOscilloscopeSettings" class="scene-context-window-button" type="button">Oscilloscope Settings</button>
-            <button id="nodeSceneOpenModuleActions" class="scene-context-window-button" type="button">Module Actions</button>
-            <button id="nodeSceneOpenMetaparameters" class="scene-context-window-button" type="button">Metaparameter</button>
-            <button id="nodeSceneOpenUiSettings" class="scene-context-window-button" type="button">UI Settings</button>
-            <button id="nodeSceneOpenPostProcessing" class="scene-context-window-button" type="button">Post Processing</button>
+            <button id="nodeSceneOpenSavedPatches" class="scene-context-window-button" type="button">
+              <span class="scene-context-window-button-icon" aria-hidden="true">📁</span>
+              <span class="scene-context-window-button-label">Patch Explorer</span>
+            </button>
+            <button id="nodeSceneOpenModuleBrowser" class="scene-context-window-button" type="button">
+              <span class="scene-context-window-button-icon" aria-hidden="true">🎛️</span>
+              <span class="scene-context-window-button-label">Module Browser</span>
+            </button>
+            <button id="nodeSceneOpenOscilloscopeSettings" class="scene-context-window-button" type="button">
+              <span class="scene-context-window-button-icon" aria-hidden="true">📺</span>
+              <span class="scene-context-window-button-label">Display Settings</span>
+            </button>
+            <button id="nodeSceneOpenModuleActions" class="scene-context-window-button" type="button">
+              <span class="scene-context-window-button-icon" aria-hidden="true">🛠️</span>
+              <span class="scene-context-window-button-label">Module Actions</span>
+            </button>
+            <button id="nodeSceneOpenMetaparameters" class="scene-context-window-button" type="button">
+              <span class="scene-context-window-button-icon" aria-hidden="true">🏷️</span>
+              <span class="scene-context-window-button-label">Metaparameter</span>
+            </button>
+            <button id="nodeSceneOpenUiSettings" class="scene-context-window-button" type="button">
+              <span class="scene-context-window-button-icon" aria-hidden="true">🧩</span>
+              <span class="scene-context-window-button-label">UI Settings</span>
+            </button>
+            <button id="nodeSceneOpenPostProcessing" class="scene-context-window-button" type="button">
+              <span class="scene-context-window-button-icon" aria-hidden="true">✨</span>
+              <span class="scene-context-window-button-label">Post Processing</span>
+            </button>
           </div>
         </div>
         <div id="nodeSceneSelectedModule" class="scene-context-selected-module" hidden>
@@ -1666,11 +1692,6 @@
           <button id="nodeSceneWidthDecrease" type="button" aria-label="Decrease module width">-</button>
           <span id="nodeSceneWidthValue" aria-live="polite">7 gu</span>
           <button id="nodeSceneWidthIncrease" type="button" aria-label="Increase module width">+</button>
-        </div>
-        <div id="nodeSceneTextBoxHeightControls" class="scene-context-width-controls" hidden>
-          <button id="nodeSceneTextBoxHeightDecrease" type="button" aria-label="Decrease module height">-</button>
-          <span id="nodeSceneTextBoxHeightValue" aria-live="polite">6 height gu</span>
-          <button id="nodeSceneTextBoxHeightIncrease" type="button" aria-label="Increase module height">+</button>
         </div>
         <div id="nodeSceneTextBoxTextSizeControls" class="scene-context-width-controls" hidden>
           <button id="nodeSceneTextBoxTextSizeDecrease" type="button" aria-label="Decrease text box text size">-</button>
@@ -1821,12 +1842,19 @@
           <span>Hide title</span>
         </button>
         <button id="nodeSceneToggleOscilloscope" type="button" role="menuitem" hidden>
-          <span>Hide oscilloscope</span>
+          <span>Hide display</span>
+        </button>
+        <div id="nodeSceneDisplayHeightControls" class="scene-context-width-controls" hidden>
+          <button id="nodeSceneDisplayHeightDecrease" type="button" aria-label="Decrease display height">-</button>
+          <span id="nodeSceneDisplayHeightValue" aria-live="polite">2 display gu</span>
+          <button id="nodeSceneDisplayHeightIncrease" type="button" aria-label="Increase display height">+</button>
+        </div>
+        <button id="nodeSceneToggleSliders" type="button" role="menuitem" hidden>
+          <span>Hide sliders</span>
         </button>
         <div id="nodeSceneImageControls" class="scene-context-text-box-controls" hidden>
           <span>image</span>
-          <div class="three">
-            <button id="nodeSceneImageLoad" type="button">load</button>
+          <div>
             <button id="nodeSceneImageSave" type="button">save</button>
             <button id="nodeSceneImageRefresh" type="button">refresh</button>
           </div>
@@ -1837,11 +1865,6 @@
             <button id="nodeSceneCanvasScript" type="button">Canvas Script</button>
           </div>
         </div>
-        <input
-          id="nodeSceneImageFileInput"
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-          hidden>
         <div id="nodeSceneLedControls" class="scene-context-text-box-controls" hidden>
           <span>led</span>
           <div class="scene-context-scope-fields">
@@ -1878,8 +1901,12 @@
         </label>
         <button id="nodeSceneDeleteModule" class="scene-context-danger" type="button" role="menuitem" hidden>
           <span>Delete</span>
-          <kbd>Delete</kbd>
         </button>
+        <button
+          id="nodeSceneContextResizeHandle"
+          class="scene-context-resize-handle"
+          type="button"
+          aria-label="Resize command center"></button>
       </div>
 
       <div
@@ -1920,27 +1947,27 @@
         class="node-scene-context-menu node-scope-context-menu node-global-scope-menu"
         hidden
         role="dialog"
-        aria-label="Global oscilloscope settings">
+        aria-label="Global display settings">
         <div class="scene-context-heading">
           <button
             id="nodeGlobalScopeDragHandle"
             class="scene-context-drag-handle"
             type="button"
-            aria-label="Move global oscilloscope settings"
+            aria-label="Move global display settings"
             data-tooltip-key="metadata.sceneMove">&#x2725;</button>
           <div class="scene-context-title">
-            <span>OSCILLOSCOPE SETTINGS</span>
-            <small>global scope controls</small>
+            <span>DISPLAY SETTINGS</span>
+            <small>global display controls</small>
           </div>
           <button
             id="nodeGlobalScopeCloseMenu"
             class="panel-close-button"
             type="button"
-            aria-label="Close global oscilloscope settings">
+            aria-label="Close global display settings">
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
-        <section class="node-scope-settings-section node-scope-global-settings" aria-label="Global oscilloscope settings">
+        <section class="node-scope-settings-section node-scope-global-settings" aria-label="Global display settings">
         <div class="node-scope-settings-section-title">Global Settings</div>
         <div class="scene-context-text-box-controls">
           <span>trace image</span>
@@ -1981,7 +2008,7 @@
                   class="node-master-scope-dot-preview"
                   width="64"
                   height="64"
-                  aria-label="Generated oscilloscope dot 1 image preview"></canvas>
+                  aria-label="Generated display dot 1 image preview"></canvas>
               </div>
             </div>
             <div class="node-master-scope-dot-core-row">
@@ -2010,7 +2037,7 @@
                   class="node-master-scope-dot-preview"
                   width="64"
                   height="64"
-                  aria-label="Generated oscilloscope dot 2 image preview"></canvas>
+                  aria-label="Generated display dot 2 image preview"></canvas>
               </div>
             </div>
             <div class="node-master-scope-dot-preview-shell node-master-scope-dot-preview-combined">
@@ -2020,12 +2047,12 @@
                 class="node-master-scope-dot-preview"
                 width="64"
                 height="64"
-                aria-label="Generated oscilloscope combined dot image preview"></canvas>
+                aria-label="Generated display combined dot image preview"></canvas>
             </div>
           </div>
         </div>
         <div class="scene-context-text-box-controls">
-          <span>oscilloscope background</span>
+          <span>display background</span>
           <div class="one scene-context-scope-fields">
             <label>
               <span>background</span>
@@ -2034,10 +2061,10 @@
           </div>
         </div>
         </section>
-        <section id="nodeIndividualScopeControls" class="node-scope-settings-section node-scope-local-settings node-individual-scope-controls" aria-label="Local oscilloscope settings">
+        <section id="nodeIndividualScopeControls" class="node-scope-settings-section node-scope-local-settings node-individual-scope-controls" aria-label="Local display settings">
         <div class="node-scope-settings-section-title">Local Settings</div>
         <div id="nodeSceneScopeControls" class="scene-context-text-box-controls">
-          <span>oscilloscope</span>
+          <span>display</span>
           <div class="two scene-context-scope-fields">
             <label>
               <span>cycles</span>
@@ -2099,6 +2126,7 @@
           <div class="node-patch-save-controls" role="group" aria-label="Patch save controls">
             <button id="nodePatchInitButton" type="button">Init</button>
             <button id="nodePatchSaveButton" type="button">Save</button>
+            <button id="nodePatchShareLinkButton" type="button">Share</button>
           </div>
           <div class="node-patch-header-fields">
             <input
@@ -2251,14 +2279,68 @@
           </button>
         </div>
         <div class="metadata-popover-grid">
-          <label>Min <input id="metadataMinValue" type="text" inputmode="decimal"></label>
-          <label id="metadataMidLabel">Mid <input id="metadataMidValue" type="text" inputmode="decimal"></label>
-          <label>Max <input id="metadataMaxValue" type="text" inputmode="decimal"></label>
-          <label>Default <input id="metadataDefaultValue" type="text" inputmode="decimal"></label>
-          <label>Drag Step <input id="metadataStepValue" type="text" inputmode="decimal"></label>
-          <label>Max Digits <input id="metadataMaxDigitsValue" type="number" min="0" max="12" step="1" inputmode="numeric"></label>
-          <label>Kind <select id="metadataKindValue"></select></label>
-          <label>Unit <input id="metadataUnitValue" type="text"></label>
+          <div class="metadata-field-actions" aria-label="Metaparameter actions">
+            <button id="metadataSaveFieldsButton" type="button">Save</button>
+            <button id="metadataRestoreFieldsButton" type="button">Restore</button>
+            <button id="metadataSetDefaultButton" type="button">Defaults</button>
+          </div>
+          <div class="metadata-section-title">Fields</div>
+          <div class="metadata-field-section metadata-identity-section">
+            <label>Alias <input id="metadataAliasValue" type="text" spellcheck="false"></label>
+            <label>Kind <select id="metadataKindValue"></select></label>
+            <label>Unit <input id="metadataUnitValue" type="text" placeholder="Hz"></label>
+            <label>
+              <span>Max Digits</span>
+              <span class="metadata-stepper-control">
+                <button type="button" data-metadata-step-target="metadataMaxDigitsValue" data-metadata-step-direction="-1">-</button>
+                <input id="metadataMaxDigitsValue" type="number" min="0" max="12" step="1" inputmode="numeric">
+                <button type="button" data-metadata-step-target="metadataMaxDigitsValue" data-metadata-step-direction="1">+</button>
+              </span>
+            </label>
+          </div>
+          <div class="metadata-section-title">Range</div>
+          <div class="metadata-field-section metadata-range-section">
+            <label>
+              <span>Min</span>
+              <span class="metadata-stepper-control">
+                <button type="button" data-metadata-step-target="metadataMinValue" data-metadata-step-direction="-1">-</button>
+                <input id="metadataMinValue" type="text" inputmode="decimal">
+                <button type="button" data-metadata-step-target="metadataMinValue" data-metadata-step-direction="1">+</button>
+              </span>
+            </label>
+            <label id="metadataMidLabel">
+              <span>Mid</span>
+              <span class="metadata-stepper-control">
+                <button type="button" data-metadata-step-target="metadataMidValue" data-metadata-step-direction="-1">-</button>
+                <input id="metadataMidValue" type="text" inputmode="decimal">
+                <button type="button" data-metadata-step-target="metadataMidValue" data-metadata-step-direction="1">+</button>
+              </span>
+            </label>
+            <label>
+              <span>Max</span>
+              <span class="metadata-stepper-control">
+                <button type="button" data-metadata-step-target="metadataMaxValue" data-metadata-step-direction="-1">-</button>
+                <input id="metadataMaxValue" type="text" inputmode="decimal">
+                <button type="button" data-metadata-step-target="metadataMaxValue" data-metadata-step-direction="1">+</button>
+              </span>
+            </label>
+            <label>
+              <span>Default</span>
+              <span class="metadata-stepper-control">
+                <button type="button" data-metadata-step-target="metadataDefaultValue" data-metadata-step-direction="-1">-</button>
+                <input id="metadataDefaultValue" type="text" inputmode="decimal">
+                <button type="button" data-metadata-step-target="metadataDefaultValue" data-metadata-step-direction="1">+</button>
+              </span>
+            </label>
+            <label>
+              <span>Step</span>
+              <span class="metadata-stepper-control">
+                <button type="button" data-metadata-step-target="metadataStepValue" data-metadata-step-direction="-1">-</button>
+                <input id="metadataStepValue" type="text" inputmode="decimal">
+                <button type="button" data-metadata-step-target="metadataStepValue" data-metadata-step-direction="1">+</button>
+              </span>
+            </label>
+          </div>
           <label class="metadata-choices-label">
             Choices
             <textarea
@@ -2267,31 +2349,38 @@
               spellcheck="false"
               placeholder="Saw, Square, Triangle, Sine, Noise"></textarea>
           </label>
-          <label class="metadata-checkbox-label">
-            <input id="metadataShowSignValue" type="checkbox">
-            Always show +/-
-          </label>
-          <label class="metadata-checkbox-label">
-            <input id="metadataWraparoundValue" type="checkbox">
-            Wraparound
-          </label>
-          <label class="metadata-checkbox-label">
-            <input id="metadataNonlinearSliderValue" type="checkbox">
-            Nonlinear slider
-          </label>
-          <label class="metadata-checkbox-label">
-            <input id="metadataLinearSmoothingValue" type="checkbox">
-            Linear smoothing
-          </label>
-          <label class="metadata-checkbox-label">
-            <input id="metadataDisplayChoicesValue" type="checkbox">
-            Display choices
-          </label>
-          <label class="metadata-checkbox-label">
-            <input id="metadataDivideChoicesValue" type="checkbox">
-            Divide choices visibly
-          </label>
-          <button id="metadataSetDefaultButton" type="button">Set Defaults from Kind</button>
+          <div class="metadata-section-title">Toggles</div>
+          <div class="metadata-toggle-section" aria-label="Metaparameter toggles">
+            <label class="metadata-checkbox-label">
+              <input id="metadataLinearSmoothingValue" type="checkbox">
+              Linear smoothing
+            </label>
+            <label class="metadata-checkbox-label">
+              <input id="metadataNonlinearSliderValue" type="checkbox">
+              Nonlinear slider
+            </label>
+            <label class="metadata-checkbox-label">
+              <input id="metadataShowSignValue" type="checkbox">
+              Always show +/-
+            </label>
+            <label class="metadata-checkbox-label">
+              <input id="metadataWraparoundValue" type="checkbox">
+              Wraparound
+            </label>
+            <label class="metadata-checkbox-label">
+              <input id="metadataDisplayChoicesValue" type="checkbox">
+              Display choices
+            </label>
+            <label class="metadata-checkbox-label">
+              <input id="metadataDivideChoicesValue" type="checkbox">
+              Divide choices visibly
+            </label>
+          </div>
+          <button
+            id="metadataAdvancedToggle"
+            class="metadata-advanced-toggle"
+            type="button"
+            aria-expanded="false">Script (advanced)</button>
         </div>
         <section class="metadata-script-panel" aria-label="Parameter metadata script">
           <div class="metadata-script-heading">
@@ -2301,17 +2390,6 @@
             id="metadataScriptReference"
             class="metadata-script-reference"
             aria-label="Supported metadata script keys"></div>
-          <div class="metadata-script-editor">
-            <pre
-              id="metadataScriptHighlight"
-              class="metadata-script-highlight"
-              aria-hidden="true"></pre>
-            <textarea
-              id="metadataScriptSource"
-              spellcheck="false"
-              rows="13"
-              aria-label="Parameter metadata script"></textarea>
-          </div>
           <div class="metadata-script-actions">
             <button id="metadataScriptApply" type="button">Save</button>
             <button
@@ -2323,8 +2401,24 @@
             <button id="metadataScriptCopy" type="button">Copy</button>
             <button id="metadataScriptPaste" type="button">Paste</button>
             <button id="metadataScriptToDesktop" type="button">To Desktop</button>
+            <output id="metadataScriptStatus" class="metadata-script-status" aria-live="polite">script ready</output>
           </div>
-          <output id="metadataScriptStatus" class="pill" aria-live="polite">script ready</output>
+          <div id="metadataClosePrompt" class="metadata-close-prompt" hidden>
+            <span>Save changes before closing?</span>
+            <button id="metadataCloseSave" type="button">Save</button>
+            <button id="metadataCloseDiscard" type="button">Discard</button>
+          </div>
+          <div class="metadata-script-editor">
+            <pre
+              id="metadataScriptHighlight"
+              class="metadata-script-highlight"
+              aria-hidden="true"></pre>
+            <textarea
+              id="metadataScriptSource"
+              spellcheck="false"
+              rows="13"
+              aria-label="Parameter metadata script"></textarea>
+          </div>
           <ul
             id="metadataScriptPreview"
             class="metadata-script-preview metadata-script-extra-info"
@@ -2798,34 +2892,34 @@
   <script src="./public/manifest-loader.js?v=manifest-loader-refactor-1780389600000"></script>
   <script src="./public/node-graph-wires.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-floating-windows.js?v=ui-window-resize-limits-2"></script>
-  <script src="./public/node-graph-file-actions.js?v=working-patch-autosave-1"></script>
+  <script src="./public/node-graph-file-actions.js?v=share-link-1"></script>
   <script src="./public/node-graph-default-buttons.js?v=patch-save-refresh-1"></script>
   <script src="./public/node-graph-cookbook-filter.js?v=filter-curve-zero-cutoffs-1780822200000"></script>
   <script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>
-  <script src="./public/node-graph-module-definitions.js?v=formula-visual-params-1"></script>
-  <script src="./public/node-graph-module-store.js?v=module-browser-public-1"></script>
-  <script src="./public/node-graph-module-sizing.js?v=formula-visual-6"></script>
+  <script src="./public/node-graph-module-definitions.js?v=display-language-1"></script>
+  <script src="./public/node-graph-module-store.js?v=display-language-1"></script>
+  <script src="./public/node-graph-module-sizing.js?v=audio-player-display-height-2"></script>
   <script src="./public/node-graph-metadata-kinds.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-parameter-metadata.js?v=audio-player-editable-metadata-1"></script>
-  <script src="./public/node-graph-metadata-defaults.js?v=slider-unit-color-1780307400000"></script>
+  <script src="./public/node-graph-metadata-defaults.js?v=decimal-template-1"></script>
   <script src="./public/node-graph-text-box-utils.js?v=text-box-size-1000-1"></script>
-  <script src="./public/node-graph-image-utils.js?v=formula-visual-6"></script>
+  <script src="./public/node-graph-image-utils.js?v=pre-formula-restore-1"></script>
   <script src="./public/node-graph-graph-utils.js?v=graph2-through-curves-1"></script>
-  <script src="./public/node-graph-samples.js?v=missing-sample-dismiss-1"></script>
+  <script src="./public/node-graph-samples.js?v=interface-controls-height-1"></script>
   <script src="./public/node-graph-text-box-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-patch-normalizers.js?v=formula-visual-6"></script>
+  <script src="./public/node-graph-patch-normalizers.js?v=pre-formula-restore-1"></script>
   <script src="./public/node-graph-ui-view.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-audio-derivation.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-grid-utils.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-patch-runtime.js?v=ellipsoid-xy-1"></script>
   <script src="./public/node-graph-code-screen-model.js?v=code-screen-1"></script>
-  <script src="./public/node-graph-patch-serialization.js?v=required-assets-1"></script>
+  <script src="./public/node-graph-patch-serialization.js?v=share-link-1"></script>
   <script src="./public/node-graph-settings-fields.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-settings-view.js?v=saved-patch-current-1"></script>
   <script src="./public/node-graph-settings-text-fit.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-preset.js?v=default-visible-nodes-1"></script>
   <script src="./public/node-graph-script-status.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-view-controls.js?v=module-card-click-add-1"></script>
+  <script src="./public/node-graph-view-controls.js?v=visibility-drag-stable-1"></script>
   <script src="./public/node-graph-workspace-geometry.js?v=workspace-viewport-clamp-1"></script>
   <script src="./public/node-graph-workspace-zoom.js?v=workspace-view-autosave-1"></script>
   <script src="./public/node-graph-workspace-view.js?v=workspace-view-autosave-1"></script>
@@ -2833,29 +2927,29 @@
   <script src="./public/node-graph-clap-host.js?v=clap-under-construction-2"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-node-dragging.js?v=io-alt-bypass-1"></script>
-  <script src="./public/node-graph-context-menu.js?v=module-actions-last-target-1"></script>
-  <script src="./public/node-graph-module-actions.js?v=module-actions-last-target-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=module-actions-caps-1"></script>
+  <script src="./public/node-graph-module-actions.js?v=display-height-grid-units-1"></script>
   <script src="./public/node-graph-code-screen.js?v=canvas-ratio-language-2"></script>
-  <script src="./public/node-graph-module-scopes.js?v=scope-zoom-gain-1"></script>
-  <script src="./public/node-graph-shader-script.js?v=floating-window-drag-area-1"></script>
+  <script src="./public/node-graph-module-scopes.js?v=essential-visual-scope-visible-1"></script>
+  <script src="./public/node-graph-shader-script.js?v=display-language-1"></script>
   <script src="./public/node-graph-canvas-script.js?v=floating-window-drag-area-1"></script>
-  <script src="./public/node-graph-module-factories.js?v=formula-visual-params-1"></script>
-  <script src="./public/node-graph-module-header-rendering.js?v=timing-flat-controls-1"></script>
-  <script src="./public/node-graph-module-rendering.js?v=formula-visual-6"></script>
+  <script src="./public/node-graph-module-factories.js?v=shell-module-retire-1"></script>
+  <script src="./public/node-graph-module-header-rendering.js?v=display-language-1"></script>
+  <script src="./public/node-graph-module-rendering.js?v=audio-player-display-height-2"></script>
   <script src="./public/node-graph-history.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-visual-utils.js?v=text-light-registry-1780800000000"></script>
-  <script src="./public/node-graph-patch-clone.js?v=required-assets-1"></script>
+  <script src="./public/node-graph-patch-clone.js?v=display-height-controls-1"></script>
   <script src="./public/node-graph-slider-metadata.js?v=metadata-step-zero-1"></script>
   <script src="./public/node-graph-slider-values.js?v=metadata-step-any-1"></script>
   <script src="./public/node-graph-slider-dragging.js?v=working-patch-autosave-1"></script>
   <script src="./public/node-graph-node-accessors.js?v=unbounded-speed-1"></script>
-  <script src="./public/node-graph-selection.js?v=module-actions-last-target-1"></script>
+  <script src="./public/node-graph-selection.js?v=selection-count-readout-1"></script>
   <script src="./public/node-graph-port-geometry.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-slider-readout.js?v=unbounded-speed-1"></script>
   <script src="./public/node-graph-slider-readout-controls.js?v=unbounded-speed-1"></script>
   <script src="./public/node-graph-ghost-sliders.js?v=unbounded-speed-1"></script>
   <script src="./public/node-code-settings-editor.js?v=code-settings-shell-1"></script>
-  <script src="./public/node-graph-metadata-editor.js?v=ui-window-resize-limits-2"></script>
+  <script src="./public/node-graph-metadata-editor.js?v=metadata-save-dirty-1"></script>
   <script src="./public/node-graph-render-settings.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-ear-protection.js?v=ear-protection-reset-1"></script>
   <script src="./public/node-graph-rendered-audio.js?v=ear-protection-reset-1"></script>
@@ -2871,45 +2965,45 @@
   <script src="./public/node-graph-debug-copy.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-execution-debug-api.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-execution-debug-view.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-tooltips.js?v=speed-under-construction-1"></script>
-  <script src="./public/node-graph-interaction-help.js?v=performance-modules-1"></script>
-  <script src="./public/presets/useruisettings.js?v=hide-scopes-default-1"></script>
-  <script src="./public/node-graph-ui-settings-definitions.js?v=origin-marker-uidev-1"></script>
+  <script src="./public/node-graph-tooltips.js?v=display-language-1"></script>
+  <script src="./public/node-graph-interaction-help.js?v=button-help-labels-1"></script>
+  <script src="./public/presets/useruisettings.js?v=clear-startup-1"></script>
+  <script src="./public/node-graph-ui-settings-definitions.js?v=floating-window-header-height-1"></script>
   <script src="./public/node-graph-ui-settings-utils.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-user-ui-settings-controls.js?v=hide-mouse-drag-setting-2"></script>
+  <script src="./public/node-graph-user-ui-settings-controls.js?v=clear-startup-1"></script>
   <script src="./public/node-graph-ui-settings-panels.js?v=workspace-window-state-1"></script>
-  <script src="./public/node-graph-ui-settings-persistence.js?v=workspace-view-autosave-1"></script>
-  <script src="./public/node-graph-ui-settings-sync.js?v=origin-marker-uidev-1"></script>
-  <script src="./public/node-graph-keyboard-shortcuts.js?v=height-widget-registry-1"></script>
+  <script src="./public/node-graph-ui-settings-persistence.js?v=clear-startup-4"></script>
+  <script src="./public/node-graph-ui-settings-sync.js?v=floating-window-header-height-1"></script>
+  <script src="./public/node-graph-keyboard-shortcuts.js?v=content-height-only-1"></script>
   <script src="./public/node-graph-live-status-text.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-live-status-controls.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-live-meter-controls.js?v=gpu-additive-status-recipe-1"></script>
   <script src="./public/node-graph-live-input-status.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-live-evidence.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-live-control-rendering.js?v=ear-protection-reset-1"></script>
-  <script src="./public/node-graph-default-patch.js?v=patch-view-zoom-1"></script>
-  <script src="./public/node-graph-state.js?v=formula-visual-inputs-1"></script>
+  <script src="./public/node-graph-default-patch.js?v=content-height-only-1"></script>
+  <script src="./public/node-graph-state.js?v=ui-boot-order-1"></script>
   <script src="./public/node-graph-external-ui-events.js?v=button-events-1"></script>
-  <script src="./public/node-graph-patch-core.js?v=formula-visual-params-2"></script>
+  <script src="./public/node-graph-patch-core.js?v=display-height-controls-1"></script>
   <script src="./public/node-graph-live-plan-runtime.js?v=module-home-actions-1"></script>
   <script src="./public/node-graph-live-parameter-runtime.js?v=unbounded-speed-1"></script>
   <script src="./public/node-graph-oscillator-runtime.js?v=ellipsoid-audio-1"></script>
   <script src="./public/node-graph-gpu-additive-backend.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-jerobeam-spiral.js?v=node-graph-jerobeam-spiral-refactor-1780371000000"></script>
   <script src="./public/node-graph-lorenz-attractor.js?v=lorenz-unbounded-speed-1"></script>
-  <script src="./public/node-graph-live-frame-evaluator.js?v=formula-visual-params-1"></script>
-  <script src="./public/node-graph-live-runtime.js?v=formula-visual-params-1"></script>
+  <script src="./public/node-graph-live-frame-evaluator.js?v=pre-formula-restore-1"></script>
+  <script src="./public/node-graph-live-runtime.js?v=pre-formula-restore-1"></script>
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-workspace-event-bindings.js?v=module-placement-unclamped-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=beta-polish-1"></script>
-  <script src="./public/node-graph-header-event-bindings.js?v=module-browser-categories-1"></script>
+  <script src="./public/node-graph-header-event-bindings.js?v=clear-startup-1"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=node-graph-help-event-bindings-refactor-1780369200000"></script>
-  <script src="./public/node-graph-scene-menu-event-bindings.js?v=command-center-fixed-width-1"></script>
+  <script src="./public/node-graph-scene-menu-event-bindings.js?v=display-height-controls-1"></script>
   <script src="./public/node-graph-uidev-event-bindings.js?v=origin-marker-uidev-1"></script>
   <script src="./public/node-graph-settings-event-bindings.js?v=metadata-popover-bind-1"></script>
   <script src="./public/node-graph-slider-event-bindings.js?v=node-graph-slider-event-bindings-refactor-1780369200000"></script>
-  <script src="./public/node-graph-event-bindings.js?v=graph-ui-editor-2"></script>
-  <script src="./public/node-graph-bootstrap.js?v=patch-working-state-meta-1"></script>
+  <script src="./public/node-graph-event-bindings.js?v=event-binding-isolation-1"></script>
+  <script src="./public/node-graph-bootstrap.js?v=share-link-1"></script>
   <script src="./public/app-event-bindings.js?v=app-event-bindings-refactor-1780361400000"></script>
   <script src="./public/app.js?v=interface-ready-startup-task-timeout-1"></script>
 </body>

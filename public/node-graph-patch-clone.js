@@ -32,9 +32,34 @@ function normalizeNodeGraphPatchNodeUi(ui = {}) {
   const source = ui && typeof ui === "object" ? ui : {};
   return {
     buttonsHidden: Boolean(source.buttonsHidden),
+    displayHeightOffsetGu: normalizeNodeGraphModuleDisplayHeightOffsetUnits(source.displayHeightOffsetGu),
     oscilloscopeHidden: Boolean(source.oscilloscopeHidden),
+    slidersHidden: Boolean(source.slidersHidden),
     titleHidden: Boolean(source.titleHidden),
   };
+}
+
+function nodeGraphEffectivePatchNodeUi(ui = {}) {
+  const normalizedUi = normalizeNodeGraphPatchNodeUi(ui);
+  return {
+    ...normalizedUi,
+    buttonsHidden: !nodeGraphPatchNodeSectionVisible(
+      normalizedUi.buttonsHidden,
+      typeof nodeGraphMvp !== "undefined" ? nodeGraphMvp.moduleButtonsVisible : true,
+    ),
+    oscilloscopeHidden: !nodeGraphPatchNodeSectionVisible(
+      normalizedUi.oscilloscopeHidden,
+      typeof nodeGraphMvp !== "undefined" ? nodeGraphMvp.moduleOscilloscopesVisible : true,
+    ),
+    slidersHidden: !nodeGraphPatchNodeSectionVisible(
+      normalizedUi.slidersHidden,
+      typeof nodeGraphMvp !== "undefined" ? nodeGraphMvp.moduleSlidersVisible : true,
+    ),
+  };
+}
+
+function nodeGraphPatchNodeSectionVisible(localHidden, globalVisible) {
+  return !Boolean(localHidden) && globalVisible !== false;
 }
 
 function normalizeNodeGraphPatchNodeAlias(alias) {
@@ -226,7 +251,7 @@ function cloneNodeGraphPatch(patch) {
           ? { portMeta: normalizeNodeGraphPatchPortMeta(node.portMeta) }
           : {}),
         params: { ...(node.params || {}) },
-        ...(ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden ? { ui } : {}),
+        ...(ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden || ui.slidersHidden || ui.displayHeightOffsetGu ? { ui } : {}),
       };
     }),
     requiredAssets: typeof nodeGraphRequiredAssetsForPatch === "function"

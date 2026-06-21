@@ -6,13 +6,80 @@ function normalizeNodeGraphSampleId(value = "") {
     .slice(0, 96);
 }
 
+const nodeGraphAssetKinds = Object.freeze(["text", "video", "image", "audio"]);
+
+function normalizeNodeGraphAssetKind(kind = "audio") {
+  const value = String(kind || "").trim().toLowerCase();
+  return nodeGraphAssetKinds.includes(value) ? value : "audio";
+}
+
+function nodeGraphAssetFileNameFromPath(path = "") {
+  return String(path || "").trim().split(/[\\/]/).pop() || "";
+}
+
+function nodeGraphAssetFileExtension(name = "") {
+  const match = String(name || "").trim().match(/\.([^.\\/]+)$/);
+  return match?.[1]?.toLowerCase?.().slice(0, 32) || "";
+}
+
+function normalizeNodeGraphAssetMetadataValue(value, depth = 0) {
+  if (value === null || ["string", "number", "boolean"].includes(typeof value)) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.slice(0, 128).map((item) => normalizeNodeGraphAssetMetadataValue(item, depth + 1));
+  }
+  if (value && typeof value === "object" && depth <= 4) {
+    return normalizeNodeGraphAssetMetadata(value, depth + 1);
+  }
+  return String(value || "");
+}
+
+function normalizeNodeGraphAssetMetadata(metadata = {}, depth = 0) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || depth > 4) {
+    return {};
+  }
+  const normalized = {};
+  for (const [key, value] of Object.entries(metadata).slice(0, 128)) {
+    const safeKey = String(key || "").trim().slice(0, 96);
+    if (!safeKey) {
+      continue;
+    }
+    normalized[safeKey] = normalizeNodeGraphAssetMetadataValue(value, depth);
+  }
+  return normalized;
+}
+
+function normalizeNodeGraphAssetFile(file = {}, fallback = {}) {
+  const source = file && typeof file === "object" ? file : {};
+  const fallbackPath = String(fallback.sourcePath || fallback.path || "").trim();
+  const sourcePath = String(source.sourcePath || source.path || fallbackPath).trim().slice(0, 512);
+  const fallbackName = String(fallback.sourceName || fallback.fileName || fallback.name || "").trim();
+  const pathName = nodeGraphAssetFileNameFromPath(sourcePath);
+  const name = String(source.name || source.fileName || fallbackName || pathName || "").trim().slice(0, 160);
+  const extension = String(source.extension || nodeGraphAssetFileExtension(name || pathName)).trim().toLowerCase().slice(0, 32);
+  const mime = String(source.mime || source.type || fallback.mime || fallback.type || "").trim().slice(0, 128);
+  const size = Math.max(0, Math.round(Number(source.size ?? fallback.size) || 0));
+  const hash = String(source.hash || fallback.hash || "").trim().slice(0, 160);
+  return {
+    ...(extension ? { extension } : {}),
+    ...(hash ? { hash } : {}),
+    ...(mime ? { mime } : {}),
+    ...(name ? { name } : {}),
+    ...(size ? { size } : {}),
+    ...(sourcePath ? { sourcePath } : {}),
+  };
+}
+
 function normalizeNodeGraphSampleReference(sample = {}) {
   const source = sample && typeof sample === "object" ? sample : {};
   const id = normalizeNodeGraphSampleId(source.id);
   const name = String(source.name || id || "Sample").trim().slice(0, 128);
   const dataUrl = String(source.dataUrl || "").trim();
-  const sourceName = String(source.sourceName || source.fileName || name || "").trim().slice(0, 160);
-  const sourcePath = String(source.sourcePath || source.path || "").trim().slice(0, 512);
+  const sourceName = String(source.sourceName || source.fileName || source.file?.name || name || "").trim().slice(0, 160);
+  const sourcePath = String(source.sourcePath || source.path || source.file?.sourcePath || source.file?.path || "").trim().slice(0, 512);
+  const file = normalizeNodeGraphAssetFile(source.file, { ...source, name, sourceName, sourcePath });
+  const metadata = normalizeNodeGraphAssetMetadata(source.metadata);
   const sampleRate = Math.max(0, Math.round(Number(source.sampleRate) || 0));
   const channels = Math.max(0, Math.min(64, Math.round(Number(source.channels) || 0)));
   const frames = Math.max(0, Math.round(Number(source.frames) || 0));
@@ -23,6 +90,8 @@ function normalizeNodeGraphSampleReference(sample = {}) {
     ...(frames ? { frames } : {}),
     id,
     kind: "audio",
+    file,
+    metadata,
     name,
     ...(sampleRate ? { sampleRate } : {}),
     ...(sourceName ? { sourceName } : {}),
@@ -64,20 +133,27 @@ function normalizeNodeGraphRequiredAsset(asset = {}) {
   const nodeIds = Array.isArray(source.nodeIds)
     ? source.nodeIds.map((value) => String(value || "").trim()).filter(Boolean).slice(0, 32)
     : [];
+  const kind = normalizeNodeGraphAssetKind(source.kind);
+  const file = normalizeNodeGraphAssetFile(source.file, source);
+  const sourceName = String(source.sourceName || source.fileName || file.name || "").trim().slice(0, 160);
+  const sourcePath = String(source.sourcePath || source.path || file.sourcePath || "").trim().slice(0, 512);
+  const metadata = normalizeNodeGraphAssetMetadata(source.metadata);
   return {
     acceptedTypes: Array.isArray(source.acceptedTypes) && source.acceptedTypes.length
       ? source.acceptedTypes.map((value) => String(value || "").trim()).filter(Boolean).slice(0, 16)
-      : ["audio/*"],
+      : [`${kind}/*`],
+    file,
     id,
-    kind: String(source.kind || "audio").trim().slice(0, 32) || "audio",
-    name: String(source.name || source.sourceName || id).trim().slice(0, 160) || id,
+    kind,
+    metadata,
+    name: String(source.name || file.name || source.sourceName || id).trim().slice(0, 160) || id,
     nodeIds,
     requiredBy,
-    ...(String(source.sourceName || "").trim()
-      ? { sourceName: String(source.sourceName || "").trim().slice(0, 160) }
+    ...(sourceName
+      ? { sourceName }
       : {}),
-    ...(String(source.sourcePath || "").trim()
-      ? { sourcePath: String(source.sourcePath || "").trim().slice(0, 512) }
+    ...(sourcePath
+      ? { sourcePath }
       : {}),
   };
 }
@@ -123,10 +199,21 @@ function nodeGraphRequiredAssetsForPatch(patch = {}) {
     }
     const sample = samples.get(sampleId) || {};
     const explicit = explicitAssets.get(sampleId) || {};
+    const file = normalizeNodeGraphAssetFile(explicit.file || sample.file, {
+      name: sample.name || explicit.name || explicit.sourceName || sampleId,
+      sourceName: sample.sourceName || explicit.sourceName,
+      sourcePath: sample.sourcePath || explicit.sourcePath,
+    });
+    const metadata = {
+      ...normalizeNodeGraphAssetMetadata(sample.metadata),
+      ...normalizeNodeGraphAssetMetadata(explicit.metadata),
+    };
     const current = assets.get(sampleId) || {
       acceptedTypes: ["audio/*"],
+      file,
       id: sampleId,
       kind: "audio",
+      metadata,
       name: sample.name || explicit.name || explicit.sourceName || sampleId,
       nodeIds: [],
       requiredBy: [],
@@ -592,8 +679,20 @@ async function loadNodeGraphSampleDataUrlForNode(nodeId, dataUrl, name = "Sample
   nodeGraphMvp.sampleLoadErrors?.delete?.(nodeId);
   nodeGraphMvp.sampleRuntimeStatus?.delete?.(nodeId);
   commitNodeGraphPatch(patch, { status: `${sample.name} loaded` });
-  renderNodeGraphMissingSampleAssetsDialog(patch);
+  const persistence = typeof saveNodeGraphWorkingPatchToUserSettings === "function"
+    ? await Promise.resolve(saveNodeGraphWorkingPatchToUserSettings({ immediateFile: true, returnFileSave: true }))
+    : { local: false, file: false };
+  renderNodeGraphMissingSampleAssetsDialog(nodeGraphMvp.patch);
   syncNodeGraphSampleDisplayForNode(nodeId);
+  if (!persistence.local) {
+    const fallbackStatus = persistence.file ? "saved to settings file" : "settings file save pending";
+    setNodeGraphSampleStatus(nodeId, `${sample.name} loaded; ${fallbackStatus}`);
+    setNodeInteractionHelp(
+      persistence.file
+        ? "Sample loaded. Browser storage was too small, so the patch was flushed to the settings file."
+        : "Sample loaded. Browser storage was too small and the settings file fallback did not confirm.",
+    );
+  }
   scheduleNodeGraphLivePlanSync("plan");
 }
 
@@ -602,7 +701,7 @@ function createNodeGraphSampleModuleBody(nodeOrId) {
   const patchNode = nodeGraphPatchNode(nodeId);
   const isMusicPlayer = patchNode?.type === "audioPlayer";
   const body = document.createElement("div");
-  body.className = "node-sample-module-body";
+  body.className = "node-module-interface-controls node-sample-module-body";
   const name = document.createElement("div");
   name.className = "node-sample-name";
   name.dataset.sampleNameForNode = nodeId;

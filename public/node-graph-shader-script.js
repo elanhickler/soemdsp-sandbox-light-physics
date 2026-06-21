@@ -570,7 +570,7 @@ function nodeGraphShaderScriptModeTokenKind(token) {
 function nodeGraphShaderScriptModeOptionsForKind(kind) {
   if (kind === "scope") {
     return {
-      label: "scope mode",
+      label: "display mode",
       options: nodeGraphShaderScriptScopeModes,
     };
   }
@@ -1339,14 +1339,14 @@ function drawNodeGraphShaderScriptScopePreview() {
   const element = node?.id ? nodeGraphNodeElement(node.id) : null;
   const camera = typeof createNodeGraphUtilityCameraForElement === "function"
     ? createNodeGraphUtilityCameraForElement(nodeGraphShaderScriptUtilityCameraId(node?.id), element, {
-      name: node ? `Scope Shader: ${nodeGraphPatchNodeTitle(node)}` : "Scope Shader",
+      name: node ? `Display Shader: ${nodeGraphPatchNodeTitle(node)}` : "Display Shader",
       padding: nodeGraphShaderScriptUtilityCameraPadding,
     })
     : null;
   if (!camera || typeof renderNodeGraphCameraFeed !== "function") {
     surface.replaceChildren();
     if (status) {
-      status.textContent = "No scope selected.";
+      status.textContent = "No display selected.";
     }
     scheduleNodeGraphShaderScriptScopePreview();
     return;
@@ -1401,7 +1401,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
   const targetNode = scopeMode ? nodeGraphShaderScriptDialogScopeNode() : null;
   if (title) {
     title.textContent = scopeMode && targetNode
-      ? `Scope Shader: ${nodeGraphPatchNodeTitle(targetNode)}`
+      ? `Display Shader: ${nodeGraphPatchNodeTitle(targetNode)}`
       : "Shader Script";
   }
   const modeLabel = title?.closest?.(".node-shader-script-heading")?.querySelector?.("span");
@@ -1424,7 +1424,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
     applyButton.setAttribute("aria-pressed", String(Boolean(nodeGraphShaderScriptState.enabled && !scopeMode)));
     applyButton.setAttribute(
       "aria-label",
-      scopeMode ? "Save scope shader" : "Apply and enable live post processing shader"
+      scopeMode ? "Save display shader" : "Apply and enable live post processing shader"
     );
   }
   const previewPanel = document.getElementById("nodeShaderScriptPreviewPanel");
@@ -1671,14 +1671,14 @@ function disableNodeGraphShaderScriptLiveApply() {
 function saveNodeGraphScopeShaderScriptFromDialog() {
   const targetNode = nodeGraphShaderScriptDialogScopeNode();
   if (!targetNode) {
-    nodeGraphShaderScriptStatus("scope module missing", true);
+    nodeGraphShaderScriptStatus("display module missing", true);
     return false;
   }
   const source = document.getElementById("nodeShaderScriptSource")?.value || "";
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const node = patch.nodes.find((candidate) => candidate.id === targetNode.id);
   if (!node) {
-    nodeGraphShaderScriptStatus("scope module missing", true);
+    nodeGraphShaderScriptStatus("display module missing", true);
     return false;
   }
   node.scopeShader = normalizeNodeGraphScopeShader({
@@ -1686,9 +1686,9 @@ function saveNodeGraphScopeShaderScriptFromDialog() {
     source,
   });
   commitNodeGraphPatch(patch, {
-    status: `scope shader saved for ${nodeGraphPatchNodeTitle(node)}`,
+    status: `display shader saved for ${nodeGraphPatchNodeTitle(node)}`,
   });
-  nodeGraphShaderScriptStatus("scope shader saved", false);
+  nodeGraphShaderScriptStatus("display shader saved", false);
   return true;
 }
 

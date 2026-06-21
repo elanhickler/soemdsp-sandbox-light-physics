@@ -1,16 +1,4 @@
 const nodeLiveAdditiveHardMaxHarmonics = 1024;
-const nodeLiveFormulaVisualParameters = Object.freeze([
-  Object.freeze({ defaultValue: 3, key: "formulaA", max: 16, min: 1 }),
-  Object.freeze({ defaultValue: 2, key: "formulaB", max: 16, min: 1 }),
-  Object.freeze({ defaultValue: 5, key: "formulaPetals", max: 24, min: 1 }),
-  Object.freeze({ defaultValue: 0.38, key: "formulaMix", max: 1, min: 0 }),
-  Object.freeze({ defaultValue: 0.82, key: "formulaScale", max: 1.5, min: 0.1 }),
-  Object.freeze({ defaultValue: 0.12, key: "formulaRotate", max: 1, min: 0 }),
-  Object.freeze({ defaultValue: 0.25, key: "formulaMorph", max: 2, min: 0 }),
-  Object.freeze({ defaultValue: 0.64, key: "formulaHue", max: 1, min: 0 }),
-  Object.freeze({ defaultValue: 0.85, key: "formulaGlow", max: 1, min: 0 }),
-  Object.freeze({ defaultValue: 0.55, key: "formulaDots", max: 1, min: 0 }),
-]);
 
 const nodeLiveRaptEllipticQuarterbandSos = Object.freeze([
   Object.freeze([1.3515101236634053e-04, 1.8481719657676747e-04, 1.3515101236634053e-04, 1, -1.5863119326809123, 0.6428204816292211]),
@@ -2900,36 +2888,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return value;
   }
 
-  formulaVisualSample(node, rate = sampleRate, nodeId = "", frame = 0, frames = 1, frameValues = new Map()) {
-    const value = {};
-    for (const parameter of nodeLiveFormulaVisualParameters) {
-      const metadata = node?.paramMeta?.[parameter.key] || {};
-      const min = Number.isFinite(Number(metadata?.min)) ? Number(metadata.min) : parameter.min;
-      const max = Number.isFinite(Number(metadata?.max)) ? Number(metadata.max) : parameter.max;
-      const target = this.readEffectiveParameter(
-        node,
-        parameter.key,
-        parameter.defaultValue,
-        frame,
-        frames,
-        frameValues,
-      );
-      value[parameter.key] = this.smoothVisualControl(
-        `formulaVisual:${nodeId}:${parameter.key}`,
-        target,
-        rate,
-        0.025,
-        Math.min(min, max),
-        Math.max(min, max),
-      );
-    }
-    this.visualControls.formulaVisual = {
-      ...(this.visualControls.formulaVisual || {}),
-      [nodeId]: value,
-    };
-    return value;
-  }
-
   postVisualControls() {
     this.port.postMessage({
       patchFingerprint: this.patchFingerprint,
@@ -2951,7 +2909,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       visualBloom: this.clampValue(this.visualControls.visualBloom, 0, 1),
       visualBrightness: this.clampValue(this.visualControls.visualBrightness, 0, 1),
       visualGlow: this.clampValue(this.visualControls.visualGlow, 0, 1),
-      formulaVisual: this.visualControls.formulaVisual || {},
       x: this.clampValue(this.visualControls.x, -1, 1),
       y: this.clampValue(this.visualControls.y, -1, 1),
     });
@@ -5333,18 +5290,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           (port) => mixInput(nodeId, port),
           safeRate,
           nodeId,
-          frame,
-          frames,
-          frameValues,
-        );
-      } else if (node?.type === "formulaVisual") {
-        value = this.formulaVisualSample(
-          node,
-          safeRate,
-          nodeId,
-          frame,
-          frames,
-          frameValues,
         );
       } else if (node?.type === "bloomGlow") {
         const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);

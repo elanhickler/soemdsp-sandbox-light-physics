@@ -56,6 +56,7 @@ const nodeUiDevSettingControls = Object.freeze([
   },
   { defaultValue: 62, id: "nodeUiDevSettingsHeaderTopRatio", key: "settingsHeaderTopRatio", max: 100, min: 0, type: "number" },
   { defaultValue: 2, id: "nodeUiDevSettingsHeaderPadding", key: "settingsHeaderPadding", max: 20, min: 0, type: "number" },
+  { defaultValue: 30, exposeDefault: true, id: "nodeUiDevFloatingWindowHeaderHeight", key: "floatingWindowHeaderHeight", max: 48, min: 20, type: "number" },
   { defaultValue: 4, exposeDefault: true, id: "nodeUiDevSliderDotSize", key: "sliderDotSize", max: 28, min: 0, type: "number" },
   {
     defaultValue: "cascadia",
@@ -120,6 +121,7 @@ const nodeUiDevSettingSections = Object.freeze([
       "nodeUiDevButtonTextSize",
       "nodeUiDevSettingsHeaderTopRatio",
       "nodeUiDevSettingsHeaderPadding",
+      "nodeUiDevFloatingWindowHeaderHeight",
       "nodeUiDevSettingsHeaderHighlights",
     ],
   },

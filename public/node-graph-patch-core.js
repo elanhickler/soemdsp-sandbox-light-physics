@@ -64,8 +64,15 @@ function validateNodeGraphPatch(patch) {
     throw new Error("nodes must be an array");
   }
 
+  const retiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"]);
+  const retiredNodeIds = new Set(
+    patch.nodes
+      .filter((node) => retiredNodeTypes.has(String(node.type || "").trim()))
+      .map((node) => String(node.id || "").trim())
+      .filter(Boolean),
+  );
   const ids = new Set();
-  const nodes = patch.nodes.map((node) => {
+  const nodes = patch.nodes.filter((node) => !retiredNodeTypes.has(String(node.type || "").trim())).map((node) => {
     const id = String(node.id || "").trim();
     const type = String(node.type || "").trim();
     if (!id) {
@@ -89,16 +96,6 @@ function validateNodeGraphPatch(patch) {
     const widthGu = normalizeNodeGraphModuleWidthUnits(type, node.widthGu);
     if (hasCustomWidth && !Number.isFinite(Number(node.widthGu))) {
       throw new Error(`node ${id} widthGu invalid`);
-    }
-    const hasCustomHeight = Object.hasOwn(node, "heightGu");
-    const heightGu = normalizeNodeGraphModuleHeightUnits(type, node.heightGu, node.ui);
-    if (hasCustomHeight && !Number.isFinite(Number(node.heightGu))) {
-      throw new Error(`node ${id} heightGu invalid`);
-    }
-    const hasCustomHeightOffset = Object.hasOwn(node, "heightOffsetGu");
-    const heightOffsetGu = normalizeNodeGraphModuleHeightOffsetUnits(node.heightOffsetGu);
-    if (hasCustomHeightOffset && !Number.isFinite(Number(node.heightOffsetGu))) {
-      throw new Error(`node ${id} heightOffsetGu invalid`);
     }
     const params = {};
     const paramMeta = {};
@@ -152,8 +149,6 @@ function validateNodeGraphPatch(patch) {
         ? { alias: normalizeNodeGraphPatchNodeAlias(node.alias) }
         : {}),
       ...(hasCustomWidth ? { widthGu } : {}),
-      ...(hasCustomHeight ? { heightGu } : {}),
-      ...(hasCustomHeightOffset ? { heightOffsetGu } : {}),
     };
     if (nodeGraphModuleDefinitions[type].layout === "textBox") {
       normalizedNode.layout = normalizeNodeGraphTextBoxLayout(node.layout);
@@ -176,9 +171,6 @@ function validateNodeGraphPatch(patch) {
     if (type === "screenSpaceShader") {
       normalizedNode.screenSpaceShader = normalizeNodeGraphScreenSpaceShader(node.screenSpaceShader);
     }
-    if (type === "formulaVisual") {
-      normalizedNode.formulaVisual = normalizeNodeGraphFormulaVisualScript(node.formulaVisual);
-    }
     if (Object.hasOwn(node, "scopeShader")) {
       normalizedNode.scopeShader = normalizeNodeGraphScopeShader(node.scopeShader);
     }
@@ -197,45 +189,11 @@ function validateNodeGraphPatch(patch) {
     const ui = nodeGraphModuleDefinitions[type].layout === "textBox" && !Object.hasOwn(node, "ui")
       ? { buttonsHidden: true }
       : normalizeNodeGraphPatchNodeUi(node.ui);
-    if (ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden) {
+    if (ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden || ui.slidersHidden || ui.displayHeightOffsetGu) {
       normalizedNode.ui = ui;
     }
     return normalizedNode;
   });
-  if (!nodes.some((node) => node.id === "home")) {
-    let homeId = "home";
-    let suffix = 2;
-    while (ids.has(homeId)) {
-      homeId = `home-${suffix}`;
-      suffix += 1;
-    }
-    const homeNode = createNodeGraphPatchNode("moduleHome", {
-      gx: 1,
-      gy: 10,
-      id: homeId,
-      widthGu: 5,
-    });
-    ids.add(homeId);
-    nodes.splice(0, 0, homeNode);
-  }
-  if (!nodes.some((node) => node.type === "moduleShop")) {
-    let shopId = "shop";
-    let suffix = 2;
-    while (ids.has(shopId)) {
-      shopId = `shop-${suffix}`;
-      suffix += 1;
-    }
-    const bottommost = nodes.reduce((max, node) => Math.max(max, node.gy), 0);
-    const shopNode = createNodeGraphPatchNode("moduleShop", {
-      gx: 1,
-      gy: Math.max(0, bottommost + 3),
-      id: shopId,
-      widthGu: 5,
-    });
-    ids.add(shopId);
-    nodes.unshift(shopNode);
-  }
-
   const uiItems = normalizeNodeGraphPatchUiItems(patch.uiItems, { nodeIds: ids });
 
   const bypassedNodes = [];
@@ -260,22 +218,8 @@ function validateNodeGraphPatch(patch) {
     }
   }
 
-  const legacyFormulaVisualInputParams = new Map([
-    ["A", "formulaA"],
-    ["B", "formulaB"],
-    ["Petals", "formulaPetals"],
-    ["Mix", "formulaMix"],
-    ["Scale", "formulaScale"],
-    ["Rotate", "formulaRotate"],
-    ["Morph", "formulaMorph"],
-    ["Hue", "formulaHue"],
-    ["Glow", "formulaGlow"],
-    ["Dots", "formulaDots"],
-  ]);
-  const migratedModulations = [];
-  const migratedModulationKeys = new Set();
   const connectionKeys = new Set();
-  const connections = Array.isArray(patch.connections) ? patch.connections.flatMap((connection) => {
+  const connections = (Array.isArray(patch.connections) ? patch.connections : []).flatMap((connection) => {
     const sourceNode = String(connection.sourceNode || "").trim();
     let sourcePort = String(connection.sourcePort || "").trim();
     const destinationNode = String(connection.destinationNode || "").trim();
@@ -283,6 +227,9 @@ function validateNodeGraphPatch(patch) {
     const sourceType = nodes.find((node) => node.id === sourceNode)?.type;
     const destinationType = nodes.find((node) => node.id === destinationNode)?.type;
     if (!sourceType || !destinationType) {
+      if (retiredNodeIds.has(sourceNode) || retiredNodeIds.has(destinationNode)) {
+        return [];
+      }
       throw new Error("connection references missing node");
     }
     sourcePort = nodeGraphCanonicalOutputPort(sourceType, sourcePort);
@@ -293,38 +240,6 @@ function validateNodeGraphPatch(patch) {
       destinationPort = "Mono";
     }
     destinationPort = nodeGraphCanonicalInputPort(destinationType, destinationPort);
-    if (destinationType === "formulaVisual" && legacyFormulaVisualInputParams.has(destinationPort)) {
-      const destinationParam = legacyFormulaVisualInputParams.get(destinationPort);
-      const alreadyModulated = (Array.isArray(patch.modulations) ? patch.modulations : []).some((modulation) => {
-        const modulationSourceType = nodes.find((node) => node.id === String(modulation.sourceNode || "").trim())?.type;
-        const modulationSourcePort = modulationSourceType
-          ? nodeGraphCanonicalOutputPort(modulationSourceType, String(modulation.sourcePort || "").trim())
-          : String(modulation.sourcePort || "").trim();
-        return (
-          String(modulation.sourceNode || "").trim() === sourceNode &&
-          modulationSourcePort === sourcePort &&
-          String(modulation.destinationNode || "").trim() === destinationNode &&
-          String(modulation.destinationParam || "").trim() === destinationParam
-        );
-      });
-      const migrationKey = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationParam}`;
-      if (!alreadyModulated && !migratedModulationKeys.has(migrationKey)) {
-        migratedModulationKeys.add(migrationKey);
-        migratedModulations.push({
-          destinationNode,
-          destinationParam,
-          sourceNode,
-          sourcePort,
-          ...(nodeGraphWireTypePatchValue(connection.wireType)
-            ? { wireType: nodeGraphWireTypePatchValue(connection.wireType) }
-            : {}),
-          ...(normalizeNodeGraphTracePoints(connection.tracePoints).length
-            ? { tracePoints: normalizeNodeGraphTracePoints(connection.tracePoints) }
-            : {}),
-        });
-      }
-      return [];
-    }
     if (!nodeGraphPatchNodeInputPorts(nodes.find((node) => node.id === destinationNode)).includes(destinationPort)) {
       throw new Error(`connection destination port invalid: ${destinationNode}.${destinationPort}`);
     }
@@ -349,7 +264,6 @@ function validateNodeGraphPatch(patch) {
 
   const modulationKeys = new Set();
   const modulations = (Array.isArray(patch.modulations) ? patch.modulations : [])
-    .concat(migratedModulations)
     .flatMap((modulation) => {
       const sourceNode = String(modulation.sourceNode || "").trim();
       let sourcePort = String(modulation.sourcePort || "").trim();
@@ -361,6 +275,9 @@ function validateNodeGraphPatch(patch) {
       const sourceType = nodes.find((node) => node.id === sourceNode)?.type;
       const destinationType = nodes.find((node) => node.id === destinationNode)?.type;
       if (!sourceType || !destinationType) {
+        if (retiredNodeIds.has(sourceNode) || retiredNodeIds.has(destinationNode)) {
+          return [];
+        }
         throw new Error("modulation references missing node");
       }
       sourcePort = nodeGraphCanonicalOutputPort(sourceType, sourcePort);
@@ -528,11 +445,14 @@ function applyNodeGraphPatchToDom() {
       (port) => !(nodeGraphModuleDefinitions[patchNode.type]?.parameters || []).some((parameter) => parameter.key === port),
     );
     const portSignature = `${nodeGraphPatchNodeInputPorts(patchNode).join(",")}=>${outputPorts.join(",")}=>${nodeGraphModuleGraphInputs(patchNode.type).join(",")}`;
+    const patchNodeUi = nodeGraphEffectivePatchNodeUi(patchNode.ui);
+    const structuralUiSignature = patchNodeUi.oscilloscopeHidden ? "scope-hidden" : "scope-visible";
     if (
       element &&
       (
         element.dataset.nodeType !== patchNode.type ||
-        element.dataset.portSignature !== portSignature
+        element.dataset.portSignature !== portSignature ||
+        element.dataset.structuralUiSignature !== structuralUiSignature
       )
     ) {
       element.remove();
@@ -544,18 +464,20 @@ function applyNodeGraphPatchToDom() {
     }
     element.style.setProperty("--node-grid-width-units", String(nodeGraphPatchNodeGridWidthUnits(patchNode)));
     element.style.setProperty("--node-grid-height-units", String(nodeGraphPatchNodeGridHeightUnits(patchNode)));
+    element.style.setProperty("--node-module-display-height-units", String(nodeGraphPatchNodeDisplayHeightUnits(patchNode)));
     const point = nodeGraphGridToPixel(patchNode);
     positionNodeGraphNode(element, point, { clamp: false, snap: false });
     element.hidden = !nodeGraphModuleShouldBeVisible(patchNode);
     element.dataset.gridX = String(patchNode.gx);
     element.dataset.gridY = String(patchNode.gy);
+    element.dataset.structuralUiSignature = structuralUiSignature;
     const titleText = element.querySelector(".node-header-title");
     if (titleText) {
       titleText.textContent = nodeGraphPatchNodeTitle(patchNode);
     }
-    const patchNodeUi = normalizeNodeGraphPatchNodeUi(patchNode.ui);
     element.classList.toggle("buttons-hidden", patchNodeUi.buttonsHidden);
     element.classList.toggle("oscilloscope-hidden", patchNodeUi.oscilloscopeHidden);
+    element.classList.toggle("sliders-hidden", patchNodeUi.slidersHidden);
     element.classList.toggle("title-hidden", patchNodeUi.titleHidden);
     const bypassed = nodeGraphNodeDisplaysBypassed(patchNode.id);
     element.classList.toggle("bypassed", bypassed);

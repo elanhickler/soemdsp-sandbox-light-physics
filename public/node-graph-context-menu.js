@@ -30,7 +30,8 @@ function clearNodeSceneContextMenuDragState() {
 
 const nodeSceneContextWindowDefaultSize = Object.freeze({
   width: 215,
-  minWidth: 160,
+  minWidth: 24,
+  maxWidth: 430,
 });
 
 const nodeModuleActionsWindowDefaultSize = Object.freeze({
@@ -76,6 +77,23 @@ function saveNodeSceneContextWindowSizeToUserSettings() {
   if (typeof saveNodeGraphWorkspaceWindowStatesToUserSettings === "function") {
     saveNodeGraphWorkspaceWindowStatesToUserSettings();
   }
+}
+
+function saveNodeModuleActionsWindowStateToUserSettings() {
+  const menu = document.getElementById("nodeModuleActionsWindow");
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "moduleActions",
+      menu,
+      {
+        open: menu ? !menu.hidden : true,
+        size: normalizeNodeModuleActionsWindowSize(nodeGraphMvp.moduleActionWindowSize),
+      },
+      { status: false },
+    );
+    return;
+  }
+  saveNodeSceneContextWindowSizeToUserSettings();
 }
 
 function closeNodeModuleActionsWindow() {
@@ -132,6 +150,10 @@ function closeNodeGlobalScopeMenu() {
 }
 
 function positionNodeSceneContextMenu(menu, x, y, remember = false) {
+  if (!menu) {
+    return;
+  }
+  menu.hidden = false;
   if (menu?.id === "nodeSceneContextMenu") {
     applyNodeSceneContextWindowSize();
   } else if (menu?.id === "nodeModuleActionsWindow") {
@@ -431,7 +453,20 @@ function dragNodeModuleActionsWindowResize(event) {
 }
 
 function endNodeModuleActionsWindowResize(event) {
-  endNodeGraphFloatingWindowResize(event, "moduleActionResizing", saveNodeSceneContextWindowSizeToUserSettings);
+  endNodeGraphFloatingWindowResize(event, "moduleActionResizing", saveNodeModuleActionsWindowStateToUserSettings);
+}
+
+function beginNodeSceneContextWindowResize(event) {
+  const menu = document.getElementById("nodeSceneContextMenu");
+  beginNodeGraphFloatingWindowResize(event, menu, "sceneContextResizing");
+}
+
+function dragNodeSceneContextWindowResize(event) {
+  dragNodeGraphFloatingWindowResize(event, "sceneContextResizing", applyNodeSceneContextWindowSize, { height: false });
+}
+
+function endNodeSceneContextWindowResize(event) {
+  endNodeGraphFloatingWindowResize(event, "sceneContextResizing", saveNodeSceneContextWindowSizeToUserSettings);
 }
 
 function beginNodeScopeContextMenuDrag(event) {
@@ -580,7 +615,6 @@ const nodeGraphModuleActionControlIds = [
   "nodeSceneWireTypeControl",
   "nodeSceneAliasControl",
   "nodeSceneWidthControls",
-  "nodeSceneTextBoxHeightControls",
   "nodeSceneTextBoxTextSizeControls",
   "nodeSceneTextBoxTextControls",
   "nodeSceneCodeblockControls",
@@ -588,8 +622,9 @@ const nodeGraphModuleActionControlIds = [
   "nodeSceneToggleButtons",
   "nodeSceneToggleTitle",
   "nodeSceneToggleOscilloscope",
+  "nodeSceneDisplayHeightControls",
+  "nodeSceneToggleSliders",
   "nodeSceneImageControls",
-  "nodeSceneImageFileInput",
   "nodeSceneCanvasControls",
   "nodeSceneLedControls",
   "nodeSceneTextBoxControls",
@@ -633,6 +668,9 @@ function openNodeGraphModuleActionsFromContextWindow() {
     top: window.innerHeight * 0.25,
   };
   positionNodeModuleActionsWindowAtSavedOr(menu, rect.right + 8, rect.top);
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("moduleActions", menu, { open: true }, { status: false });
+  }
 }
 
 function openNodeGraphMetaparametersFromContextWindow() {
@@ -719,10 +757,10 @@ function configureNodeSceneContextMenu(mode) {
   const widthDecrease = document.getElementById("nodeSceneWidthDecrease");
   const widthIncrease = document.getElementById("nodeSceneWidthIncrease");
   const widthValue = document.getElementById("nodeSceneWidthValue");
-  const textBoxHeightControls = document.getElementById("nodeSceneTextBoxHeightControls");
-  const textBoxHeightDecrease = document.getElementById("nodeSceneTextBoxHeightDecrease");
-  const textBoxHeightIncrease = document.getElementById("nodeSceneTextBoxHeightIncrease");
-  const textBoxHeightValue = document.getElementById("nodeSceneTextBoxHeightValue");
+  const displayHeightControls = document.getElementById("nodeSceneDisplayHeightControls");
+  const displayHeightDecrease = document.getElementById("nodeSceneDisplayHeightDecrease");
+  const displayHeightIncrease = document.getElementById("nodeSceneDisplayHeightIncrease");
+  const displayHeightValue = document.getElementById("nodeSceneDisplayHeightValue");
   const textBoxTextSizeControls = document.getElementById("nodeSceneTextBoxTextSizeControls");
   const textBoxTextSizeDecrease = document.getElementById("nodeSceneTextBoxTextSizeDecrease");
   const textBoxTextSizeIncrease = document.getElementById("nodeSceneTextBoxTextSizeIncrease");
@@ -747,9 +785,9 @@ function configureNodeSceneContextMenu(mode) {
   const graphRemoveNode = document.getElementById("nodeSceneGraphRemoveNode");
   const toggleButtonsButton = document.getElementById("nodeSceneToggleButtons");
   const toggleOscilloscopeButton = document.getElementById("nodeSceneToggleOscilloscope");
+  const toggleSlidersButton = document.getElementById("nodeSceneToggleSliders");
   const toggleTitleButton = document.getElementById("nodeSceneToggleTitle");
   const imageControls = document.getElementById("nodeSceneImageControls");
-  const imageLoad = document.getElementById("nodeSceneImageLoad");
   const imageSave = document.getElementById("nodeSceneImageSave");
   const imageRefresh = document.getElementById("nodeSceneImageRefresh");
   const canvasControls = document.getElementById("nodeSceneCanvasControls");
@@ -803,17 +841,17 @@ function configureNodeSceneContextMenu(mode) {
     );
   const canCopy = moduleMode && targetNode?.type !== "output";
   const widthGu = targetNode ? nodeGraphPatchNodeGridWidthUnits(targetNode) : 0;
-  const heightGu = targetNode ? nodeGraphPatchNodeGridHeightUnits(targetNode) : 0;
-  const heightOffsetGu = targetNode ? nodeGraphPatchNodeHeightOffsetUnits(targetNode) : 0;
   const widthLimits = targetNode
     ? nodeGraphModuleWidthLimitsForType(targetNode.type)
     : nodeGraphModuleWidthLimits;
-  const heightLimits = targetNode
-    ? nodeGraphModuleHeightLimitsForType(targetNode.type)
-    : nodeGraphModuleHeightLimits;
   const targetNodeUi = normalizeNodeGraphPatchNodeUi(targetNode?.ui);
-  const buttonsHidden = targetNodeUi.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false;
-  const oscilloscopeHidden = targetNodeUi.oscilloscopeHidden;
+  const effectiveTargetNodeUi = nodeGraphEffectivePatchNodeUi(targetNode?.ui);
+  const buttonsHidden = effectiveTargetNodeUi.buttonsHidden;
+  const oscilloscopeHidden = effectiveTargetNodeUi.oscilloscopeHidden;
+  const displayHeightGu = targetNode ? nodeGraphModuleConfiguredDisplayHeightUnits(targetNode.type, targetNode.ui) : 0;
+  const targetNodeLayout = nodeGraphPatchNodeLayout(targetNode);
+  const visualFaceLabel = "display";
+  const slidersHidden = effectiveTargetNodeUi.slidersHidden;
   const titleHidden = targetNodeUi.titleHidden;
   const textBoxLayout = normalizeNodeGraphTextBoxLayout(targetNode?.layout);
   const textBoxMode = textBoxLayout.textMode;
@@ -871,14 +909,14 @@ function configureNodeSceneContextMenu(mode) {
   wireTypeControl.hidden = !wireMode;
   aliasControl.hidden = !moduleMode;
   widthControls.hidden = !moduleMode;
-  const canResizeHeight = moduleMode && hasModuleActionTarget;
-  textBoxHeightControls.hidden = !canResizeHeight;
   textBoxTextSizeControls.hidden = !(moduleMode && !multiModuleMode && targetNode?.type === "textBox");
   textBoxTextControls.hidden = !(moduleMode && !multiModuleMode && targetNode?.type === "textBox");
   codeblockControls.hidden = !(moduleMode && !multiModuleMode && targetNode?.type === "codeblock");
   graphControls.hidden = !(moduleMode && !multiModuleMode && targetIsGraphType);
   toggleButtonsButton.hidden = !moduleMode || multiModuleMode;
   toggleOscilloscopeButton.hidden = !(moduleMode && !multiModuleMode && nodeGraphPatchNodeHasHideableOscilloscope(targetNode));
+  displayHeightControls.hidden = !(moduleMode && !multiModuleMode && nodeGraphPatchNodeHasHideableOscilloscope(targetNode));
+  toggleSlidersButton.hidden = !(moduleMode && !multiModuleMode && nodeGraphModuleTypeHasHideableSliders(targetNode?.type));
   toggleTitleButton.hidden = !moduleMode || multiModuleMode;
   imageControls.hidden = !(moduleMode && !multiModuleMode && targetNode?.type === "image");
   canvasControls.hidden = !(moduleMode && !multiModuleMode && targetNode?.type === "canvas");
@@ -896,7 +934,9 @@ function configureNodeSceneContextMenu(mode) {
         : "none";
     aliasControl.hidden = multiModuleMode;
     aliasInput.disabled = !targetNode || multiModuleMode;
-    aliasInput.value = targetNode && !multiModuleMode ? normalizeNodeGraphPatchNodeAlias(targetNode.alias) : "";
+    if (document.activeElement !== aliasInput) {
+      aliasInput.value = targetNode && !multiModuleMode ? normalizeNodeGraphPatchNodeAlias(targetNode.alias) : "";
+    }
     aliasInput.placeholder = targetNode && !multiModuleMode ? nodeGraphDefaultNodeTitle(targetNode.type, targetNode.id) : "module title alias";
     aliasInput.title = nodeGraphTooltipText("actions.moduleAlias");
     copyButton.disabled = !canCopy || multiModuleMode;
@@ -930,11 +970,17 @@ function configureNodeSceneContextMenu(mode) {
     widthDecrease.title = nodeGraphTooltipText("actions.widthDecrease");
     widthIncrease.disabled = multiModuleMode ? !selectedNodes.length : !targetNode || widthGu >= widthLimits.maxGu;
     widthIncrease.title = nodeGraphTooltipText("actions.widthIncrease");
-    textBoxHeightValue.textContent = multiModuleMode ? `${selectedNodeIds.size} modules` : `${nodeGraphModuleHeightOffsetLabel(heightOffsetGu)} height`;
-    textBoxHeightDecrease.disabled = multiModuleMode ? !selectedNodes.length : !canResizeHeight || heightGu <= heightLimits.minGu;
-    textBoxHeightDecrease.title = "Make this module one grid unit shorter.";
-    textBoxHeightIncrease.disabled = multiModuleMode ? !selectedNodes.length : !canResizeHeight || heightGu >= heightLimits.maxGu;
-    textBoxHeightIncrease.title = "Make this module one grid unit taller.";
+    displayHeightValue.textContent = `${displayHeightGu} display gu`;
+    displayHeightDecrease.disabled =
+      !targetNode ||
+      !nodeGraphPatchNodeHasHideableOscilloscope(targetNode) ||
+      displayHeightGu <= nodeGraphModuleDisplayHeightLimits.minGu;
+    displayHeightDecrease.title = "Decrease this module's display height.";
+    displayHeightIncrease.disabled =
+      !targetNode ||
+      !nodeGraphPatchNodeHasHideableOscilloscope(targetNode) ||
+      displayHeightGu >= nodeGraphModuleDisplayHeightLimits.maxGu;
+    displayHeightIncrease.title = "Increase this module's display height.";
     textBoxTextSizeValue.textContent = `${textBoxLayout.textSizePercent}% text`;
     textBoxTextSizeDecrease.disabled =
       !targetNode ||
@@ -951,21 +997,27 @@ function configureNodeSceneContextMenu(mode) {
     toggleButtonsButton.setAttribute("aria-pressed", buttonsHidden ? "true" : "false");
     toggleButtonsButton.title = nodeGraphTooltipText(buttonsHidden ? "actions.showModuleButtons" : "actions.hideModuleButtons");
     toggleOscilloscopeButton.disabled = !targetNode || !nodeGraphPatchNodeHasHideableOscilloscope(targetNode);
-    toggleOscilloscopeButton.querySelector("span").textContent = oscilloscopeHidden ? "Show oscilloscope" : "Hide oscilloscope";
+    toggleOscilloscopeButton.querySelector("span").textContent = oscilloscopeHidden
+      ? `Show ${visualFaceLabel}`
+      : `Hide ${visualFaceLabel}`;
     toggleOscilloscopeButton.setAttribute("aria-pressed", oscilloscopeHidden ? "true" : "false");
     toggleOscilloscopeButton.title = oscilloscopeHidden
-      ? "Show this module's built-in oscilloscope strip."
-      : "Hide this module's built-in oscilloscope strip.";
+      ? `Show this module's built-in ${visualFaceLabel}.`
+      : `Hide this module's built-in ${visualFaceLabel}.`;
+    toggleSlidersButton.disabled = !targetNode || !nodeGraphModuleTypeHasHideableSliders(targetNode.type);
+    toggleSlidersButton.querySelector("span").textContent = slidersHidden ? "Show sliders" : "Hide sliders";
+    toggleSlidersButton.setAttribute("aria-pressed", slidersHidden ? "true" : "false");
+    toggleSlidersButton.title = slidersHidden
+      ? "Show this module's parameter sliders."
+      : "Hide this module's parameter sliders.";
     toggleTitleButton.disabled = !targetNode;
     toggleTitleButton.querySelector("span").textContent = titleHidden ? "Show title" : "Hide title";
     toggleTitleButton.setAttribute("aria-pressed", titleHidden ? "true" : "false");
     toggleTitleButton.title = nodeGraphTooltipText(titleHidden ? "actions.showModuleTitle" : "actions.hideModuleTitle");
     if (targetNode?.type === "image") {
       const imageLayout = normalizeNodeGraphImageLayout(targetNode.layout);
-      imageLoad.disabled = false;
       imageSave.disabled = !imageLayout.dataUrl;
       imageRefresh.disabled = false;
-      imageLoad.title = "Load an image into this patch-local image node.";
       imageSave.title = imageLayout.dataUrl ? "Save this image node's current image." : "Load an image before saving.";
       imageRefresh.title = "Refresh image preview and trace texture.";
     }
@@ -1073,9 +1125,6 @@ function configureNodeSceneContextMenu(mode) {
     widthValue.textContent = "";
     widthDecrease.disabled = true;
     widthIncrease.disabled = true;
-    textBoxHeightValue.textContent = "";
-    textBoxHeightDecrease.disabled = true;
-    textBoxHeightIncrease.disabled = true;
     textBoxTextSizeValue.textContent = "";
     textBoxTextSizeDecrease.disabled = true;
     textBoxTextSizeIncrease.disabled = true;
@@ -1105,7 +1154,6 @@ function configureNodeSceneContextMenu(mode) {
     toggleButtonsButton.disabled = true;
     toggleOscilloscopeButton.disabled = true;
     toggleTitleButton.disabled = true;
-    imageLoad.disabled = true;
     imageSave.disabled = true;
     imageRefresh.disabled = true;
     canvasScript.disabled = true;
@@ -1130,9 +1178,6 @@ function configureNodeSceneContextMenu(mode) {
     widthValue.textContent = "";
     widthDecrease.disabled = true;
     widthIncrease.disabled = true;
-    textBoxHeightValue.textContent = "";
-    textBoxHeightDecrease.disabled = true;
-    textBoxHeightIncrease.disabled = true;
     textBoxTextSizeValue.textContent = "";
     textBoxTextSizeDecrease.disabled = true;
     textBoxTextSizeIncrease.disabled = true;
@@ -1162,7 +1207,6 @@ function configureNodeSceneContextMenu(mode) {
     toggleButtonsButton.disabled = true;
     toggleOscilloscopeButton.disabled = true;
     toggleTitleButton.disabled = true;
-    imageLoad.disabled = true;
     imageSave.disabled = true;
     imageRefresh.disabled = true;
     canvasScript.disabled = true;

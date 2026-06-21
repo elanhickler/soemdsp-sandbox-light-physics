@@ -435,7 +435,6 @@ function renderNodeGraphLiveScriptBlock(event) {
       visualBloom: Number(runtime.visualControls?.visualBloom) || 0,
       visualBrightness: Number(runtime.visualControls?.visualBrightness) || 0,
       visualGlow: Number(runtime.visualControls?.visualGlow) || 0,
-      formulaVisual: runtime.visualControls?.formulaVisual || {},
       x: Number(runtime.visualControls?.x) || 0,
       y: Number(runtime.visualControls?.y) || 0,
     };
@@ -949,9 +948,6 @@ function handleNodeGraphLiveWorkletMessage(event) {
       visualBloom: Number(message.visualBloom) || 0,
       visualBrightness: Number(message.visualBrightness) || 0,
       visualGlow: Number(message.visualGlow) || 0,
-      formulaVisual: message.formulaVisual && typeof message.formulaVisual === "object"
-        ? message.formulaVisual
-        : {},
       x: Number(message.x) || 0,
       y: Number(message.y) || 0,
     });
@@ -974,9 +970,6 @@ function handleNodeGraphLiveWorkletMessage(event) {
         visualBloom: Number(message.visualBloom) || 0,
         visualBrightness: Number(message.visualBrightness) || 0,
         visualGlow: Number(message.visualGlow) || 0,
-        formulaVisual: message.formulaVisual && typeof message.formulaVisual === "object"
-          ? message.formulaVisual
-          : {},
         x: Number(message.x) || 0,
         y: Number(message.y) || 0,
       };
@@ -1353,7 +1346,7 @@ async function createNodeGraphLiveWorkletNode(context) {
     throw new Error("AudioWorklet unavailable");
   }
   await nodeGraphLiveAwaitStartup(
-    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=formula-visual-params-1"),
+    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=module-home-actions-1"),
     "AudioWorklet startup timed out",
   );
   const workletNode = new AudioWorkletNode(

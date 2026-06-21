@@ -16,9 +16,7 @@ function nodeGraphSelectionHelpText() {
   if (!selectedNodeIds.size) {
     return "";
   }
-  return selectedNodeIds.size === 1
-    ? "1 module selected"
-    : `${selectedNodeIds.size} modules selected`;
+  return "Modules selected";
 }
 
 function composeNodeInteractionHelpText(text = "") {
@@ -27,6 +25,24 @@ function composeNodeInteractionHelpText(text = "") {
     return text;
   }
   return text ? `${text}\n${selectionText}` : selectionText;
+}
+
+function normalizeNodeInteractionButtonLabel(value = "") {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function nodeInteractionButtonLabel(button) {
+  if (!button) {
+    return "";
+  }
+  return normalizeNodeInteractionButtonLabel(
+    button.getAttribute("aria-label") ||
+      button.getAttribute("title") ||
+      button.textContent ||
+      "",
+  );
 }
 
 function nodeInteractionMouseHint(element) {
@@ -152,7 +168,7 @@ function nodeInteractionMouseHint(element) {
     return nodeGraphTooltipText("actions.deleteSelection");
   }
   if (element.matches("button")) {
-    return nodeGraphTooltipText("common.activate");
+    return nodeInteractionButtonLabel(element) || nodeGraphTooltipText("common.activate");
   }
   return nodeGraphTooltipText("common.interact");
 }

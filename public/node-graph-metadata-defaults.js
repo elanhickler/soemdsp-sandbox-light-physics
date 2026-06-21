@@ -1,5 +1,5 @@
 const fallbackNodeMetadataKindTemplates = Object.freeze({
-  decimal: { def: 0, label: "Decimal", linearSmoothing: true, max: 1, maxDigits: 3, mid: 0.5, min: 0, step: 0.01, unit: "" },
+  decimal: { def: 0, label: "Decimal", linearSmoothing: true, max: 1, maxDigits: 4, mid: 0.5, min: 0, step: 0.0001, unit: "" },
   decimal_bipolar: {
     def: 0,
     label: "Decimal Bipolar",

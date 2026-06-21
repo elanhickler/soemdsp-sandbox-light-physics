@@ -44,20 +44,15 @@ function nodeGraphCanvasScriptSourceWithGridUnits(source, widthGu, heightGu) {
   return `${gridLine}\n${baseSource}`;
 }
 
-function resizeNodeGraphCanvasModuleOnGrid(patchNode, axis, delta) {
+function resizeNodeGraphCanvasModuleOnGrid(patchNode, delta) {
   const canvasScript = normalizeNodeGraphCanvasScript(patchNode.canvasScript);
   const currentWidthGu = nodeGraphPatchNodeGridWidthUnits(patchNode);
   const currentHeightGu = nodeGraphPatchNodeGridHeightUnits(patchNode);
-  const nextWidthGu = axis === "width"
-    ? normalizeNodeGraphModuleWidthUnits("canvas", currentWidthGu + delta)
-    : currentWidthGu;
-  const nextHeightGu = axis === "height"
-    ? normalizeNodeGraphModuleHeightUnits("canvas", currentHeightGu + delta, patchNode.ui)
-    : currentHeightGu;
-  if (nextWidthGu === currentWidthGu && nextHeightGu === currentHeightGu) {
+  const nextWidthGu = normalizeNodeGraphModuleWidthUnits("canvas", currentWidthGu + delta);
+  if (nextWidthGu === currentWidthGu) {
     return false;
   }
-  const source = nodeGraphCanvasScriptSourceWithGridUnits(canvasScript.source, nextWidthGu, nextHeightGu);
+  const source = nodeGraphCanvasScriptSourceWithGridUnits(canvasScript.source, nextWidthGu, currentHeightGu);
   patchNode.canvasScript = normalizeNodeGraphCanvasScript({ ...canvasScript, source });
   delete patchNode.widthGu;
   delete patchNode.heightGu;
@@ -80,7 +75,7 @@ function resizeSelectedNodeGraphModulesOnGrid(axis, delta) {
     }
 
     if (patchNode.type === "canvas") {
-      if (resizeNodeGraphCanvasModuleOnGrid(patchNode, axis, delta)) {
+      if (axis === "width" && resizeNodeGraphCanvasModuleOnGrid(patchNode, delta)) {
         changedCount += 1;
       }
       continue;
@@ -101,37 +96,23 @@ function resizeSelectedNodeGraphModulesOnGrid(axis, delta) {
       continue;
     }
 
-    const currentHeightGu = nodeGraphPatchNodeGridHeightUnits(patchNode);
-    const currentOffsetGu = nodeGraphPatchNodeHeightOffsetUnits(patchNode);
-    const nextOffsetGu = normalizeNodeGraphModuleHeightOffsetUnits(currentOffsetGu + delta);
-    const nextHeightGu = normalizeNodeGraphModuleHeightUnits(
-      patchNode.type,
-      currentHeightGu + (nextOffsetGu - currentOffsetGu),
-      patchNode.ui,
-    );
-    if (nextHeightGu === currentHeightGu) {
-      continue;
-    }
-    delete patchNode.heightGu;
-    if (nextOffsetGu === 0) {
-      delete patchNode.heightOffsetGu;
-    } else {
-      patchNode.heightOffsetGu = nextOffsetGu;
-    }
-    changedCount += 1;
+    continue;
   }
 
   if (!changedCount) {
     return false;
   }
   commitNodeGraphPatch(patch, {
-    status: axis === "width" ? "module width changed" : "module height changed",
+    status: "module width changed",
   });
   configureNodeSceneContextMenu("module");
   return true;
 }
 
 function handleNodeGraphKeydown(event) {
+  if (handleNodeGraphFloatingWindowKeyboardNudge(event)) {
+    return;
+  }
   if (event.key === "Escape" && nodeGraphWireInteractions?.cancelManualTrace?.()) {
     event.preventDefault();
     return;
@@ -208,10 +189,8 @@ function handleNodeGraphKeydown(event) {
   }
   if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
     const shiftArrowSizeActions = {
-      ArrowDown: ["height", 1],
       ArrowLeft: ["width", -1],
       ArrowRight: ["width", 1],
-      ArrowUp: ["height", -1],
     };
     const action = shiftArrowSizeActions[event.key];
     if (action) {

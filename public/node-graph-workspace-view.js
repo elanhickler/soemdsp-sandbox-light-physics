@@ -147,9 +147,6 @@ function nodeGraphSetVisualControls(values = {}) {
     visualBloom: nodeGraphVisualControlValue(values.visualBloom, current.visualBloom || 0),
     visualBrightness: nodeGraphVisualControlValue(values.visualBrightness, current.visualBrightness || 0),
     visualGlow: nodeGraphVisualControlValue(values.visualGlow, current.visualGlow || 0),
-    formulaVisual: values.formulaVisual && typeof values.formulaVisual === "object"
-      ? values.formulaVisual
-      : (current.formulaVisual || {}),
     x: nodeGraphVisualControlSignedValue(values.x, current.x || 0),
     y: nodeGraphVisualControlSignedValue(values.y, current.y || 0),
   };
@@ -192,7 +189,6 @@ function nodeGraphClearVisualControls() {
     visualBloom: 0,
     visualBrightness: 0,
     visualGlow: 0,
-    formulaVisual: {},
     x: 0,
     y: 0,
   };
