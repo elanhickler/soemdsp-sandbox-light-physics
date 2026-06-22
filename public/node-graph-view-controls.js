@@ -758,70 +758,28 @@ function endNodeGraphVisibilityMenuResize(event) {
 }
 
 function beginNodeGraphVisibilityMenuDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
   const menu = document.getElementById("nodeVisibilityMenu");
   if (!menu || menu.hidden) {
     return;
   }
-  const rect = menu.getBoundingClientRect();
-  const styleLeft = Number.parseFloat(menu.style.left);
-  const styleTop = Number.parseFloat(menu.style.top);
-  nodeGraphMvp.visibilityMenuDragging = {
-    handle: event.currentTarget,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
-    startLeft: Number.isFinite(styleLeft) ? styleLeft : rect.left,
-    startTop: Number.isFinite(styleTop) ? styleTop : rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowDrag(event, menu, "visibilityMenuDragging");
 }
 
 function dragNodeGraphVisibilityMenu(event) {
-  const drag = nodeGraphMvp.visibilityMenuDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
   const menu = document.getElementById("nodeVisibilityMenu");
-  const next = nodeGraphFloatingWindowPosition(
-    menu,
-    drag.startLeft + event.clientX - drag.startClientX,
-    drag.startTop + event.clientY - drag.startClientY,
-  );
-  if (menu) {
-    menu.style.left = `${next.left}px`;
-    menu.style.top = `${next.top}px`;
-    menu.style.right = "auto";
-  }
-  event.preventDefault();
+  dragNodeGraphFloatingWindow(event, "visibilityMenuDragging", menu, (next) => {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("visibilityMenu", menu, { open: true, position: next }, { persist: false });
+    }
+  });
 }
 
 function endNodeGraphVisibilityMenuDrag(event) {
-  const drag = nodeGraphMvp.visibilityMenuDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.visibilityMenuDragging = null;
-  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
-    rememberNodeGraphWorkspaceWindowState("visibilityMenu", document.getElementById("nodeVisibilityMenu"), {}, { status: false });
-  }
+  endNodeGraphFloatingWindowDrag(event, "visibilityMenuDragging", () => {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("visibilityMenu", document.getElementById("nodeVisibilityMenu"), {}, { status: false });
+    }
+  });
 }
 
 function toggleNodeGraphVisibilityMenu() {

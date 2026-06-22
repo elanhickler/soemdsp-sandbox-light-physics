@@ -1204,69 +1204,49 @@ function endNodeGraphSavedPatchesWindowResize(event) {
 }
 
 function beginNodeGraphSavedPatchesWindowDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
   const panel = document.getElementById("nodeSavedPatchesWindow");
   if (!panel || panel.hidden) {
     return;
   }
-  const rect = panel.getBoundingClientRect();
   const heading = document.getElementById("nodeSavedPatchesWindowHeading");
-  nodeGraphMvp.savedPatchesWindowDragging = {
-    handle: event.currentTarget,
-    heading,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  heading?.classList.add("dragging");
-  positionNodeGraphSavedPatchesWindow(rect.left, rect.top);
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
+  const drag = beginNodeGraphFloatingWindowDrag(event, panel, "savedPatchesWindowDragging");
+  if (drag) {
+    drag.heading = heading;
+    heading?.classList.add("dragging");
   }
-  event.preventDefault();
-  event.stopPropagation();
 }
 
 function dragNodeGraphSavedPatchesWindow(event) {
-  const drag = nodeGraphMvp.savedPatchesWindowDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  positionNodeGraphSavedPatchesWindow(
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
+  dragNodeGraphFloatingWindow(
+    event,
+    "savedPatchesWindowDragging",
+    document.getElementById("nodeSavedPatchesWindow"),
+    (next) => {
+      if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+        rememberNodeGraphWorkspaceWindowState(
+          "patchExplorer",
+          document.getElementById("nodeSavedPatchesWindow"),
+          { open: true, position: next },
+          { persist: false },
+        );
+      }
+    },
   );
-  event.preventDefault();
 }
 
 function endNodeGraphSavedPatchesWindowDrag(event) {
   const drag = nodeGraphMvp.savedPatchesWindowDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  drag.heading?.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.savedPatchesWindowDragging = null;
-  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
-    rememberNodeGraphWorkspaceWindowState(
-      "patchExplorer",
-      document.getElementById("nodeSavedPatchesWindow"),
-      { open: true },
-      { status: false },
-    );
-  }
+  endNodeGraphFloatingWindowDrag(event, "savedPatchesWindowDragging", () => {
+    drag?.heading?.classList.remove("dragging");
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState(
+        "patchExplorer",
+        document.getElementById("nodeSavedPatchesWindow"),
+        { open: true },
+        { status: false },
+      );
+    }
+  });
 }
 
 function setNodeGraphSavedPatchesWindowVisible(visible) {

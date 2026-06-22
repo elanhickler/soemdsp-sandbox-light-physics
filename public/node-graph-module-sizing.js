@@ -329,6 +329,15 @@ function nodeGraphModuleHeightWidgetUnits(type, ui = {}) {
       { id: "fit", heightGu: nodeGraphModuleLayout.fitCushionGu, visible: true },
     ];
   }
+  if (nodeGraphModuleDefinitions[type]?.layout === "traceDisplay") {
+    return [
+      { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },
+      { id: "trace", heightGu: nodeGraphModuleDisplayHeightUnits(type, ui), visible: true },
+      { id: "io", heightGu: nodeGraphModuleIoSectionHeightGu(type), visible: true },
+      { id: "params", heightGu: nodeGraphModuleSliderBodyHeightGu(type), visible: slidersVisible },
+      { id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true },
+    ];
+  }
   if (nodeGraphModuleDefinitions[type]?.layout === "graph") {
     return [
       { id: "header", heightGu: nodeGraphModuleHeaderHeightUnits(ui), visible: true },

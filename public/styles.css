@@ -8505,12 +8505,12 @@ audio {
 }
 
 .node-graph-workspace.module-oscilloscopes-hidden
-  .dsp-node:not(.canvas-node-layout):not(.visual-scope-layout) {
+  .dsp-node:not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout) {
   --node-module-scope-height: 0px;
 }
 
 .node-graph-workspace.module-oscilloscopes-hidden
-  .dsp-node:not(.canvas-node-layout):not(.visual-scope-layout)
+  .dsp-node:not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout)
   .node-module-scope-window {
   display: none;
 }
@@ -8789,6 +8789,14 @@ audio {
   grid-template-rows: var(--node-header-height) minmax(0, 1fr) minmax(var(--node-io-section-min-height), auto);
 }
 
+.dsp-node.trace-display-layout {
+  grid-template-rows:
+    var(--node-header-height)
+    var(--node-module-scope-height)
+    minmax(var(--node-io-section-min-height), auto)
+    auto;
+}
+
 .dsp-node.graph-node-layout {
   grid-template-rows: var(--node-header-height) minmax(0, 1fr) minmax(var(--node-io-section-min-height), auto);
 }
@@ -8902,20 +8910,20 @@ audio {
   padding: 0;
 }
 
-.node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout),
-.dsp-node.buttons-hidden:not(.text-box-layout):not(.image-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) {
+.node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout),
+.dsp-node.buttons-hidden:not(.text-box-layout):not(.image-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) {
   grid-template-rows: var(--node-header-height) var(--node-module-scope-height) auto auto minmax(0, 1fr);
 }
 
-.node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)::after,
-.dsp-node.buttons-hidden:not(.text-box-layout):not(.image-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)::after {
+.node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)::after,
+.dsp-node.buttons-hidden:not(.text-box-layout):not(.image-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout)::after {
   content: "";
   display: block;
   min-height: 0;
 }
 
-.node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) .dsp-node-body,
-.dsp-node.buttons-hidden:not(.text-box-layout):not(.image-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) .dsp-node-body {
+.node-graph-workspace.module-buttons-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) .dsp-node-body,
+.dsp-node.buttons-hidden:not(.text-box-layout):not(.image-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) .dsp-node-body {
   align-content: start;
   grid-auto-rows: var(--node-body-row-height);
 }
@@ -10070,11 +10078,11 @@ audio {
   display: none;
 }
 
-.dsp-node.oscilloscope-hidden:not(.canvas-node-layout):not(.visual-scope-layout) {
+.dsp-node.oscilloscope-hidden:not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout) {
   --node-module-scope-height: 0px;
 }
 
-.dsp-node.oscilloscope-hidden:not(.canvas-node-layout):not(.visual-scope-layout) .node-module-scope-window {
+.dsp-node.oscilloscope-hidden:not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout) .node-module-scope-window {
   display: none;
 }
 
@@ -10090,8 +10098,8 @@ audio {
     minmax(0, 1fr);
 }
 
-.node-graph-workspace.module-oscilloscopes-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.filter-curve-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout),
-.dsp-node.oscilloscope-hidden:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.graph-node-layout):not(.filter-curve-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) {
+.node-graph-workspace.module-oscilloscopes-hidden .dsp-node:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.filter-curve-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout),
+.dsp-node.oscilloscope-hidden:not(.text-box-layout):not(.image-node-layout):not(.canvas-node-layout):not(.visual-scope-layout):not(.trace-display-layout):not(.graph-node-layout):not(.filter-curve-layout):not(.slider-widget-layout):not(.knob-widget-layout):not(.sample-module-layout):not(.screen-space-shader-layout) {
   grid-template-rows: var(--node-header-height) minmax(var(--node-io-section-min-height), auto) minmax(0, 1fr);
 }
 

@@ -93,6 +93,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "canvas",
   "led",
   "visualOscilloscope",
+  "traceDisplay",
   "parabol",
   "vibratoGenerator",
   "wowAndFlutter",
@@ -232,12 +233,12 @@ const nodeGraphModuleStoreDepartmentAds = Object.freeze({
   Samples: {
     symbol: "▣",
     title: "Samples",
-    pitch: "Audio clips, one-shots, loops, and sample playback tools.",
+    pitch: "Audio-file shelf. Empty by default until sandbox has a real file-library flow.",
   },
   Loops: {
     symbol: "∞",
     title: "Loops",
-    pitch: "Loop players and repeatable audio-material tools for building longer musical chains.",
+    pitch: "Loop-file shelf. Empty by default until sandbox has a real audio-loop library flow.",
   },
   Noise: {
     symbol: "✦",
@@ -456,6 +457,7 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   clapPlugin: {
     category: "Audio",
+    developerOnly: true,
     description: "Browser-side shell for a local CLAP host plugin. Stores plugin identity and can use a host instance during bounded Render Sample.",
     label: "CLAP Plugin",
     notes: ["local host", "native plugin", "offline render"],
@@ -635,19 +637,19 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["group interface", "public output", "patch boundary"],
   },
   samplePlayer: {
-    category: "Samples",
+    category: "Audio",
     description: "Patch-local one-shot sample playback. Trigger starts from Start and plays to End with simple click ramps.",
     label: "Sample Player",
     notes: ["sample playback", "one shot", "audio source"],
   },
   audioPlayer: {
-    category: "Samples",
+    category: "Audio",
     description: "Patch-local music file player with stereo outputs and a phasor-driven scrub input for sample-accurate playback head control.",
     label: "Music Player",
     notes: ["music playback", "scrubbable", "phasor", "audio source"],
   },
   sampleLooper: {
-    category: "Loops",
+    category: "Audio",
     description: "Patch-local gated sample loop playback with loop bounds, pitch control, and seam crossfade.",
     label: "Sample Looper",
     notes: ["sample playback", "loop", "audio source"],
@@ -787,6 +789,11 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     category: "Visual",
     description: "Square in-world display tile. Patch any signal into In and use it as a dedicated visual display.",
     notes: ["square display", "signal display", "visual sink"],
+  },
+  traceDisplay: {
+    category: "Visual",
+    description: "Focused 1D waveform display testbed. Patch any signal into In and inspect the current trace without the full prettyscope renderer.",
+    notes: ["1D waveform", "display testbed", "input trace"],
   },
   parabol: {
     category: "Modulators",
@@ -1019,6 +1026,9 @@ function nodeGraphModuleStoreSearchResultOrder(a, b) {
 
 function nodeGraphModuleStorePublicEntriesByDepartment(entries = []) {
   const groups = new Map();
+  for (const department of nodeGraphModuleStoreDepartments) {
+    groups.set(department, []);
+  }
   entries
     .filter((entry) => entry.visible)
     .forEach((entry) => {
@@ -1505,63 +1515,42 @@ function positionNodeGraphModuleShopViewNearPoint(point = null) {
 }
 
 function beginNodeGraphModuleShopViewDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
   const panel = document.getElementById("nodeModuleShopView");
   if (!panel || panel.hidden) {
     return;
   }
-  const rect = panel.getBoundingClientRect();
-  nodeGraphMvp.moduleShopDragging = {
-    handle: event.currentTarget,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  positionNodeGraphModuleShopView(rect.left, rect.top);
-  event.currentTarget.setPointerCapture?.(event.pointerId);
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowDrag(event, panel, "moduleShopDragging");
 }
 
 function dragNodeGraphModuleShopView(event) {
-  const drag = nodeGraphMvp.moduleShopDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  positionNodeGraphModuleShopView(
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
+  dragNodeGraphFloatingWindow(
+    event,
+    "moduleShopDragging",
+    document.getElementById("nodeModuleShopView"),
+    (next) => {
+      if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+        rememberNodeGraphWorkspaceWindowState(
+          "moduleBrowser",
+          document.getElementById("nodeModuleShopView"),
+          { open: true, position: next },
+          { persist: false },
+        );
+      }
+    },
   );
-  event.preventDefault();
 }
 
 function endNodeGraphModuleShopViewDrag(event) {
-  const drag = nodeGraphMvp.moduleShopDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.moduleShopDragging = null;
-  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
-    rememberNodeGraphWorkspaceWindowState(
-      "moduleBrowser",
-      document.getElementById("nodeModuleShopView"),
-      { open: true },
-      { status: false },
-    );
-  }
+  endNodeGraphFloatingWindowDrag(event, "moduleShopDragging", () => {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState(
+        "moduleBrowser",
+        document.getElementById("nodeModuleShopView"),
+        { open: true },
+        { status: false },
+      );
+    }
+  });
 }
 
 function beginNodeGraphModuleShopViewResize(event) {

@@ -55,6 +55,79 @@ function applyNodeGraphFloatingWindowSizeVars(element, cssPrefix, defaults = {},
   }
 }
 
+function beginNodeGraphFloatingWindowDrag(event, element, stateKey) {
+  if (
+    event.button > 0 ||
+    !element ||
+    element.hidden ||
+    !stateKey ||
+    (typeof nodeGraphDialogDragTargetIsInteractive === "function" &&
+      nodeGraphDialogDragTargetIsInteractive(event))
+  ) {
+    return null;
+  }
+  const rect = element.getBoundingClientRect();
+  const styleLeft = Number.parseFloat(element.style.left);
+  const styleTop = Number.parseFloat(element.style.top);
+  const drag = {
+    handle: event.currentTarget,
+    pointerId: event.pointerId ?? null,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    startLeft: Number.isFinite(styleLeft) ? styleLeft : rect.left,
+    startTop: Number.isFinite(styleTop) ? styleTop : rect.top,
+  };
+  nodeGraphMvp[stateKey] = drag;
+  event.currentTarget.classList.add("dragging");
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+  return drag;
+}
+
+function dragNodeGraphFloatingWindow(event, stateKey, element, onMove = null) {
+  const drag = nodeGraphMvp[stateKey];
+  if (
+    !drag ||
+    !element ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return false;
+  }
+  const next = nodeGraphFloatingWindowPosition(
+    element,
+    drag.startLeft + event.clientX - drag.startClientX,
+    drag.startTop + event.clientY - drag.startClientY,
+  );
+  element.style.left = `${next.left}px`;
+  element.style.top = `${next.top}px`;
+  element.style.right = "auto";
+  if (typeof onMove === "function") {
+    onMove(next, element, drag);
+  }
+  event.preventDefault();
+  return true;
+}
+
+function endNodeGraphFloatingWindowDrag(event, stateKey, onEnd = null) {
+  const drag = nodeGraphMvp[stateKey];
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return false;
+  }
+  drag.handle?.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle?.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp[stateKey] = null;
+  if (typeof onEnd === "function") {
+    onEnd();
+  }
+  return true;
+}
+
 function beginNodeGraphFloatingWindowResize(event, element, stateKey) {
   if (event.button > 0 || !element || element.hidden || !stateKey) {
     return null;
@@ -177,11 +250,13 @@ function nudgeNodeGraphFloatingWindowByKeyboard(target, dx, dy) {
   target.element.style.left = `${next.left}px`;
   target.element.style.top = `${next.top}px`;
   target.element.style.right = "auto";
-  if (Number.isFinite(Number(target.drag.offsetX))) {
-    target.drag.offsetX -= next.left - rect.left;
+  if (Number.isFinite(Number(target.drag.startLeft))) {
+    target.drag.startLeft = next.left;
+    target.drag.startClientX = Number(target.drag.startClientX) + dx;
   }
-  if (Number.isFinite(Number(target.drag.offsetY))) {
-    target.drag.offsetY -= next.top - rect.top;
+  if (Number.isFinite(Number(target.drag.startTop))) {
+    target.drag.startTop = next.top;
+    target.drag.startClientY = Number(target.drag.startClientY) + dy;
   }
   if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
     rememberNodeGraphWorkspaceWindowState(

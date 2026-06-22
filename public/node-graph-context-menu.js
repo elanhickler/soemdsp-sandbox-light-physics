@@ -196,24 +196,49 @@ function positionNodeSceneContextMenuHeaderAtPoint(menu, x, y, remember = false)
   );
 }
 
+function nodeSceneContextMenuCurrentPosition(menu) {
+  if (!menu) {
+    return null;
+  }
+  const left = Number.parseFloat(menu.style.left);
+  const top = Number.parseFloat(menu.style.top);
+  if (Number.isFinite(left) && Number.isFinite(top)) {
+    return { left, top };
+  }
+  if (menu.hidden) {
+    return null;
+  }
+  const rect = menu.getBoundingClientRect();
+  if (Number.isFinite(rect.left) && Number.isFinite(rect.top)) {
+    return { left: rect.left, top: rect.top };
+  }
+  return null;
+}
+
 function positionNodeSceneContextMenuAtCurrentSavedOrInitial(menu, x, y) {
   if (!menu) {
     return;
   }
   applyNodeSceneContextWindowSize();
-  if (!menu.hidden) {
-    const rect = menu.getBoundingClientRect();
-    positionNodeSceneContextMenu(menu, rect.left, rect.top, false);
-    return;
-  }
+  const currentPosition = nodeSceneContextMenuCurrentPosition(menu);
   const workspaceState = nodeGraphMvp.workspaceWindowStates?.commandCenter;
-  const savedPosition = workspaceState?.position || nodeGraphMvp.moduleActionWindowPosition;
-  const hasSavedPosition =
-    Number.isFinite(Number(savedPosition?.left)) &&
-    Number.isFinite(Number(savedPosition?.top));
-  if (hasSavedPosition) {
+  const savedPosition = workspaceState?.position;
+  const chosenPosition = currentPosition || savedPosition;
+  const hasChosenPosition =
+    Number.isFinite(Number(chosenPosition?.left)) &&
+    Number.isFinite(Number(chosenPosition?.top));
+  if (hasChosenPosition) {
     menu.hidden = false;
-    positionNodeSceneContextMenu(menu, savedPosition.left, savedPosition.top, false);
+    menu.style.left = `${chosenPosition.left}px`;
+    menu.style.top = `${chosenPosition.top}px`;
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState(
+        "commandCenter",
+        menu,
+        { open: true, position: { left: chosenPosition.left, top: chosenPosition.top } },
+        { persist: false },
+      );
+    }
     return;
   }
   positionNodeSceneContextMenuHeaderAtPoint(menu, x, y, true);
@@ -221,7 +246,7 @@ function positionNodeSceneContextMenuAtCurrentSavedOrInitial(menu, x, y) {
 
 function positionNodeSceneContextMenuAtSavedOr(menu, x, y) {
   const workspaceState = nodeGraphMvp.workspaceWindowStates?.commandCenter;
-  const savedPosition = workspaceState?.position || nodeGraphMvp.moduleActionWindowPosition;
+  const savedPosition = workspaceState?.position;
   const hasSavedPosition =
     Number.isFinite(Number(savedPosition?.left)) &&
     Number.isFinite(Number(savedPosition?.top));
@@ -315,9 +340,6 @@ function toggleNodeGlobalScopeMenu() {
 }
 
 function beginNodeSceneContextMenuDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
   if (nodeGraphMvp.sceneContextDragging) {
     event.preventDefault();
     event.stopPropagation();
@@ -329,118 +351,61 @@ function beginNodeSceneContextMenuDrag(event) {
     return;
   }
 
-  const rect = menu.getBoundingClientRect();
   clearNodeSceneContextMenuDragState();
-  nodeGraphMvp.sceneContextDragging = {
-    handle: event.currentTarget,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowDrag(event, menu, "sceneContextDragging");
 }
 
 function dragNodeSceneContextMenu(event) {
-  const drag = nodeGraphMvp.sceneContextDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
-  positionNodeSceneContextMenu(
+  dragNodeGraphFloatingWindow(
+    event,
+    "sceneContextDragging",
     document.getElementById("nodeSceneContextMenu"),
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
-    false,
+    (next) => {
+      if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+        rememberNodeGraphWorkspaceWindowState("commandCenter", document.getElementById("nodeSceneContextMenu"), { open: true, position: next }, { persist: false });
+      }
+    },
   );
-  event.preventDefault();
 }
 
 function endNodeSceneContextMenuDrag(event) {
-  const drag = nodeGraphMvp.sceneContextDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
-  clearNodeSceneContextMenuDragState();
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.sceneContextDragging = null;
-  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
-    rememberNodeGraphWorkspaceWindowState("commandCenter", document.getElementById("nodeSceneContextMenu"), { open: true }, { status: false });
-  }
+  endNodeGraphFloatingWindowDrag(event, "sceneContextDragging", () => {
+    clearNodeSceneContextMenuDragState();
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("commandCenter", document.getElementById("nodeSceneContextMenu"), { open: true }, { status: false });
+    }
+  });
 }
 
 function beginNodeModuleActionsWindowDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
-
   const menu = document.getElementById("nodeModuleActionsWindow");
   if (!menu || menu.hidden) {
     return;
   }
-
-  const rect = menu.getBoundingClientRect();
-  nodeGraphMvp.moduleActionDragging = {
-    handle: event.currentTarget,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
+  beginNodeGraphFloatingWindowDrag(event, menu, "moduleActionDragging");
 }
 
 function dragNodeModuleActionsWindow(event) {
-  const drag = nodeGraphMvp.moduleActionDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
-  positionNodeSceneContextMenu(
+  dragNodeGraphFloatingWindow(
+    event,
+    "moduleActionDragging",
     document.getElementById("nodeModuleActionsWindow"),
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
-    true,
+    (next) => {
+      nodeGraphMvp.moduleActionWindowPosition = next;
+      syncNodeGraphPatchWindowPosition("moduleActions", next);
+      if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+        rememberNodeGraphWorkspaceWindowState("moduleActions", document.getElementById("nodeModuleActionsWindow"), { open: true, position: next }, { persist: false });
+      }
+    },
   );
-  event.preventDefault();
 }
 
 function endNodeModuleActionsWindowDrag(event) {
-  const drag = nodeGraphMvp.moduleActionDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.moduleActionDragging = null;
-  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
-    rememberNodeGraphWorkspaceWindowState("moduleActions", document.getElementById("nodeModuleActionsWindow"), { open: true }, { status: false });
-  }
+  endNodeGraphFloatingWindowDrag(event, "moduleActionDragging", () => {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("moduleActions", document.getElementById("nodeModuleActionsWindow"), { open: true }, { status: false });
+    }
+  });
 }
 
 function beginNodeModuleActionsWindowResize(event) {
@@ -470,130 +435,48 @@ function endNodeSceneContextWindowResize(event) {
 }
 
 function beginNodeScopeContextMenuDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
-
-  const menu = document.getElementById("nodeGlobalScopeMenu");
+  const menu = document.getElementById("nodeScopeContextMenu");
   if (!menu || menu.hidden) {
     return;
   }
-
-  const rect = menu.getBoundingClientRect();
-  nodeGraphMvp.scopeContextDragging = {
-    handle: event.currentTarget,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowDrag(event, menu, "scopeContextDragging");
 }
 
 function beginNodeGlobalScopeMenuDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
   const menu = document.getElementById("nodeGlobalScopeMenu");
   if (!menu || menu.hidden) {
     return;
   }
-  const rect = menu.getBoundingClientRect();
-  nodeGraphMvp.globalScopeDragging = {
-    handle: event.currentTarget,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowDrag(event, menu, "globalScopeDragging");
 }
 
 function dragNodeGlobalScopeMenu(event) {
-  const drag = nodeGraphMvp.globalScopeDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
   const menu = document.getElementById("nodeGlobalScopeMenu");
-  positionNodeSceneContextMenu(
-    menu,
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
-    false,
-  );
-  nodeGraphMvp.globalScopeWindowPosition = {
-    left: Number.parseFloat(menu.style.left) || menu.getBoundingClientRect().left,
-    top: Number.parseFloat(menu.style.top) || menu.getBoundingClientRect().top,
-  };
-  event.preventDefault();
+  dragNodeGraphFloatingWindow(event, "globalScopeDragging", menu, (next) => {
+    nodeGraphMvp.globalScopeWindowPosition = next;
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", menu, { open: true, position: next }, { persist: false });
+    }
+  });
 }
 
 function endNodeGlobalScopeMenuDrag(event) {
-  const drag = nodeGraphMvp.globalScopeDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.globalScopeDragging = null;
-  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
-    rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", document.getElementById("nodeGlobalScopeMenu"), { open: true }, { status: false });
-  }
+  endNodeGraphFloatingWindowDrag(event, "globalScopeDragging", () => {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", document.getElementById("nodeGlobalScopeMenu"), { open: true }, { status: false });
+    }
+  });
 }
 
 function dragNodeScopeContextMenu(event) {
-  const drag = nodeGraphMvp.scopeContextDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
   const menu = document.getElementById("nodeScopeContextMenu");
-  positionNodeSceneContextMenu(
-    menu,
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
-    false,
-  );
-  nodeGraphMvp.scopeContextWindowPosition = {
-    left: Number.parseFloat(menu.style.left) || menu.getBoundingClientRect().left,
-    top: Number.parseFloat(menu.style.top) || menu.getBoundingClientRect().top,
-  };
-  event.preventDefault();
+  dragNodeGraphFloatingWindow(event, "scopeContextDragging", menu, (next) => {
+    nodeGraphMvp.scopeContextWindowPosition = next;
+  });
 }
 
 function endNodeScopeContextMenuDrag(event) {
-  const drag = nodeGraphMvp.scopeContextDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.scopeContextDragging = null;
+  endNodeGraphFloatingWindowDrag(event, "scopeContextDragging");
 }
 
 function nodeGraphContextTargetModuleElement(nodeId = nodeGraphModuleActionTargetNodeId()) {

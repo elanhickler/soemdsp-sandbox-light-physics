@@ -985,7 +985,7 @@ function nodeGraphModuleScopeSlots() {
 }
 
 function nodeGraphModuleScopeSlotIgnoresGlobalHide(slot) {
-  return ["visualOscilloscope", "canvas"].includes(slot?.type);
+  return ["visualOscilloscope", "traceDisplay", "canvas"].includes(slot?.type);
 }
 
 function nodeGraphVisibleModuleScopeSlots() {
@@ -2955,6 +2955,19 @@ function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null) {
     buffer = nodeGraphModuleScopeCapturedVisualOscilloscopeXyBuffer(slot, capturedBuffer) ||
       capturedBuffer ||
       nodeGraphModuleScopeOfflineVisualOscilloscopeBuffer(slot);
+  } else if (slot?.type === "traceDisplay") {
+    buffer = capturedBuffer;
+    if (buffer?.length) {
+      buffer.nodeGraphScopeDrawFullWindow = true;
+      buffer.nodeGraphScopeDrawProgress = 1;
+      buffer.nodeGraphScopeDrawStartProgress = 0;
+      buffer.nodeGraphScopeDrawWrap = false;
+      buffer.nodeGraphScopeHoldPoint = false;
+      buffer.nodeGraphScopeMinPointSpacingPx = 1;
+      buffer.nodeGraphScopeScanTrail = false;
+      buffer.nodeGraphScopeUseFullWindow = true;
+      buffer.nodeGraphScopeVisualPointLimit = 2048;
+    }
   } else if (slot?.type === "spiral" || slot?.type === "ellipsoid" || slot?.type === "lorenzAttractor") {
     buffer = nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, "X", "Y") || capturedBuffer;
   } else if (slot?.type === "audioPlayer") {
@@ -2973,7 +2986,9 @@ function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null) {
       nodeGraphModuleScopeOfflineGainAnalyzerBuffer(slot) ||
       capturedBuffer;
   }
-  return nodeGraphModuleScopeApplyShaderDisplayMode(slot, buffer);
+  return slot?.type === "traceDisplay"
+    ? buffer
+    : nodeGraphModuleScopeApplyShaderDisplayMode(slot, buffer);
 }
 
 function nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, xPort = "X", yPort = "Y") {
@@ -3854,6 +3869,18 @@ function nodeGraphModuleScopeVisibleSamples(buffer, settings, cycleEstimate) {
 
 function nodeGraphModuleScopeBufferView(buffer, slot) {
   const settings = nodeGraphModuleScopeEffectiveSettingForSlot(slot);
+  if (slot?.type === "traceDisplay") {
+    return {
+      end: buffer.length,
+      gain: Math.max(0, Number(nodeGraphModuleScopeNodeParam(nodeGraphModuleScopeNodeForSlot(slot), "gain", 1)) || 0),
+      offset: clampNodeSliderValue(
+        Number(nodeGraphModuleScopeNodeParam(nodeGraphModuleScopeNodeForSlot(slot), "offset", 0)) || 0,
+        -1,
+        1,
+      ),
+      start: 0,
+    };
+  }
   if (buffer?.nodeGraphScopeUseFullWindow) {
     return {
       end: buffer.length,
@@ -6080,6 +6107,26 @@ function nodeGraphModuleScopeScreenItems(workspace, canvas, pixelRatio) {
     .filter(Boolean);
 }
 
+function drawNodeGraphTraceDisplayItem(renderer, item, pixelRatio) {
+  const slot = item?.slot;
+  const buffer = item?.buffer;
+  if (!slot || !buffer?.length) {
+    return;
+  }
+  renderNodeGraphModuleScopeAnalyzer(slot, buffer);
+  clearNodeGraphModuleScopeLocalFallback(slot);
+  renderer.gl.enable(renderer.gl.SCISSOR_TEST);
+  applyNodeGraphModuleScopeTraceBlendMode(renderer.gl, "normal");
+  drawNodeGraphModuleScopeBufferWebGl(renderer, item.scopeRect, buffer, pixelRatio, slot, {
+    color: [0.46, 0.92, 1],
+    dotSizeScale: 1,
+    intensity: 0.92,
+    thicknessPx: 1.4 * nodeGraphModuleScopeStrokeZoomScale(),
+    visibleProgressRange: item.visibleProgressRange,
+    visibleRect: item.visibleScopeRect,
+  });
+}
+
 function drawNodeGraphModuleScopes() {
   const debug = setNodeGraphModuleScopeDebugPhase("enter", {
     drawAttempts: (Number(nodeGraphModuleScopeState.renderDebug?.drawAttempts) || 0) + 1,
@@ -6182,6 +6229,10 @@ function drawNodeGraphModuleScopes() {
       visibleProgressRange,
       visibleScopeRect,
     } = item;
+    if (slot?.type === "traceDisplay") {
+      drawNodeGraphTraceDisplayItem(renderer, item, pixelRatio);
+      continue;
+    }
     renderNodeGraphModuleScopeAnalyzer(slot, buffer);
     if (buffer?.nodeGraphScopeLightDisplay) {
       continue;

@@ -364,6 +364,7 @@ function nodeGraphModuleLayoutClassNames(type, definition, layout) {
     sliderWidget: "slider-widget-layout",
     speakerProtection: "speaker-protection-layout",
     textBox: "text-box-layout",
+    traceDisplay: "trace-display-layout",
     visualScope: "visual-scope-layout",
   };
   if (definition.layout === "canvas") {
@@ -465,6 +466,18 @@ function createNodeGraphModuleElement(type, node) {
     const outputColumn = createNodeGraphIoColumn(node, type, outputPorts, "output");
     ioSection.append(inputColumn || document.createElement("div"));
     ioSection.append(outputColumn || document.createElement("div"));
+    article.append(ioSection);
+  } else if (layout === "traceDisplay") {
+    const scopeSection = createNodeGraphModuleScopeSection(node, type);
+    scopeSection.classList.add("node-module-trace-display-window");
+    article.append(scopeSection);
+    registerNodeGraphModuleScopeSlot(article, { nodeId: node, type, scopeElement: scopeSection });
+
+    const ioSection = document.createElement("div");
+    ioSection.className = "dsp-node-io-section";
+    const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
+    ioSection.append(inputColumn || document.createElement("div"));
+    ioSection.append(document.createElement("div"));
     article.append(ioSection);
   } else if (definition.layout === "graph") {
     const graphSection = document.createElement("div");

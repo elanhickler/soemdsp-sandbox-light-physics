@@ -4121,7 +4121,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "store",
             clap_contract_sources["store"],
-            ['"clapPlugin"', 'category: "Audio"', "Browser-side shell for a local CLAP host plugin"],
+            ['"clapPlugin"', 'category: "Audio"', "developerOnly: true", "Browser-side shell for a local CLAP host plugin"],
         ),
         (
             "patch persistence",
@@ -7531,6 +7531,14 @@ def require_node_graph_mvp_contract() -> None:
         'key: "visualOscilloscopeY"',
         'label: "Y"',
         'port: "Y"',
+        'traceDisplay: "Trace Display"',
+        '"traceDisplay"',
+        "traceDisplay: {",
+        'bufferedInputs: ["In"]',
+        'layout: "traceDisplay"',
+        'key: "traceDisplay"',
+        "drawNodeGraphTraceDisplayItem",
+        'slot?.type === "traceDisplay"',
         "function nodeGraphModuleVisualInputs(type)",
         "function nodeGraphCanonicalInputPort(type, port)",
         "function nodeGraphCanonicalOutputPort(type, port)",
@@ -8418,6 +8426,8 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphPatchNodeGridWidthUnits(node)",
         "function nodeGraphPatchNodeGridHeightUnits(node)",
         "function nodeGraphModuleHeightWidgetUnits(type, ui = {})",
+        'nodeGraphModuleDefinitions[type]?.layout === "traceDisplay"',
+        '{ id: "inset", heightGu: nodeGraphModuleLayout.moduleGridInsetGu * 2, visible: true }',
         "const nodeGraphModuleDisplayHeightLimits",
         "minGu: 1",
         "stepGu: 1",
@@ -8995,6 +9005,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphModuleStoreSearchResultOrder(a, b)",
         "const implementedDelta = Number(Boolean(b?.implemented)) - Number(Boolean(a?.implemented))",
         "function nodeGraphModuleStorePublicEntriesByDepartment(entries = [])",
+        "for (const department of nodeGraphModuleStoreDepartments)",
         "const searchingAllModules = !selectedDepartment",
         "const visibleModuleEntries = selectedDepartment || departmentSearch",
         "[...publicEntries].sort(nodeGraphModuleStoreSearchResultOrder)",
@@ -9071,6 +9082,11 @@ def require_node_graph_mvp_contract() -> None:
         "\"Loops\"",
         "\"Samples\"",
         "\"Debug\"",
+        'samplePlayer: {\n    category: "Audio"',
+        'audioPlayer: {\n    category: "Audio"',
+        'sampleLooper: {\n    category: "Audio"',
+        'pitch: "Audio-file shelf. Empty by default',
+        'pitch: "Loop-file shelf. Empty by default',
         "nodeGraphModuleStoreVisualGroups",
         "Generate",
         "Process",
@@ -12947,6 +12963,12 @@ def require_node_graph_mvp_contract() -> None:
         "configuredMaxWidth",
         "configuredMaxHeight",
         "function applyNodeGraphFloatingWindowSizeVars(element, cssPrefix, defaults = {}, normalized = {})",
+        "function beginNodeGraphFloatingWindowDrag(event, element, stateKey)",
+        "function dragNodeGraphFloatingWindow(event, stateKey, element, onMove = null)",
+        "function endNodeGraphFloatingWindowDrag(event, stateKey, onEnd = null)",
+        "startClientX: event.clientX",
+        "startLeft: Number.isFinite(styleLeft) ? styleLeft : rect.left",
+        "drag.startLeft + event.clientX - drag.startClientX",
         "function beginNodeGraphFloatingWindowResize(event, element, stateKey)",
         "function dragNodeGraphFloatingWindowResize(event, stateKey, applySize, axes = {})",
         "function endNodeGraphFloatingWindowResize(event, stateKey, onEnd = null)",
@@ -12964,6 +12986,20 @@ def require_node_graph_mvp_contract() -> None:
         index_source.index("./public/node-graph-module-store.js"),
         "shared floating window helper should load before floating window consumers",
     )
+    for path, state_key in (
+        ("./public/node-graph-context-menu.js", "sceneContextDragging"),
+        ("./public/node-graph-context-menu.js", "moduleActionDragging"),
+        ("./public/node-graph-context-menu.js", "globalScopeDragging"),
+        ("./public/node-graph-file-actions.js", "savedPatchesWindowDragging"),
+        ("./public/node-graph-metadata-editor.js", "metadataDragging"),
+        ("./public/node-graph-module-store.js", "moduleShopDragging"),
+        ("./public/node-graph-view-controls.js", "visibilityMenuDragging"),
+    ):
+        require(
+            f'beginNodeGraphFloatingWindowDrag(event,' in script_sources[path]
+            and f'"{state_key}"' in script_sources[path],
+            f"{state_key} should use shared stable floating-window drag helper",
+        )
     for path in (
         "./public/node-graph-floating-windows.js",
         "./public/node-graph-context-menu.js",
@@ -13083,11 +13119,11 @@ def require_node_graph_mvp_contract() -> None:
     )
     require(
         "function nodeGraphModuleScopeSlotIgnoresGlobalHide(slot)" in node_graph_source
-        and 'return ["visualOscilloscope", "canvas"].includes(slot?.type);' in node_graph_source
+        and 'return ["visualOscilloscope", "traceDisplay", "canvas"].includes(slot?.type);' in node_graph_source
         and "function nodeGraphVisibleModuleScopeSlots()" in node_graph_source
         and "return slots.filter(nodeGraphModuleScopeSlotIgnoresGlobalHide);" in node_graph_source
         and "nodeGraphMvp.moduleOscilloscopesVisible === false && !nodeGraphVisibleModuleScopeSlots().length" in node_graph_source,
-        "visual oscilloscope and canvas scope faces should keep drawing when global module scopes are hidden",
+        "display testbed, visual oscilloscope, and canvas scope faces should keep drawing when global module scopes are hidden",
     )
 
     require(

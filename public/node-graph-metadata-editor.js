@@ -121,9 +121,6 @@ function nodeMetadataPopoverEmptyDragTarget(event) {
 }
 
 function beginNodeMetadataPopoverDrag(event) {
-  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
-    return;
-  }
   if (event.currentTarget?.id === "metadataPopoverCornerDrag") {
     beginNodeMetadataPopoverResize(event);
     return;
@@ -139,22 +136,12 @@ function beginNodeMetadataPopoverDrag(event) {
     return;
   }
 
-  const rect = popover.getBoundingClientRect();
   const heading = document.querySelector("#nodeParameterMetadataPopover .metadata-popover-heading");
-  nodeGraphMvp.metadataDragging = {
-    handle: event.currentTarget,
-    heading,
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    pointerId: event.pointerId ?? null,
-  };
-  event.currentTarget.classList.add("dragging");
-  heading?.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
+  const drag = beginNodeGraphFloatingWindowDrag(event, popover, "metadataDragging");
+  if (drag) {
+    drag.heading = heading;
+    heading?.classList.add("dragging");
   }
-  event.preventDefault();
-  event.stopPropagation();
 }
 
 function beginNodeMetadataPopoverResize(event) {
@@ -171,46 +158,36 @@ function endNodeMetadataPopoverResize(event) {
 }
 
 function dragNodeMetadataPopover(event) {
-  const drag = nodeGraphMvp.metadataDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
-  positionNodeMetadataPopover(
+  dragNodeGraphFloatingWindow(
+    event,
+    "metadataDragging",
     document.getElementById("nodeParameterMetadataPopover"),
-    event.clientX - drag.offsetX,
-    event.clientY - drag.offsetY,
-    true,
+    (next) => {
+      if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+        rememberNodeGraphWorkspaceWindowState(
+          "metaparameters",
+          document.getElementById("nodeParameterMetadataPopover"),
+          { open: true, position: next },
+          { persist: false },
+        );
+      }
+    },
   );
-  event.preventDefault();
 }
 
 function endNodeMetadataPopoverDrag(event) {
   const drag = nodeGraphMvp.metadataDragging;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-
-  drag.handle.classList.remove("dragging");
-  drag.heading?.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.metadataDragging = null;
-  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
-    rememberNodeGraphWorkspaceWindowState(
-      "metaparameters",
-      document.getElementById("nodeParameterMetadataPopover"),
-      { open: true, size: nodeMetadataPopoverSizeFromElement() },
-      { status: false },
-    );
-  }
+  endNodeGraphFloatingWindowDrag(event, "metadataDragging", () => {
+    drag?.heading?.classList.remove("dragging");
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState(
+        "metaparameters",
+        document.getElementById("nodeParameterMetadataPopover"),
+        { open: true, size: nodeMetadataPopoverSizeFromElement() },
+        { status: false },
+      );
+    }
+  });
 }
 
 function metadataScriptStatus(message, error = false, detail = "") {

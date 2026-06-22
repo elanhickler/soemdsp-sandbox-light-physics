@@ -64,6 +64,7 @@ const nodeGraphNodeLabels = Object.freeze({
   canvas: "Canvas",
   led: "LED",
   visualOscilloscope: "Display",
+  traceDisplay: "Trace Display",
   speakerProtection: "Speaker Protection",
   badvalMonitor: "BADVAL Monitor",
   textBox: "Text Box",
@@ -1570,6 +1571,20 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { key: "visualOscilloscope", label: "Mono", port: "In" },
       { key: "visualOscilloscopeX", label: "X", port: "X" },
       { key: "visualOscilloscopeY", label: "Y", port: "Y" },
+    ],
+    visualSink: true,
+  },
+  traceDisplay: {
+    bufferedInputs: ["In"],
+    inputs: ["In"],
+    layout: "traceDisplay",
+    outputs: [],
+    parameters: [
+      { defaultValue: "1", key: "gain", label: "Gain", max: "8", mid: "1", min: "0", step: "any" },
+      { defaultValue: "0", key: "offset", label: "Offset", max: "1", mid: "0", min: "-1", step: "any" },
+    ],
+    visualInputs: [
+      { key: "traceDisplay", label: "In", port: "In" },
     ],
     visualSink: true,
   },
