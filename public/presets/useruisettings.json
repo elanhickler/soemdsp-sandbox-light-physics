@@ -601,17 +601,8 @@
         "open": false
       }
     },
-    "sharedInspectorActive": "moduleActions",
-    "sharedInspectorWindowState": {
-      "position": {
-        "left": 16,
-        "top": 399
-      },
-      "size": {
-        "width": 142,
-        "height": 540
-      }
-    },
+    "sharedInspectorActive": "",
+    "sharedInspectorWindowState": {},
     "workspaceView": {
       "pan": {
         "x": 28,

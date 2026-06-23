@@ -203,11 +203,11 @@ function positionNodeSceneContextMenu(menu, x, y, remember = false) {
     if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
       rememberNodeGraphWorkspaceWindowState("commandCenter", menu, { open: !menu.hidden, position: { left, top } }, { persist: false });
     }
-  } else if (menu?.id === "nodeModuleActionsWindow") {
+  } else if (menu?.id === "nodeModuleActionsWindow" && remember) {
     if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
       rememberNodeGraphWorkspaceWindowState("moduleActions", menu, { open: !menu.hidden, position: { left, top } }, { persist: false });
     }
-  } else if (menu?.id === "nodeGlobalScopeMenu") {
+  } else if (menu?.id === "nodeGlobalScopeMenu" && remember) {
     if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
       rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", menu, { open: !menu.hidden, position: { left, top } }, { persist: false });
     }

@@ -3502,6 +3502,8 @@ def require_node_graph_mvp_contract() -> None:
         all(not entry.get("open") for entry in default_ui_view.get("workspaceWindowStates", {}).values()),
         "default ui settings should not open floating windows on first load",
     )
+    require(default_ui_view.get("sharedInspectorActive", "") == "", "default ui settings should not open a shared inspector on first load")
+    require(default_ui_view.get("sharedInspectorWindowState", {}) == {}, "default ui settings should not pin shared inspector geometry on first load")
 
     require(
         '<script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>' in index_source,
@@ -4067,7 +4069,7 @@ def require_node_graph_mvp_contract() -> None:
             "\n".join([graph_contract_sources["index"], graph_contract_sources["state"], graph_contract_sources["runtime"]]),
             [
                 "ellipsoid-xy-1",
-                "clear-startup-1",
+                "beta-clean-start-2",
                 "node-graph-graph-utils.js",
                 "graphNodeDragging: null",
                 "graphClipboard: null",
@@ -6200,7 +6202,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneOpenUiSettings",
         "nodeSceneOpenPostProcessing",
         "scene-context-window-button",
-        "clear-startup-1",
+        "beta-clean-start-2",
         "share-link-1",
         "hidden-io-proxy-1",
         "control-surface-visibility-1",
@@ -10777,7 +10779,7 @@ def require_node_graph_mvp_contract() -> None:
         "function dragNodeUserUiSettings(event)",
         "function endNodeUserUiSettingsDrag(event)",
         "const nodeUiDevDefaultSettingsUrl = \"./public/presets/useruisettings.json\"",
-        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v9\"",
+        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v10\"",
         "function sanitizeNodeUiDevWorkingPatchForStartup(patch)",
         'node?.type === "moduleHome" || node?.type === "moduleShop"',
         "nodeGraphMissingSampleAssets(patch).length",
@@ -12295,6 +12297,7 @@ def require_node_graph_mvp_contract() -> None:
         "await Promise.all([",
         "nodeSandboxStartupTask(\"node graph\", initNodeGraphMvp)",
         "await markNodeSandboxInterfaceReady();",
+        "applyNodeGraphWorkspaceWindowStates();",
         'document.documentElement.dataset.nodeSandboxInterfaceReady = "true";',
         'window.dispatchEvent(new CustomEvent("nodeSandboxInterfaceReady", {',
         "async function waitForNodeSandboxFontsReady",
@@ -13666,6 +13669,20 @@ def require_node_graph_mvp_contract() -> None:
         and "bindNodeMetadataScriptBeforeUnload();" in script_sources["./public/node-graph-bootstrap.js"]
         and "scheduleNodeMetadataScriptParserSelfTestStatus();" in script_sources["./public/node-graph-bootstrap.js"],
         "metadata editor should bind during node graph bootstrap after nodeGraphMvp exists",
+    )
+    require(
+        "ensureNodeGraphStartupModulesVisible();\n  if (typeof applyNodeGraphWorkspaceWindowStates === \"function\")" in script_sources["./public/node-graph-bootstrap.js"],
+        "node graph bootstrap should reapply saved window state after startup module rendering",
+    )
+    require(
+        "function enforceNodeGraphWorkspaceClosedWindowStates" in script_sources["./public/node-graph-ui-settings-persistence.js"]
+        and "enforceNodeGraphWorkspaceClosedWindowStates(nodeGraphMvp.workspaceWindowStates);" in script_sources["./public/node-graph-ui-settings-persistence.js"],
+        "workspace window state restore should explicitly re-close windows whose saved/default state is closed",
+    )
+    require(
+        'menu?.id === "nodeModuleActionsWindow" && remember' in script_sources["./public/node-graph-context-menu.js"]
+        and 'menu?.id === "nodeGlobalScopeMenu" && remember' in script_sources["./public/node-graph-context-menu.js"],
+        "position-only floating window helpers should not persist hidden windows as open",
     )
     require(
         'document.body.classList.remove("node-boot-loading")' in boot_loading_source

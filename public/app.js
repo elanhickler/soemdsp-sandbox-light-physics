@@ -53,6 +53,9 @@ async function markNodeSandboxInterfaceReady() {
   await waitForNodeSandboxFontsReady();
   setNodeSandboxStartupProgress(94, "stabilizing");
   await waitForNodeSandboxStableLayout();
+  if (typeof applyNodeGraphWorkspaceWindowStates === "function") {
+    applyNodeGraphWorkspaceWindowStates();
+  }
   setNodeSandboxStartupProgress(100, "ready");
   document.documentElement.dataset.nodeSandboxInterfaceReady = "true";
   globalThis.nodeSandboxInterfaceReady = true;

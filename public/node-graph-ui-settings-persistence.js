@@ -1,5 +1,5 @@
 const nodeUiDevDefaultSettingsUrl = "./public/presets/useruisettings.json";
-const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v9";
+const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v10";
 
 const nodeGraphWorkspaceWindowStateKeys = Object.freeze([
   "commandCenter",
@@ -390,6 +390,17 @@ function applyNodeGraphWorkspaceWindowStateToElement(key) {
   }
 }
 
+function enforceNodeGraphWorkspaceClosedWindowStates(states = nodeGraphMvp.workspaceWindowStates) {
+  const normalized = normalizeNodeGraphWorkspaceWindowStates(states);
+  for (const key of nodeGraphWorkspaceWindowStateKeys) {
+    const element = document.getElementById(nodeGraphWorkspaceWindowElements[key]);
+    if (!element || normalized[key]?.open) {
+      continue;
+    }
+    element.hidden = true;
+  }
+}
+
 function applyNodeGraphWorkspaceWindowStates() {
   nodeGraphMvp.workspaceWindowStates = normalizeNodeGraphWorkspaceWindowStates(
     nodeGraphMvp.workspaceWindowStates,
@@ -401,6 +412,7 @@ function applyNodeGraphWorkspaceWindowStates() {
   for (const key of nodeGraphWorkspaceWindowStateKeys) {
     applyNodeGraphWorkspaceWindowStateToElement(key);
   }
+  enforceNodeGraphWorkspaceClosedWindowStates(nodeGraphMvp.workspaceWindowStates);
   document
     .getElementById("nodeUserUiSettingsButton")
     ?.classList.toggle("active", !document.getElementById("nodeUserUiSettingsPanel")?.hidden);

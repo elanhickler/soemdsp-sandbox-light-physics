@@ -51,6 +51,9 @@ async function initNodeGraphMvp() {
   renderNodeGraphSliderVisibilityToggles();
   renderNodeGraphSliderLayout();
   ensureNodeGraphStartupModulesVisible();
+  if (typeof applyNodeGraphWorkspaceWindowStates === "function") {
+    applyNodeGraphWorkspaceWindowStates();
+  }
   loadNodeMetadataKindTemplates();
   refreshNodeGraphLiveInputDevices();
   refreshNodeGraphLiveMicrophonePermissionState();
