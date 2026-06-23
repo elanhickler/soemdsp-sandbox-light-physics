@@ -3,6 +3,9 @@ async function initNodeGraphMvp() {
   configureNodeGraphDefaultPresetButton();
   await loadNodeGraphTooltips();
   await bindNodeGraphMvpEvents();
+  if (typeof loadNodeGraphResourceManifest === "function") {
+    await loadNodeGraphResourceManifest();
+  }
   nodeGraphMvp.defaultPatch = await loadNodeGraphDefaultPresetPatch();
   let startupPatch = nodeGraphMvp.workingPatch || nodeGraphMvp.defaultPatch;
   let startupPatchDirtyState = nodeGraphMvp.workingPatch && ["saved", "edited", "untouched"].includes(nodeGraphMvp.patchDirtyState)

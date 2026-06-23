@@ -110,6 +110,7 @@ PUBLIC_SCRIPT_PATHS = (
     "./public/node-graph-image-utils.js",
     "./public/node-graph-graph-utils.js",
     "./public/node-graph-samples.js",
+    "./public/node-graph-resources.js",
     "./public/node-graph-text-box-rendering.js",
     "./public/node-graph-patch-normalizers.js",
     "./public/node-graph-ui-view.js",
@@ -6418,7 +6419,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeMissingSampleAssetsList",
         "nodeMissingSampleAssetsClose",
         "dismissNodeGraphMissingSampleAssetsDialog()",
-        "interface-controls-height-1",
+        "repo-resources-1",
         "share-link-1",
         "hidden-io-proxy-1",
         "control-surface-visibility-1",
@@ -6941,6 +6942,7 @@ def require_node_graph_mvp_contract() -> None:
         "patch runtime": script_sources["./public/node-graph-patch-runtime.js"],
         "patch normalizers": script_sources["./public/node-graph-patch-normalizers.js"],
         "rendering": script_sources["./public/node-graph-module-rendering.js"],
+        "resources": script_sources["./public/node-graph-resources.js"],
         "runtime": script_sources["./public/node-graph-live-frame-evaluator.js"],
         "samples": script_sources["./public/node-graph-samples.js"],
         "sizing": script_sources["./public/node-graph-module-sizing.js"],
@@ -6951,6 +6953,18 @@ def require_node_graph_mvp_contract() -> None:
         "styles": style_source,
         "worklet": worklet_source,
     }
+    resource_manifest = json.loads((PUBLIC / "resources" / "manifest.json").read_text(encoding="utf-8"))
+    require(
+        resource_manifest.get("version") == 1 and isinstance(resource_manifest.get("resources"), list),
+        "resource manifest should exist as a simple versioned resources list",
+    )
+    require(
+        '<script src="./public/node-graph-resources.js?v=repo-resources-1"></script>' in index_source
+        and "await loadNodeGraphResourceManifest();" in script_sources["./public/node-graph-bootstrap.js"]
+        and "resources: { resources: [], version: 1 }" in script_sources["./public/node-graph-state.js"]
+        and "resourceMap: new Map()" in script_sources["./public/node-graph-state.js"],
+        "resource manifest loader should be wired into startup before patches resolve samples",
+    )
     for name, source_text, snippets in [
         (
             "definition",
@@ -6980,6 +6994,7 @@ def require_node_graph_mvp_contract() -> None:
             "sample data",
             "\n".join([
                 audio_player_contract_sources["samples"],
+                audio_player_contract_sources["resources"],
                 audio_player_contract_sources["clone"],
                 audio_player_contract_sources["patch core"],
                 audio_player_contract_sources["parameter metadata"],
@@ -7052,6 +7067,12 @@ def require_node_graph_mvp_contract() -> None:
                 "function loadNodeGraphMissingSampleAssetFromPath",
                 "nodeGraphMissingAssetSearchNames",
                 "nodeGraphMissingAssetPrimaryNodeId",
+                "resourceId",
+                "nodeGraphResourceById",
+                "nodeGraphSampleReferenceFromResource",
+                "nodeGraphDataUrlForResource",
+                "nodeGraphDataUrlForSampleReference(reference = {})",
+                "loadNodeGraphResourceManifest",
                 "saveNodeGraphWorkingPatchToUserSettings({ immediateFile: true, returnFileSave: true })",
                 "renderNodeGraphMissingSampleAssetsDialog(nodeGraphMvp.patch)",
                 "Browser storage was too small, so the patch was flushed to the settings file.",

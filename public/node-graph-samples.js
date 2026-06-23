@@ -76,6 +76,7 @@ function normalizeNodeGraphSampleReference(sample = {}) {
   const id = normalizeNodeGraphSampleId(source.id);
   const name = String(source.name || id || "Sample").trim().slice(0, 128);
   const dataUrl = String(source.dataUrl || "").trim();
+  const resourceId = normalizeNodeGraphSampleId(source.resourceId || source.assetId);
   const sourceName = String(source.sourceName || source.fileName || source.file?.name || name || "").trim().slice(0, 160);
   const sourcePath = String(source.sourcePath || source.path || source.file?.sourcePath || source.file?.path || "").trim().slice(0, 512);
   const file = normalizeNodeGraphAssetFile(source.file, { ...source, name, sourceName, sourcePath });
@@ -93,6 +94,7 @@ function normalizeNodeGraphSampleReference(sample = {}) {
     file,
     metadata,
     name,
+    ...(resourceId ? { resourceId } : {}),
     ...(sampleRate ? { sampleRate } : {}),
     ...(sourceName ? { sourceName } : {}),
     ...(sourcePath ? { sourcePath } : {}),
@@ -118,7 +120,8 @@ function normalizeNodeGraphPatchSamples(samples = []) {
 
 function nodeGraphPatchSampleById(sampleId, patch = nodeGraphMvp.patch) {
   const id = normalizeNodeGraphSampleId(sampleId);
-  return normalizeNodeGraphPatchSamples(patch?.samples).find((sample) => sample.id === id) || null;
+  return normalizeNodeGraphPatchSamples(patch?.samples).find((sample) => sample.id === id) ||
+    (typeof nodeGraphSampleReferenceFromResource === "function" ? nodeGraphSampleReferenceFromResource(id) : null);
 }
 
 function normalizeNodeGraphRequiredAsset(asset = {}) {
@@ -134,6 +137,7 @@ function normalizeNodeGraphRequiredAsset(asset = {}) {
     ? source.nodeIds.map((value) => String(value || "").trim()).filter(Boolean).slice(0, 32)
     : [];
   const kind = normalizeNodeGraphAssetKind(source.kind);
+  const resourceId = normalizeNodeGraphSampleId(source.resourceId || source.assetId);
   const file = normalizeNodeGraphAssetFile(source.file, source);
   const sourceName = String(source.sourceName || source.fileName || file.name || "").trim().slice(0, 160);
   const sourcePath = String(source.sourcePath || source.path || file.sourcePath || "").trim().slice(0, 512);
@@ -149,6 +153,9 @@ function normalizeNodeGraphRequiredAsset(asset = {}) {
     name: String(source.name || file.name || source.sourceName || id).trim().slice(0, 160) || id,
     nodeIds,
     requiredBy,
+    ...(resourceId
+      ? { resourceId }
+      : {}),
     ...(sourceName
       ? { sourceName }
       : {}),
@@ -198,11 +205,14 @@ function nodeGraphRequiredAssetsForPatch(patch = {}) {
       continue;
     }
     const sample = samples.get(sampleId) || {};
+    const resource = typeof nodeGraphResourceById === "function"
+      ? nodeGraphResourceById(sample.resourceId || sampleId)
+      : null;
     const explicit = explicitAssets.get(sampleId) || {};
     const file = normalizeNodeGraphAssetFile(explicit.file || sample.file, {
-      name: sample.name || explicit.name || explicit.sourceName || sampleId,
-      sourceName: sample.sourceName || explicit.sourceName,
-      sourcePath: sample.sourcePath || explicit.sourcePath,
+      name: sample.name || resource?.name || explicit.name || explicit.sourceName || sampleId,
+      sourceName: sample.sourceName || resource?.sourceName || explicit.sourceName,
+      sourcePath: sample.sourcePath || resource?.sourcePath || explicit.sourcePath,
     });
     const metadata = {
       ...normalizeNodeGraphAssetMetadata(sample.metadata),
@@ -214,11 +224,12 @@ function nodeGraphRequiredAssetsForPatch(patch = {}) {
       id: sampleId,
       kind: "audio",
       metadata,
-      name: sample.name || explicit.name || explicit.sourceName || sampleId,
+      name: sample.name || resource?.name || explicit.name || explicit.sourceName || sampleId,
       nodeIds: [],
       requiredBy: [],
-      ...(sample.sourceName || explicit.sourceName ? { sourceName: sample.sourceName || explicit.sourceName } : {}),
-      ...(sample.sourcePath || explicit.sourcePath ? { sourcePath: sample.sourcePath || explicit.sourcePath } : {}),
+      ...(sample.resourceId || resource?.id ? { resourceId: sample.resourceId || resource.id } : {}),
+      ...(sample.sourceName || resource?.sourceName || explicit.sourceName ? { sourceName: sample.sourceName || resource?.sourceName || explicit.sourceName } : {}),
+      ...(sample.sourcePath || resource?.sourcePath || explicit.sourcePath ? { sourcePath: sample.sourcePath || resource?.sourcePath || explicit.sourcePath } : {}),
     };
     const label = nodeGraphSampleRequiredByLabel(node);
     if (label && !current.requiredBy.includes(label)) {
@@ -303,8 +314,11 @@ function nodeGraphMissingSampleAssets(patch = nodeGraphMvp.patch) {
   const samples = new Map(normalizeNodeGraphPatchSamples(patch.samples).map((sample) => [sample.id, sample]));
   return nodeGraphRequiredAssetsForPatch(patch).filter((asset) => {
     const sample = samples.get(asset.id);
+    const resource = typeof nodeGraphResourceById === "function"
+      ? nodeGraphResourceById(sample?.resourceId || asset.resourceId || asset.id)
+      : null;
     const cached = nodeGraphMvp.sampleBuffers?.get?.(asset.id);
-    return !cached && !sample?.dataUrl && !sample?.sourcePath && !sample?.file?.sourcePath;
+    return !cached && !resource && !sample?.dataUrl && !sample?.sourcePath && !sample?.file?.sourcePath;
   });
 }
 
@@ -681,6 +695,12 @@ async function nodeGraphDataUrlForSampleReference(reference = {}) {
   if (reference.dataUrl) {
     return reference.dataUrl;
   }
+  const resource = typeof nodeGraphResourceById === "function"
+    ? nodeGraphResourceById(reference.resourceId || reference.id)
+    : null;
+  if (resource?.path) {
+    return nodeGraphDataUrlForResource(resource);
+  }
   const sourcePath = String(reference.sourcePath || reference.file?.sourcePath || "").trim();
   if (!sourcePath) {
     return "";
@@ -695,6 +715,30 @@ async function nodeGraphDataUrlForSampleReference(reference = {}) {
     throw new Error(payload?.error || `local path load failed (${response.status})`);
   }
   return payload.dataUrl;
+}
+
+function nodeGraphBlobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error("Resource file read failed"));
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function nodeGraphDataUrlForResource(resource = {}) {
+  const path = String(resource.path || resource.sourcePath || "").trim();
+  if (!path) {
+    return "";
+  }
+  if (/^data:/i.test(path)) {
+    return path;
+  }
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`resource load failed (${response.status})`);
+  }
+  return nodeGraphBlobToDataUrl(await response.blob());
 }
 
 async function transcodeNodeGraphSampleDataUrl(name, dataUrl) {
@@ -886,10 +930,11 @@ function createNodeGraphSampleModuleBody(nodeOrId) {
 }
 
 async function nodeGraphDecodedSampleForReference(reference) {
-  if (!reference?.dataUrl) {
+  const dataUrl = await nodeGraphDataUrlForSampleReference(reference);
+  if (!dataUrl) {
     return null;
   }
-  const decoded = await decodeNodeGraphSampleDataUrl(reference.dataUrl, reference.name);
+  const decoded = await decodeNodeGraphSampleDataUrl(dataUrl, reference.name);
   return {
     channelData: decoded.channelData,
     channels: decoded.channels,
@@ -952,7 +997,16 @@ function nodeGraphLiveSamplesForPlan(plan, patch = nodeGraphMvp.patch) {
       .map((node) => normalizeNodeGraphSampleId(node.sample?.id))
       .filter(Boolean),
   );
-  return normalizeNodeGraphPatchSamples(patch.samples)
+  const references = normalizeNodeGraphPatchSamples(patch.samples);
+  for (const sampleId of needed) {
+    if (!references.some((reference) => reference.id === sampleId) && typeof nodeGraphSampleReferenceFromResource === "function") {
+      const resourceReference = nodeGraphSampleReferenceFromResource(sampleId);
+      if (resourceReference) {
+        references.push(resourceReference);
+      }
+    }
+  }
+  return references
     .filter((reference) => needed.has(reference.id))
     .map((reference) => nodeGraphLiveSampleForReference(reference))
     .filter((sample) => sample?.id && (sample.samples?.length || sample.channelData?.length));
@@ -969,7 +1023,16 @@ async function nodeGraphEnsureLiveSamplesForPlan(plan, patch = nodeGraphMvp.patc
     plan.samples = [];
     return plan.samples;
   }
-  for (const reference of normalizeNodeGraphPatchSamples(patch.samples)) {
+  const references = normalizeNodeGraphPatchSamples(patch.samples);
+  for (const sampleId of needed) {
+    if (!references.some((reference) => reference.id === sampleId) && typeof nodeGraphSampleReferenceFromResource === "function") {
+      const resourceReference = nodeGraphSampleReferenceFromResource(sampleId);
+      if (resourceReference) {
+        references.push(resourceReference);
+      }
+    }
+  }
+  for (const reference of references) {
     if (!needed.has(reference.id) || nodeGraphMvp.sampleBuffers?.has?.(reference.id)) {
       continue;
     }
