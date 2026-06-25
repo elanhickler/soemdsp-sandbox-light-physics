@@ -164,6 +164,11 @@ function normalizeNodeGraphModuleScopeFramesPerSecond(value) {
   return Number.isFinite(number) ? clampNodeSliderValue(Math.round(number), 0, 240) : 60;
 }
 
+function normalizeNodeGraphModuleScopePointBudget(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? clampNodeSliderValue(Math.round(number), 1, 65536) : 4096;
+}
+
 function normalizeNodeGraphModuleScopeBackgroundColor(value) {
   const text = String(value || "").trim();
   return /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : "#000000";
@@ -245,6 +250,7 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const dotCore2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
   const dotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#17002f", "#17002f");
   const framesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60);
+  const pointBudget = normalizeNodeGraphModuleScopePointBudget(nodeGraphMvp.moduleScopePointBudget ?? 4096);
   const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp.moduleScopeLineThickness ?? 1);
   const discontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
@@ -259,6 +265,7 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   nodeGraphMvp.moduleScopeDotCore2Brightness = dotCore2Brightness;
   nodeGraphMvp.moduleScopeDotCore2Color = dotCore2Color;
   nodeGraphMvp.moduleScopeFramesPerSecond = framesPerSecond;
+  nodeGraphMvp.moduleScopePointBudget = pointBudget;
   nodeGraphMvp.moduleScopeLineThickness = lineThickness;
   nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = discontinuitySkipSamples;
   const backgroundInput = document.getElementById("nodeMasterScopeBackgroundColor");
@@ -271,6 +278,7 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const dotCore2BrightnessInput = document.getElementById("nodeMasterScopeDotCore2Brightness");
   const dotCore2ColorInput = document.getElementById("nodeMasterScopeDotCore2Color");
   const fpsInput = document.getElementById("nodeMasterScopeFps");
+  const pointBudgetInput = document.getElementById("nodeMasterScopePointBudget");
   const lineInput = document.getElementById("nodeMasterScopeLineThickness");
   const skipSamplesInput = document.getElementById("nodeMasterScopeDiscontinuitySkipSamples");
   if (backgroundInput && document.activeElement !== backgroundInput) {
@@ -336,6 +344,9 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   if (fpsInput && document.activeElement !== fpsInput) {
     fpsInput.value = String(framesPerSecond);
   }
+  if (pointBudgetInput && document.activeElement !== pointBudgetInput) {
+    pointBudgetInput.value = String(pointBudget);
+  }
   if (lineInput && document.activeElement !== lineInput) {
     lineInput.value = lineThickness.toFixed(2);
   }
@@ -383,6 +394,14 @@ function setNodeGraphModuleButtonsVisibility(visible, options = {}) {
 
 function setNodeGraphModuleScopeFramesPerSecond(value) {
   nodeGraphMvp.moduleScopeFramesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(value);
+  renderNodeGraphModuleScopeBrightnessControl();
+  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
+    scheduleNodeGraphModuleScopeDraw();
+  }
+}
+
+function setNodeGraphModuleScopePointBudget(value) {
+  nodeGraphMvp.moduleScopePointBudget = normalizeNodeGraphModuleScopePointBudget(value);
   renderNodeGraphModuleScopeBrightnessControl();
   if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
     scheduleNodeGraphModuleScopeDraw();

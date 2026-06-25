@@ -528,6 +528,9 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeFramesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(
     view.moduleScopeFramesPerSecond ?? nodeGraphMvp.moduleScopeFramesPerSecond ?? 60,
   );
+  const moduleScopePointBudget = normalizeNodeGraphModuleScopePointBudget(
+    view.moduleScopePointBudget ?? nodeGraphMvp.moduleScopePointBudget ?? 4096,
+  );
   const moduleScopeLineThickness = normalizeNodeGraphModuleScopeLineThickness(
     view.moduleScopeLineThickness ?? nodeGraphMvp.moduleScopeLineThickness ?? 1,
   );
@@ -647,6 +650,7 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleScopeDotCore2Brightness,
       moduleScopeDotCore2Color,
       moduleScopeFramesPerSecond,
+      moduleScopePointBudget,
       moduleScopeLineThickness,
       moduleScopeDiscontinuitySkipSamples,
       traceSettings,
@@ -723,6 +727,7 @@ function readNodeUiDevSettingsFromControls(options = {}) {
       moduleScopeDotCore2Brightness: normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore2Brightness ?? 0.45, 0.45),
       moduleScopeDotCore2Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#17002f", "#17002f"),
       moduleScopeFramesPerSecond: normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60),
+      moduleScopePointBudget: normalizeNodeGraphModuleScopePointBudget(nodeGraphMvp.moduleScopePointBudget ?? 4096),
       moduleScopeLineThickness: normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp.moduleScopeLineThickness ?? 1),
       moduleScopeDiscontinuitySkipSamples: normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
         nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
@@ -835,6 +840,7 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleScopeDotCore2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(normalized.view.moduleScopeDotCore2Brightness, 0.45);
   nodeGraphMvp.moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore2Color, "#17002f");
   nodeGraphMvp.moduleScopeFramesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(normalized.view.moduleScopeFramesPerSecond);
+  nodeGraphMvp.moduleScopePointBudget = normalizeNodeGraphModuleScopePointBudget(normalized.view.moduleScopePointBudget);
   nodeGraphMvp.moduleScopeLineThickness = normalizeNodeGraphModuleScopeLineThickness(normalized.view.moduleScopeLineThickness);
   nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     normalized.view.moduleScopeDiscontinuitySkipSamples,

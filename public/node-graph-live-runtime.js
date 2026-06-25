@@ -452,6 +452,9 @@ function renderNodeGraphLiveScriptBlock(event) {
       runtime.meterClipCount,
       runtime.meterProtectionMuteCount || 0,
       runtime.badNumberCount || 0,
+      0,
+      0,
+      0,
     );
     runtime.meterCounter = 0;
     nodeGraphMvp.live.inputMeterPeak = 0;
@@ -874,6 +877,9 @@ function handleNodeGraphLiveWorkletMessage(event) {
       Number(message.clipCount) || 0,
       Number(message.protectionMuteCount) || 0,
       Number(message.badNumberCount) || 0,
+      Number(message.overrunCount) || 0,
+      Number(message.maxBlockProcessMs) || 0,
+      Number(message.maxBlockBudgetRatio) || 0,
     );
     if (typeof syncNodeGraphAudioPlayerRuntimeStatus === "function") {
       syncNodeGraphAudioPlayerRuntimeStatus({
@@ -1507,7 +1513,7 @@ async function createNodeGraphLiveWorkletNode(context) {
     throw new Error("AudioWorklet unavailable");
   }
   await nodeGraphLiveAwaitStartup(
-    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=soft-clipper-1"),
+    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=audio-overrun-meter-2"),
     "AudioWorklet startup timed out",
   );
   const workletNode = new AudioWorkletNode(

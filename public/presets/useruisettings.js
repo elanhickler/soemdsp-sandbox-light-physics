@@ -142,6 +142,7 @@
     "moduleScopeDotCore2Brightness": 1.23,
     "moduleScopeDotCore2Color": "#5c0000",
     "moduleScopeFramesPerSecond": 60,
+    "moduleScopePointBudget": 16384,
     "moduleScopeLineThickness": 1,
     "moduleScopeDiscontinuitySkipSamples": 1,
     "traceSettings": {
@@ -616,7 +617,7 @@
         }
       },
       "moduleActions": {
-        "open": true
+        "open": false
       },
       "metaparameters": {
         "open": false
@@ -648,11 +649,11 @@
         "open": false
       },
       "traceDisplaySettings": {
-        "open": false,
-        "targetNode": "ellipsoid-1"
+        "open": true,
+        "targetNode": "scope2d-1"
       }
     },
-    "sharedInspectorActive": "moduleActions",
+    "sharedInspectorActive": "traceDisplaySettings",
     "sharedInspectorWindowState": {
       "position": {
         "left": 588,
@@ -661,10 +662,10 @@
     },
     "workspaceView": {
       "pan": {
-        "x": -72.32142857142857,
-        "y": -532.7410714285713
+        "x": -331.7857142857143,
+        "y": -1146.3839285714284
       },
-      "zoom": 1.0606137022653628
+      "zoom": 2.941165327612676
     },
     "moduleStoreDepartment": "",
     "savedPatchBankIndex": 0,
@@ -988,15 +989,15 @@
             }
           },
           "params": {
-            "frequency": 30.1,
+            "frequency": 0.908229577872583,
             "phase": 0,
-            "offsetX": -0.88,
+            "offsetX": 0.63,
             "offsetY": 0,
             "shapeX": 0,
             "shapeY": 0,
             "scaleX": 1,
             "scaleY": 1,
-            "level": 0.44
+            "level": 0.41
           },
           "type": "ellipsoid",
           "ui": {
@@ -1075,7 +1076,7 @@
       "view": {
         "heightGu": 24,
         "widthGu": 24,
-        "zoom": 0.6740391819935171
+        "zoom": 1.0606137022653623
       },
       "visual": {
         "background": {

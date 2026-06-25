@@ -140,6 +140,7 @@ var nodeGraphMvp = {
   moduleScopeDotCore2Brightness: 0.45,
   moduleScopeDotCore2Color: "#17002f",
   moduleScopeFramesPerSecond: 60,
+  moduleScopePointBudget: 4096,
   moduleScopeLineThickness: 1,
   moduleScopeDiscontinuitySkipSamples: 1,
   moduleScopeSettings: {},
