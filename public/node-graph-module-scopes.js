@@ -8870,6 +8870,35 @@ function nodeGraphScope2dCanvasSettingsSignature(settings) {
   ].join("|");
 }
 
+function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer) {
+  const count = Math.min(buffer?.x?.length || 0, buffer?.y?.length || 0);
+  if (!count) {
+    return [];
+  }
+  const pathPoints = [];
+  const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx();
+  let previousPoint = null;
+  for (let index = 0; index < count; index += 1) {
+    if (!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])) {
+      breakNodeGraphScope2dPath(pathPoints);
+      previousPoint = null;
+      continue;
+    }
+    const point = nodeGraphScope2dPointToCanvas(
+      item,
+      pixelRatio,
+      nodeGraphScope2dPointFromSamples(square, buffer.x[index], buffer.y[index]),
+    );
+    if (!point) {
+      breakNodeGraphScope2dPath(pathPoints);
+      previousPoint = null;
+      continue;
+    }
+    previousPoint = appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx);
+  }
+  return pathPoints;
+}
+
 function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, settings) {
   const canvas = nodeGraphModuleScopeLocalFallbackCanvas(item?.slot);
   const screenElement = item?.screenElement || item?.slot?.scopeElement;
@@ -8909,30 +8938,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
     return;
   }
   const dotSpace = Math.min(canvas.width, canvas.height);
-  const pathPoints = [];
-  const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx();
-  let previousPoint = null;
-  const appendPointAt = (index) => {
-    if (!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])) {
-      breakNodeGraphScope2dPath(pathPoints);
-      previousPoint = null;
-      return;
-    }
-    const point = nodeGraphScope2dPointToCanvas(
-      item,
-      pixelRatio,
-      nodeGraphScope2dPointFromSamples(square, buffer.x[index], buffer.y[index]),
-    );
-    if (!point) {
-      breakNodeGraphScope2dPath(pathPoints);
-      previousPoint = null;
-      return;
-    }
-    previousPoint = appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx);
-  };
-  for (let index = 0; index < count; index += 1) {
-    appendPointAt(index);
-  }
+  const pathPoints = buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer);
   const pointCount = pathPoints.filter(Boolean).length;
   if (pointCount < 2) {
     return;

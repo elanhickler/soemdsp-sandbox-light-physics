@@ -12814,6 +12814,7 @@ def require_node_graph_mvp_contract() -> None:
         and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      pathPoints," in scope2d_helper_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
         and "if (sampleX === null || sampleY === null) {\n    return false;\n  }" in scope2d_helper_source
+        and "function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer)" in scope2d_helper_source
         and "function nodeGraphScope2dCenterRunMask" not in scope2d_helper_source
         and "centerRunMask" not in scope2d_helper_source
         and "function breakNodeGraphScope2dPath(points)" in scope2d_helper_source
@@ -12827,6 +12828,7 @@ def require_node_graph_mvp_contract() -> None:
         and "previousPoint = null;" in scope2d_helper_source
         and "let subpathOpen = false;" in node_graph_source
         and "appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx)" in scope2d_helper_source
+        and "const pathPoints = buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer);" in scope2d_helper_source
         and "let previousPoint = null" in scope2d_helper_source
         and "scope2dLastPoints" not in node_graph_source
         and "canContinueFromPreviousPoint" not in scope2d_helper_source
