@@ -8755,6 +8755,21 @@ function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.
   return Math.sqrt((sampleX * radiusX) ** 2 + (sampleY * radiusY) ** 2) > Math.max(0, Number(minimumPixels) || 0);
 }
 
+function nodeGraphScope2dPointStateFromSample(square, canvas, index, buffer) {
+  const sampleX = Number(buffer?.x?.[index]);
+  const sampleY = Number(buffer?.y?.[index]);
+  if (!Number.isFinite(sampleX) || !Number.isFinite(sampleY)) {
+    return null;
+  }
+  return {
+    sampleX,
+    sampleY,
+    visible: nodeGraphScope2dSampleHasVisibleOffset(square, sampleX, sampleY),
+    height: canvas?.height,
+    width: canvas?.width,
+  };
+}
+
 function nodeGraphScope2dPointToCanvas(item, pixelRatio, point) {
   const screenRect = item?.screenRect;
   if (!screenRect || !point) {
@@ -8834,6 +8849,16 @@ function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2d
   return capped;
 }
 
+function nodeGraphScope2dSampleJumpIsPlausible(previousState, sampleX, sampleY) {
+  if (!previousState || !Number.isFinite(Number(sampleX)) || !Number.isFinite(Number(sampleY))) {
+    return false;
+  }
+  const dx = Number(sampleX) - Number(previousState.sampleX);
+  const dy = Number(sampleY) - Number(previousState.sampleY);
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  return distance <= 1.5;
+}
+
 function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, settings) {
   const canvas = nodeGraphModuleScopeLocalFallbackCanvas(item?.slot);
   const screenElement = item?.screenElement || item?.slot?.scopeElement;
@@ -8876,8 +8901,10 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
     startFrame === expectedStartFrame;
   const canContinueFromPreviousPoint = previousState?.width === canvas.width &&
     previousState?.height === canvas.height &&
+    previousState.visible === true &&
     sampleStreamContinuous;
   let previousPoint = canContinueFromPreviousPoint ? previousState.point : null;
+  let previousPointState = canContinueFromPreviousPoint ? previousState : null;
   let firstIndex = 0;
   if (!canContinueFromPreviousPoint) {
     while (
@@ -8889,6 +8916,14 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   }
   const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx();
   const appendPointAt = (index) => {
+    if (
+      previousPoint &&
+      previousPointState &&
+      !nodeGraphScope2dSampleJumpIsPlausible(previousPointState, buffer.x[index], buffer.y[index])
+    ) {
+      previousPoint = null;
+      previousPointState = null;
+    }
     const point = nodeGraphScope2dPointToCanvas(
       item,
       pixelRatio,
@@ -8898,17 +8933,23 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
       return;
     }
     previousPoint = appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx);
+    previousPointState = nodeGraphScope2dPointStateFromSample(square, canvas, index, buffer);
   };
   for (let index = firstIndex; index < count; index += 1) {
     appendPointAt(index);
   }
-  if (previousPoint) {
+  if (previousPoint && previousPointState?.visible === true) {
     nodeGraphModuleScopeState.scope2dLastPoints.set(item.slot.nodeId, {
       absoluteFrame: hasFrameMetadata ? absoluteFrame : NaN,
       height: canvas.height,
       point: previousPoint,
+      sampleX: previousPointState.sampleX,
+      sampleY: previousPointState.sampleY,
+      visible: true,
       width: canvas.width,
     });
+  } else {
+    nodeGraphModuleScopeState.scope2dLastPoints.delete(item.slot.nodeId);
   }
   const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints);
   const pointCount = budgetedPathPoints.length;

@@ -12785,9 +12785,14 @@ def require_node_graph_mvp_contract() -> None:
         and "const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints)" in scope2d_helper_source
         and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      budgetedPathPoints," in scope2d_helper_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
+        and "function nodeGraphScope2dPointStateFromSample(square, canvas, index, buffer)" in scope2d_helper_source
+        and "function nodeGraphScope2dSampleJumpIsPlausible(previousState, sampleX, sampleY)" in scope2d_helper_source
         and "!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[firstIndex], buffer.y[firstIndex])" in scope2d_helper_source
         and "appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx)" in scope2d_helper_source
         and "canContinueFromPreviousPoint" in scope2d_helper_source
+        and "previousState.visible === true" in scope2d_helper_source
+        and "previousPointState = nodeGraphScope2dPointStateFromSample(square, canvas, index, buffer)" in scope2d_helper_source
+        and "nodeGraphScope2dSampleJumpIsPlausible(previousPointState, buffer.x[index], buffer.y[index])" in scope2d_helper_source
         and "firstIndex < count - 1" in scope2d_helper_source
         and "nodeGraphScope2dSettingsForNode" in scope2d_source
         and "drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, settings)" in scope2d_source
