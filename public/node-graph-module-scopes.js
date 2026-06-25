@@ -8830,6 +8830,12 @@ function nodeGraphScope2dInterpolationSpacingPx() {
   return 0.5;
 }
 
+function breakNodeGraphScope2dPath(points) {
+  if (Array.isArray(points) && points.length && points[points.length - 1] !== null) {
+    points.push(null);
+  }
+}
+
 function nodeGraphScope2dCanvasSettingsSignature(settings) {
   const safeSettings = normalizeNodeGraphScope2dSettings(settings);
   return [
@@ -8890,9 +8896,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   let previousPoint = null;
   const appendPointAt = (index) => {
     if (!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])) {
-      if (pathPoints[pathPoints.length - 1] !== null) {
-        pathPoints.push(null);
-      }
+      breakNodeGraphScope2dPath(pathPoints);
       previousPoint = null;
       return;
     }
@@ -8902,6 +8906,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
       nodeGraphScope2dPointFromSamples(square, buffer.x[index], buffer.y[index]),
     );
     if (!point) {
+      breakNodeGraphScope2dPath(pathPoints);
       previousPoint = null;
       return;
     }

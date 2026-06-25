@@ -12811,7 +12811,9 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
         and "function nodeGraphScope2dCenterRunMask" not in scope2d_helper_source
         and "centerRunMask" not in scope2d_helper_source
-        and "pathPoints.push(null);" in scope2d_helper_source
+        and "function breakNodeGraphScope2dPath(points)" in scope2d_helper_source
+        and "breakNodeGraphScope2dPath(pathPoints);" in scope2d_helper_source
+        and "points.push(null);" in scope2d_helper_source
         and "function nodeGraphScope2dCanvasSettingsSignature(settings)" in scope2d_helper_source
         and "canvas.dataset.scope2dSettingsSignature !== settingsSignature" in scope2d_helper_source
         and "scrubNodeGraphScope2dCanvasCenter" not in scope2d_helper_source
