@@ -485,12 +485,6 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeBackgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(
     view.moduleScopeBackgroundColor ?? nodeGraphMvp.moduleScopeBackgroundColor ?? "#000000",
   );
-  const moduleScopeBurn = normalizeNodeGraphModuleScopeBurn(
-    view.moduleScopeBurn ?? nodeGraphMvp.moduleScopeBurn ?? 0,
-  );
-  const moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(
-    view.moduleScopeDecay ?? nodeGraphMvp.moduleScopeDecay ?? 0,
-  );
   const globalSmoothingSeconds = clampNodeGraphAutoSmoothingSeconds(
     view.globalSmoothingSeconds !== undefined
       ? view.globalSmoothingSeconds
@@ -642,8 +636,6 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleOscilloscopesVisible,
       moduleSlidersVisible,
       moduleScopeBackgroundColor,
-      moduleScopeBurn,
-      moduleScopeDecay,
       globalSmoothingSeconds,
       globalSmoothingManual,
       moduleScopeDotCore1Enabled,
@@ -718,8 +710,6 @@ function readNodeUiDevSettingsFromControls(options = {}) {
       moduleOscilloscopesVisible: Boolean(nodeGraphMvp.moduleOscilloscopesVisible),
       moduleSlidersVisible: Boolean(nodeGraphMvp.moduleSlidersVisible),
       moduleScopeBackgroundColor: normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor ?? "#000000"),
-      moduleScopeBurn: normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0),
-      moduleScopeDecay: normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0),
       globalSmoothingSeconds: clampNodeGraphAutoSmoothingSeconds(
         nodeGraphMvp?.live?.autoSmoothingSeconds ?? nodeGraphAutoSmoothingDefaultSeconds,
       ),
@@ -827,8 +817,6 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleOscilloscopesVisible = Boolean(normalized.view.moduleOscilloscopesVisible);
   nodeGraphMvp.moduleSlidersVisible = Boolean(normalized.view.moduleSlidersVisible);
   nodeGraphMvp.moduleScopeBackgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(normalized.view.moduleScopeBackgroundColor);
-  nodeGraphMvp.moduleScopeBurn = normalizeNodeGraphModuleScopeBurn(normalized.view.moduleScopeBurn);
-  nodeGraphMvp.moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(normalized.view.moduleScopeDecay);
   nodeGraphMvp.live.autoSmoothingSeconds = clampNodeGraphAutoSmoothingSeconds(
     normalized.view.globalSmoothingSeconds !== undefined
       ? normalized.view.globalSmoothingSeconds

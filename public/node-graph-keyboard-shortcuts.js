@@ -166,6 +166,11 @@ function handleNodeGraphKeydown(event) {
     }
     return;
   }
+  if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "a") {
+    event.preventDefault();
+    openNodeGraphModuleShop(null);
+    return;
+  }
   if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "a") {
     if (addFocusedNodeGraphGraphNode()) {
       event.preventDefault();

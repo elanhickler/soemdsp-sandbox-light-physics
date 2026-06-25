@@ -44,6 +44,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "graph2",
   "gain",
   "bias",
+  "softClipper",
   "rotate3dTo2d",
   "output",
   "macroKnob",
@@ -511,6 +512,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     category: "Dynamics",
     description: "Offsets a signal away from center. Useful for steering modulation and shifting control lanes.",
     notes: ["addition", "offset", "control lane shift"],
+  },
+  softClipper: {
+    category: "Dynamics",
+    description: "SOEMDSP tanh soft clipper with center bias and clipping width controls.",
+    label: "Soft Clipper",
+    notes: ["soft clipping", "tanh", "dynamics"],
   },
   rotate3dTo2d: {
     category: "Dynamics",

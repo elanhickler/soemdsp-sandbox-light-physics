@@ -149,16 +149,6 @@ function renderNodeGraphModuleVisibilityToggles() {
   renderNodeGraphVisibilityMenuButton();
 }
 
-function normalizeNodeGraphModuleScopeBurn(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? clampNodeSliderValue(number, 0, 1) : 0;
-}
-
-function normalizeNodeGraphModuleScopeDecay(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? clampNodeSliderValue(number, 0, 1) : 0;
-}
-
 function normalizeNodeGraphModuleScopeLineThickness(value) {
   const number = Number(value);
   return Number.isFinite(number) ? clampNodeSliderValue(number, 0.25, 10) : 1;
@@ -245,8 +235,6 @@ function renderNodeGraphModuleScopeDotPreview(
 }
 
 function renderNodeGraphModuleScopeBrightnessControl() {
-  const burn = normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0);
-  const decay = normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0);
   const backgroundColor = normalizeNodeGraphModuleScopeBackgroundColor(nodeGraphMvp.moduleScopeBackgroundColor);
   const dotCore1Enabled = normalizeNodeGraphModuleScopeDotCoreEnabled(nodeGraphMvp.moduleScopeDotCore1Enabled);
   const dotCore1Size = normalizeNodeGraphModuleScopeDotCoreSize(nodeGraphMvp.moduleScopeDotCore1Size ?? 2, 2);
@@ -261,8 +249,6 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const discontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
   );
-  nodeGraphMvp.moduleScopeBurn = burn;
-  nodeGraphMvp.moduleScopeDecay = decay;
   nodeGraphMvp.moduleScopeBackgroundColor = backgroundColor;
   nodeGraphMvp.moduleScopeDotCore1Enabled = dotCore1Enabled;
   nodeGraphMvp.moduleScopeDotCore1Size = dotCore1Size;
@@ -275,8 +261,6 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   nodeGraphMvp.moduleScopeFramesPerSecond = framesPerSecond;
   nodeGraphMvp.moduleScopeLineThickness = lineThickness;
   nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = discontinuitySkipSamples;
-  const burnInput = document.getElementById("nodeMasterScopeBurn");
-  const decayInput = document.getElementById("nodeMasterScopeDecay");
   const backgroundInput = document.getElementById("nodeMasterScopeBackgroundColor");
   const dotCore1EnabledInput = document.getElementById("nodeMasterScopeDotCore1Enabled");
   const dotCore1SizeInput = document.getElementById("nodeMasterScopeDotCore1Size");
@@ -289,12 +273,6 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const fpsInput = document.getElementById("nodeMasterScopeFps");
   const lineInput = document.getElementById("nodeMasterScopeLineThickness");
   const skipSamplesInput = document.getElementById("nodeMasterScopeDiscontinuitySkipSamples");
-  if (burnInput && document.activeElement !== burnInput) {
-    burnInput.value = burn.toFixed(2);
-  }
-  if (decayInput && document.activeElement !== decayInput) {
-    decayInput.value = decay.toFixed(2);
-  }
   if (backgroundInput && document.activeElement !== backgroundInput) {
     backgroundInput.value = backgroundColor;
   }
@@ -401,30 +379,6 @@ function setNodeGraphModuleButtonsVisibility(visible, options = {}) {
   if (options.help !== false) {
     setNodeInteractionHelp(nodeGraphMvp.moduleButtonsVisible ? "Module buttons shown." : "Module buttons hidden.");
   }
-}
-
-function setNodeGraphModuleScopeBurn(value) {
-  nodeGraphMvp.moduleScopeBurn = normalizeNodeGraphModuleScopeBurn(value);
-  renderNodeGraphModuleScopeBrightnessControl();
-  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
-    scheduleNodeGraphModuleScopeDraw();
-  }
-}
-
-function handleNodeGraphModuleScopeBurnInput(event) {
-  setNodeGraphModuleScopeBurn(event.currentTarget.value);
-}
-
-function setNodeGraphModuleScopeDecay(value) {
-  nodeGraphMvp.moduleScopeDecay = normalizeNodeGraphModuleScopeDecay(value);
-  renderNodeGraphModuleScopeBrightnessControl();
-  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
-    scheduleNodeGraphModuleScopeDraw();
-  }
-}
-
-function handleNodeGraphModuleScopeDecayInput(event) {
-  setNodeGraphModuleScopeDecay(event.currentTarget.value);
 }
 
 function setNodeGraphModuleScopeFramesPerSecond(value) {

@@ -594,6 +594,16 @@ function nodeGraphSpeakerProtectionSample(value, runtime, nodeId) {
   return unsafe ? 0 : number;
 }
 
+function nodeGraphSoftClipperSample(input, center = 0, width = 2) {
+  const safeWidth = Math.max(0.000001, Math.abs(Number(width) || 2));
+  const safeCenter = Number(center) || 0;
+  const scaleX = 2 / safeWidth;
+  const shiftX = -1 - (scaleX * (safeCenter - 0.5 * safeWidth));
+  const scaleY = 1 / scaleX;
+  const shiftY = -shiftX * scaleY;
+  return shiftY + scaleY * Math.tanh(scaleX * (Number(input) || 0) + shiftX);
+}
+
 function nodeGraphOnePoleHighpassSample(state, input, frequency, sampleRate, runtime = null, nodeId = "") {
   const rate = Math.max(1, Number(sampleRate) || nodeGraphMvp.sampleRate || 44100);
   const safeInput = nodeGraphSafeFilterNumber(input, runtime, nodeId, state, "highpass input");
@@ -2625,6 +2635,12 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frame,
         frames,
         frameValues,
+      );
+    } else if (node?.type === "softClipper") {
+      value = nodeGraphSoftClipperSample(
+        mixInput(nodeId),
+        readNodeGraphLiveEffectiveParam(runtime, node, "center", 0, frame, frames, frameValues),
+        readNodeGraphLiveEffectiveParam(runtime, node, "width", 2, frame, frames, frameValues),
       );
     } else if (node?.type === "rotate3dTo2d") {
       const angleX = readNodeGraphLiveEffectiveParam(runtime, node, "rotateX", 0, frame, frames, frameValues) * Math.PI * 2;

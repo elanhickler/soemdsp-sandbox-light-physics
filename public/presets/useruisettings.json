@@ -128,8 +128,6 @@
     "moduleOscilloscopesVisible": true,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
-    "moduleScopeBurn": 0,
-    "moduleScopeDecay": 0,
     "globalSmoothingSeconds": 5,
     "globalSmoothingManual": true,
     "moduleScopeDotCore1Enabled": true,
@@ -342,6 +340,10 @@
         "home": false
       },
       "bias": {
+        "developer": true,
+        "home": false
+      },
+      "softClipper": {
         "developer": true,
         "home": false
       },
@@ -604,14 +606,14 @@
     "workspaceWindowStatesVersion": 1,
     "workspaceWindowStates": {
       "commandCenter": {
-        "open": false,
+        "open": true,
         "position": {
-          "left": 29,
-          "top": 234
+          "left": -68,
+          "top": 430
         }
       },
       "moduleActions": {
-        "open": false
+        "open": true
       },
       "metaparameters": {
         "open": false
@@ -620,13 +622,17 @@
         "open": false
       },
       "patchExplorer": {
-        "open": false
+        "open": false,
+        "position": {
+          "left": 90,
+          "top": 375
+        }
       },
       "moduleBrowser": {
         "open": false,
         "position": {
-          "left": 17,
-          "top": 166
+          "left": 514,
+          "top": 7
         }
       },
       "visibilityMenu": {
@@ -639,23 +645,459 @@
         "open": false
       },
       "traceDisplaySettings": {
-        "open": false
+        "open": false,
+        "targetNode": "ellipsoid-1"
       }
     },
-    "sharedInspectorActive": "",
-    "sharedInspectorWindowState": {},
+    "sharedInspectorActive": "moduleActions",
+    "sharedInspectorWindowState": {
+      "position": {
+        "left": 588,
+        "top": 183
+      }
+    },
     "workspaceView": {
       "pan": {
-        "x": -159.52423469387753,
-        "y": 26.621173469387756
+        "x": -72.32142857142857,
+        "y": -532.7410714285713
       },
-      "zoom": 1.058399097277098
+      "zoom": 1.0606137022653628
     },
     "moduleStoreDepartment": "",
     "savedPatchBankIndex": 0,
-    "savedPatchBankName": "",
+    "savedPatchBankName": "basic",
     "savedPatchGridColumns": 3,
-    "savedPatchExplorerView": "banks",
-    "patchDirtyState": "untouched"
+    "savedPatchExplorerView": "patches",
+    "workingPatch": {
+      "activeCameraId": "camera-1",
+      "audio": {
+        "targetSampleRate": 44100
+      },
+      "bypassedNodes": [],
+      "cameras": [
+        {
+          "color": "#ff3333",
+          "enabled": true,
+          "height": 488,
+          "id": "camera-1",
+          "midiTrigger": null,
+          "name": "Camera 1",
+          "resolutionHeight": 1080,
+          "resolutionWidth": 1920,
+          "width": 868,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "codeScreen": {
+        "helpers": [],
+        "patchTools": [],
+        "samples": [],
+        "script": "",
+        "scriptLanguage": "javascript",
+        "slots": [],
+        "ui": []
+      },
+      "connections": [
+        {
+          "destinationNode": "output",
+          "destinationPort": "Left",
+          "sourceNode": "ellipsoid-1",
+          "sourcePort": "X",
+          "tracePoints": []
+        },
+        {
+          "destinationNode": "output",
+          "destinationPort": "Right",
+          "sourceNode": "ellipsoid-1",
+          "sourcePort": "Y",
+          "tracePoints": []
+        },
+        {
+          "destinationNode": "scope2d-1",
+          "destinationPort": "X",
+          "sourceNode": "ellipsoid-1",
+          "sourcePort": "X",
+          "tracePoints": []
+        },
+        {
+          "destinationNode": "scope2d-1",
+          "destinationPort": "Y",
+          "sourceNode": "ellipsoid-1",
+          "sourcePort": "Y",
+          "tracePoints": []
+        },
+        {
+          "destinationNode": "traceDisplay-1",
+          "destinationPort": "In",
+          "sourceNode": "ellipsoid-1",
+          "sourcePort": "Wave Out",
+          "tracePoints": []
+        }
+      ],
+      "format": {
+        "kind": "soemdsp-sandbox-node-patch",
+        "version": 1
+      },
+      "grid": {
+        "heightPx": 28,
+        "sizePx": 28,
+        "widthPx": 28
+      },
+      "graphConnections": [],
+      "info": {
+        "author": "",
+        "bank": 0,
+        "bankName": "basic",
+        "description": "",
+        "name": "ellipsoid",
+        "program": 0,
+        "tags": "circle"
+      },
+      "modulations": [],
+      "monitors": [],
+      "nodes": [
+        {
+          "gx": 0,
+          "gy": 24,
+          "id": "output",
+          "paramMeta": {
+            "volume": {
+              "alias": "",
+              "choices": [],
+              "def": 0.1,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 1,
+              "maxDigits": 3,
+              "mid": 0.1,
+              "min": 0,
+              "nonlinearSlider": false,
+              "showSign": false,
+              "step": 0,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            }
+          },
+          "params": {
+            "volume": 0.640154150863261
+          },
+          "type": "output",
+          "ui": {
+            "buttonsHidden": false,
+            "displayHeightOffsetGu": 0,
+            "ioHidden": true,
+            "interfaceControlsHidden": false,
+            "movementLocked": false,
+            "oscilloscopeHidden": true,
+            "slidersHidden": true,
+            "titleHidden": false
+          }
+        },
+        {
+          "gx": -8,
+          "gy": 12,
+          "id": "ellipsoid-1",
+          "paramMeta": {
+            "frequency": {
+              "alias": "",
+              "choices": [],
+              "def": 220,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "frequency",
+              "linearSmoothing": true,
+              "max": 20000,
+              "maxDigits": 5,
+              "mid": 220,
+              "min": 0,
+              "nonlinearSlider": true,
+              "showSign": false,
+              "step": 0,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "Hz",
+              "wraparound": false
+            },
+            "phase": {
+              "alias": "",
+              "choices": [],
+              "def": 0,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "phase",
+              "linearSmoothing": true,
+              "max": 1,
+              "maxDigits": 3,
+              "mid": 0.5,
+              "min": 0,
+              "nonlinearSlider": false,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "cycle",
+              "wraparound": true
+            },
+            "offsetX": {
+              "alias": "",
+              "choices": [],
+              "def": 0,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 1,
+              "maxDigits": 3,
+              "mid": 0,
+              "min": -1,
+              "nonlinearSlider": false,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            },
+            "offsetY": {
+              "alias": "",
+              "choices": [],
+              "def": 0,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 1,
+              "maxDigits": 3,
+              "mid": 0,
+              "min": -1,
+              "nonlinearSlider": false,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            },
+            "shapeX": {
+              "alias": "",
+              "choices": [],
+              "def": 0,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 1,
+              "maxDigits": 3,
+              "mid": 0,
+              "min": -1,
+              "nonlinearSlider": false,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            },
+            "shapeY": {
+              "alias": "",
+              "choices": [],
+              "def": 0,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 1,
+              "maxDigits": 3,
+              "mid": 0,
+              "min": -1,
+              "nonlinearSlider": false,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            },
+            "scaleX": {
+              "alias": "",
+              "choices": [],
+              "def": 1,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 10,
+              "maxDigits": 3,
+              "mid": 1,
+              "min": 0,
+              "nonlinearSlider": true,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            },
+            "scaleY": {
+              "alias": "",
+              "choices": [],
+              "def": 1,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 10,
+              "maxDigits": 3,
+              "mid": 1,
+              "min": 0,
+              "nonlinearSlider": true,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            },
+            "level": {
+              "alias": "",
+              "choices": [],
+              "def": 1,
+              "displayChoices": false,
+              "divideChoicesVisibly": false,
+              "kind": "decimal",
+              "linearSmoothing": true,
+              "max": 1,
+              "maxDigits": 3,
+              "mid": 0.5,
+              "min": 0,
+              "nonlinearSlider": false,
+              "showSign": false,
+              "step": 0.01,
+              "unboundedMax": false,
+              "unboundedMin": false,
+              "unit": "",
+              "wraparound": false
+            }
+          },
+          "params": {
+            "frequency": 30.1,
+            "phase": 0,
+            "offsetX": -0.88,
+            "offsetY": 0,
+            "shapeX": 0,
+            "shapeY": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "level": 0.44
+          },
+          "type": "ellipsoid",
+          "ui": {
+            "buttonsHidden": true,
+            "displayHeightOffsetGu": 0,
+            "ioHidden": true,
+            "interfaceControlsHidden": false,
+            "movementLocked": false,
+            "oscilloscopeHidden": false,
+            "slidersHidden": false,
+            "titleHidden": true
+          }
+        },
+        {
+          "gx": 0,
+          "gy": 10,
+          "id": "scope2d-1",
+          "paramMeta": {},
+          "params": {},
+          "type": "scope2d",
+          "ui": {
+            "buttonsHidden": true,
+            "displayHeightOffsetGu": 0,
+            "ioHidden": true,
+            "interfaceControlsHidden": false,
+            "movementLocked": false,
+            "oscilloscopeHidden": false,
+            "slidersHidden": false,
+            "titleHidden": false
+          }
+        },
+        {
+          "gx": 0,
+          "gy": 18,
+          "id": "traceDisplay-1",
+          "paramMeta": {},
+          "params": {},
+          "type": "traceDisplay",
+          "ui": {
+            "buttonsHidden": false,
+            "displayHeightOffsetGu": 0,
+            "ioHidden": true,
+            "interfaceControlsHidden": false,
+            "movementLocked": false,
+            "oscilloscopeHidden": false,
+            "slidersHidden": false,
+            "titleHidden": false
+          },
+          "traceDisplaySettings": {
+            "brightness": 0.92,
+            "color": "#75ebff",
+            "dot1Enabled": true,
+            "dot1Size": 0.08,
+            "dot2Brightness": 0.18,
+            "dot2Color": "#184fff",
+            "dot2Enabled": true,
+            "dot2Size": 0.24,
+            "dot2LineThickness": 0.48,
+            "cycles": 2,
+            "lineThickness": 0.2,
+            "padding": 0,
+            "skipSamples": 1,
+            "sourceSync": true,
+            "zoomSeconds": 0.05
+          }
+        }
+      ],
+      "requiredAssets": [],
+      "samples": [],
+      "timing": {
+        "tempoBpm": 120,
+        "timeSignatureDenominator": 4,
+        "timeSignatureNumerator": 4
+      },
+      "uiItems": [],
+      "view": {
+        "heightGu": 24,
+        "widthGu": 24,
+        "zoom": 0.6740391819935171
+      },
+      "visual": {
+        "background": {
+          "h": 210,
+          "l": 5,
+          "s": 0
+        },
+        "mode": "auto",
+        "scale": 1,
+        "style": "glow",
+        "theme": "cyan-violet",
+        "trail": 0.35
+      },
+      "windows": {
+        "metadata": {
+          "left": null,
+          "top": null
+        },
+        "moduleActions": {
+          "left": null,
+          "top": null
+        }
+      }
+    },
+    "currentSavedPatchFilename": "bank000-program000-ellipsoid-circle.json",
+    "patchDirtyState": "edited"
   }
 }

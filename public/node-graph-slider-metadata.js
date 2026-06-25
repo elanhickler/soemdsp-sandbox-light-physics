@@ -224,8 +224,43 @@ function formatNodeSliderCompactNumber(value) {
   return Number.isFinite(number) ? Number(number.toFixed(6)).toString() : "";
 }
 
+function sanitizeNodeGraphNumericText(value) {
+  const source = String(value ?? "").trim().replace(/,/g, "");
+  let output = "";
+  let hasDot = false;
+  let hasExponent = false;
+  let exponentHasDigit = false;
+  for (const character of source) {
+    if (character >= "0" && character <= "9") {
+      output += character;
+      if (hasExponent) {
+        exponentHasDigit = true;
+      }
+      continue;
+    }
+    if ((character === "+" || character === "-") && (output === "" || /[eE]$/.test(output))) {
+      output += character;
+      continue;
+    }
+    if (character === "." && !hasDot && !hasExponent) {
+      output += character;
+      hasDot = true;
+      continue;
+    }
+    if ((character === "e" || character === "E") && !hasExponent && /[0-9]/.test(output)) {
+      output += "e";
+      hasExponent = true;
+      continue;
+    }
+  }
+  if (hasExponent && !exponentHasDigit) {
+    output = output.replace(/[eE][+-]?$/, "");
+  }
+  return /^[-+]?\.?$/.test(output) ? "" : output;
+}
+
 function parseNodeMetadataNumber(value, fallback) {
-  const number = Number(String(value).trim());
+  const number = Number(sanitizeNodeGraphNumericText(value));
   return Number.isFinite(number) ? number : fallback;
 }
 

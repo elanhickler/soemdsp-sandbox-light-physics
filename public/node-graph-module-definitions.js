@@ -155,9 +155,16 @@ const nodeGraphModuleDefinitions = Object.freeze({
   osc: {
     displayType: "trace",
     inputs: ["Reset", "0.1V/Oct", "Increment"],
+    inputLabels: {
+      "0.1V/Oct": "0.1V",
+      Increment: "Inc.",
+    },
     outputAliases: {
       Out: "Wave Out",
       Noise: "Wave Out",
+    },
+    outputLabels: {
+      "Wave Out": "Wave",
     },
     outputs: ["Saw", "Ramp", "Square", "Tri", "Sine", "Wave Out"],
     parameters: [
@@ -213,9 +220,16 @@ const nodeGraphModuleDefinitions = Object.freeze({
   polyBlep: {
     displayType: "trace",
     inputs: ["Reset", "0.1V/Oct", "Increment"],
+    inputLabels: {
+      "0.1V/Oct": "0.1V",
+      Increment: "Inc.",
+    },
     outputAliases: {
       Out: "Wave Out",
       Noise: "Wave Out",
+    },
+    outputLabels: {
+      "Wave Out": "Wave",
     },
     outputs: ["Saw", "Ramp", "Square", "Tri", "Sine", "Wave Out"],
     parameters: [
@@ -271,9 +285,16 @@ const nodeGraphModuleDefinitions = Object.freeze({
   fbPolyBlepOsc: {
     displayType: "trace",
     inputs: ["Reset", "0.1V/Oct", "Increment"],
+    inputLabels: {
+      "0.1V/Oct": "0.1V",
+      Increment: "Inc.",
+    },
     outputAliases: {
       Out: "Wave Out",
       Noise: "Wave Out",
+    },
+    outputLabels: {
+      "Wave Out": "Wave",
     },
     outputs: ["Saw", "Ramp", "Square", "Tri", "Sine", "Wave Out"],
     parameters: [
@@ -329,6 +350,10 @@ const nodeGraphModuleDefinitions = Object.freeze({
   additiveOsc: {
     graphInputs: ["Damping Graph", "Phase Graph"],
     inputs: ["Reset", "0.1V/Oct", "Increment"],
+    inputLabels: {
+      "0.1V/Oct": "0.1V",
+      Increment: "Inc.",
+    },
     outputs: ["Out"],
     parameters: [
       {
@@ -378,6 +403,10 @@ const nodeGraphModuleDefinitions = Object.freeze({
   gpuAdditiveOsc: {
     graphInputs: ["Damping Graph", "Phase Graph"],
     inputs: ["Reset", "0.1V/Oct", "Increment"],
+    inputLabels: {
+      "0.1V/Oct": "0.1V",
+      Increment: "Inc.",
+    },
     outputs: ["Out"],
     parameters: [
       {
@@ -425,9 +454,17 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   ellipsoid: {
+    displayType: "scope2d",
     inputs: ["Reset", "0.1V/Oct", "Increment"],
+    inputLabels: {
+      "0.1V/Oct": "0.1V",
+      Increment: "Inc.",
+    },
     outputAliases: {
       Out: "Wave Out",
+    },
+    outputLabels: {
+      "Wave Out": "Wave",
     },
     outputs: ["X", "Y", "Wave Out"],
     parameters: [
@@ -964,6 +1001,32 @@ const nodeGraphModuleDefinitions = Object.freeze({
       },
     ],
   },
+  softClipper: {
+    inputs: ["In"],
+    outputs: ["Out"],
+    parameters: [
+      {
+        defaultValue: "0",
+        key: "center",
+        label: "Center",
+        max: "1",
+        mid: "0",
+        min: "-1",
+        nonlinearSlider: false,
+        step: "any",
+      },
+      {
+        defaultValue: "2",
+        key: "width",
+        label: "Width",
+        max: "8",
+        mid: "2",
+        min: "0.0001",
+        nonlinearSlider: true,
+        step: "any",
+      },
+    ],
+  },
   rotate3dTo2d: {
     inputs: ["X", "Y", "Z"],
     outputs: ["X", "Y"],
@@ -1299,6 +1362,10 @@ const nodeGraphModuleDefinitions = Object.freeze({
   keyboardController: {
     inputs: ["MIDI Note", "Gate", "Velocity", "Octave", "Reset", "Hold", "X", "Y"],
     layout: "keyboardController",
+    outputLabels: {
+      "0.1V/Oct": "0.1V",
+      Increment: "Inc.",
+    },
     outputs: ["Gate", "1 Sample Gate", "Key", "Q", "MIDI", "Double", "0.1V/Oct", "Increment", "Frequency", "Pitch", "X", "Y"],
     parameters: [],
   },

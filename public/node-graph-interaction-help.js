@@ -12,11 +12,7 @@ function nodeInteractionHelpText(target) {
 }
 
 function nodeGraphSelectionHelpText() {
-  const selectedNodeIds = nodeGraphSelectedNodeIds();
-  if (!selectedNodeIds.size) {
-    return "";
-  }
-  return "Modules selected";
+  return "";
 }
 
 function composeNodeInteractionHelpText(text = "") {

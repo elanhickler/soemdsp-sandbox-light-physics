@@ -3119,6 +3119,16 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return number;
   }
 
+  softClipperSample(input, center = 0, width = 2) {
+    const safeWidth = Math.max(0.000001, Math.abs(Number(width) || 2));
+    const safeCenter = Number(center) || 0;
+    const scaleX = 2 / safeWidth;
+    const shiftX = -1 - (scaleX * (safeCenter - 0.5 * safeWidth));
+    const scaleY = 1 / scaleX;
+    const shiftY = -shiftX * scaleY;
+    return shiftY + scaleY * Math.tanh(scaleX * (Number(input) || 0) + shiftX);
+  }
+
   onePoleHighpassSample(state, input, frequency, rate = sampleRate) {
     const safeRate = Math.max(1, Number(rate) || sampleRate || 44100);
     const safeInput = this.safeFilterNumber(input, state);
@@ -5112,6 +5122,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       } else if (node?.type === "bias") {
         value = mixInput(nodeId) +
           this.readEffectiveParameter(node, "offset", 0, frame, frames, frameValues);
+      } else if (node?.type === "softClipper") {
+        value = this.softClipperSample(
+          mixInput(nodeId),
+          this.readEffectiveParameter(node, "center", 0, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "width", 2, frame, frames, frameValues),
+        );
       } else if (node?.type === "rotate3dTo2d") {
         const angleX = this.readEffectiveParameter(node, "rotateX", 0, frame, frames, frameValues) * Math.PI * 2;
         const angleY = this.readEffectiveParameter(node, "rotateY", 0, frame, frames, frameValues) * Math.PI * 2;

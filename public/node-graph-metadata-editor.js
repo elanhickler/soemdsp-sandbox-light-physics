@@ -1754,23 +1754,36 @@ function bindNodeMetadataScriptBeforeUnload() {
 
 function readNodeMetadataEditorValues(slider) {
   const current = nodeSliderMetadata(slider);
-  let min = parseNodeMetadataNumber(document.getElementById("metadataMinValue").value, current.min);
-  let max = parseNodeMetadataNumber(document.getElementById("metadataMaxValue").value, current.max);
+  const sanitizeMetadataNumberInput = (id) => {
+    const input = document.getElementById(id);
+    if (!input) {
+      return "";
+    }
+    const sanitized = typeof sanitizeNodeGraphNumericText === "function"
+      ? sanitizeNodeGraphNumericText(input.value)
+      : String(input.value ?? "").trim();
+    if (sanitized && sanitized !== input.value) {
+      input.value = sanitized;
+    }
+    return sanitized;
+  };
+  let min = parseNodeMetadataNumber(sanitizeMetadataNumberInput("metadataMinValue"), current.min);
+  let max = parseNodeMetadataNumber(sanitizeMetadataNumberInput("metadataMaxValue"), current.max);
   if (min > max) {
     [min, max] = [max, min];
   }
-  const stepInput = document.getElementById("metadataStepValue").value.trim();
+  const stepInput = sanitizeMetadataNumberInput("metadataStepValue");
   const kind = normalizeNodeMetadataKind(document.getElementById("metadataKindValue").value);
   return {
     alias: normalizeNodeGraphPatchMetadataAlias(document.getElementById("metadataAliasValue").value),
-    def: parseNodeMetadataNumber(document.getElementById("metadataDefaultValue").value, current.def),
+    def: parseNodeMetadataNumber(sanitizeMetadataNumberInput("metadataDefaultValue"), current.def),
     kind,
     max,
     maxDigits: normalizeNodeGraphMetadataMaxDigits(
-      document.getElementById("metadataMaxDigitsValue").value,
+      sanitizeMetadataNumberInput("metadataMaxDigitsValue"),
       kind,
     ),
-    mid: parseNodeMetadataNumber(document.getElementById("metadataMidValue").value, current.mid),
+    mid: parseNodeMetadataNumber(sanitizeMetadataNumberInput("metadataMidValue"), current.mid),
     min,
     choices: parseNodeMetadataChoices(document.getElementById("metadataChoicesValue").value),
     displayChoices: document.getElementById("metadataDisplayChoicesValue").checked,

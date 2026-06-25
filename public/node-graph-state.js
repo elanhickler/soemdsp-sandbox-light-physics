@@ -130,8 +130,6 @@ var nodeGraphMvp = {
   modulePlacement: null,
   moduleShopDragging: null,
   moduleSlidersVisible: true,
-  moduleScopeBurn: 0,
-  moduleScopeDecay: 0,
   moduleScopeBackgroundColor: "#000000",
   moduleScopeDotCore1Enabled: false,
   moduleScopeDotCore1Size: 2,
