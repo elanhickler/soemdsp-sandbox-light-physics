@@ -8752,10 +8752,15 @@ function drawNodeGraphLineBurnOscilloscopeItem(renderer, item, pixelRatio) {
   drawNodeGraphOneDimensionalBurnTrail(item, pixelRatio, { x, y }, settings);
 }
 
+function nodeGraphScope2dFiniteSample(value) {
+  const sample = Number(value);
+  return Number.isFinite(sample) ? sample : null;
+}
+
 function nodeGraphScope2dPointFromSamples(square, x, y) {
-  const sampleX = Number(x);
-  const sampleY = Number(y);
-  if (!Number.isFinite(sampleX) || !Number.isFinite(sampleY)) {
+  const sampleX = nodeGraphScope2dFiniteSample(x);
+  const sampleY = nodeGraphScope2dFiniteSample(y);
+  if (sampleX === null || sampleY === null) {
     return null;
   }
   return {
@@ -8765,8 +8770,11 @@ function nodeGraphScope2dPointFromSamples(square, x, y) {
 }
 
 function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5) {
-  const sampleX = Number(x) || 0;
-  const sampleY = Number(y) || 0;
+  const sampleX = nodeGraphScope2dFiniteSample(x);
+  const sampleY = nodeGraphScope2dFiniteSample(y);
+  if (sampleX === null || sampleY === null) {
+    return false;
+  }
   const radiusX = Math.max(1, Number(square?.width) || 1) * 0.44;
   const radiusY = Math.max(1, Number(square?.height) || 1) * 0.44;
   return Math.sqrt((sampleX * radiusX) ** 2 + (sampleY * radiusY) ** 2) > Math.max(0, Number(minimumPixels) || 0);
@@ -8882,7 +8890,9 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   }
   let hasSignal = false;
   for (let index = 0; index < count; index += 1) {
-    if (Math.abs(Number(buffer.x[index]) || 0) > 0.000001 || Math.abs(Number(buffer.y[index]) || 0) > 0.000001) {
+    const sampleX = nodeGraphScope2dFiniteSample(buffer.x[index]);
+    const sampleY = nodeGraphScope2dFiniteSample(buffer.y[index]);
+    if ((sampleX !== null && Math.abs(sampleX) > 0.000001) || (sampleY !== null && Math.abs(sampleY) > 0.000001)) {
       hasSignal = true;
       break;
     }

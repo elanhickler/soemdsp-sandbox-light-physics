@@ -12783,7 +12783,7 @@ def require_node_graph_mvp_contract() -> None:
     scope2d_buffer_start = node_graph_source.index("function nodeGraphModuleScopeCapturedScope2dBuffer")
     scope2d_buffer_end = node_graph_source.index("function nodeGraphModuleScopeCapturedStereoNoiseXyBuffer", scope2d_buffer_start)
     scope2d_buffer_source = node_graph_source[scope2d_buffer_start:scope2d_buffer_end]
-    scope2d_helper_start = node_graph_source.index("function nodeGraphScope2dPointFromSamples")
+    scope2d_helper_start = node_graph_source.index("function nodeGraphScope2dFiniteSample")
     scope2d_helper_source = node_graph_source[scope2d_helper_start:scope2d_start]
     require(
         "function nodeGraphScope2dSourceFrameCount(sampleRate, fps, validLength)" in node_graph_source
@@ -12795,6 +12795,8 @@ def require_node_graph_mvp_contract() -> None:
         and "const yRecentSamples = nodeGraphScopeBufferRecentSampleCount(yBuffer)" in scope2d_buffer_source
         and "if (hasRecentSampleMetadata && !(xRecentSamples > 0 && yRecentSamples > 0))" in scope2d_buffer_source
         and "return null;" in scope2d_buffer_source
+        and "function nodeGraphScope2dFiniteSample(value)" in scope2d_helper_source
+        and "return Number.isFinite(sample) ? sample : null;" in scope2d_helper_source
         and "function nodeGraphScope2dInterpolationSpacingPx()" in scope2d_helper_source
         and "return 0.5;" in scope2d_helper_source
         and "function nodeGraphScope2dMaxBridgeDistancePx" not in scope2d_helper_source
@@ -12809,6 +12811,7 @@ def require_node_graph_mvp_contract() -> None:
         and "if (pointCount < 2) {\n    return;\n  }\n  nodeGraphOneDimensionalBurnFadeTrail(context, canvas, settings);" in scope2d_helper_source
         and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      pathPoints," in scope2d_helper_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
+        and "if (sampleX === null || sampleY === null) {\n    return false;\n  }" in scope2d_helper_source
         and "function nodeGraphScope2dCenterRunMask" not in scope2d_helper_source
         and "centerRunMask" not in scope2d_helper_source
         and "function breakNodeGraphScope2dPath(points)" in scope2d_helper_source
