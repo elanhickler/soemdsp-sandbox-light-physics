@@ -12781,13 +12781,18 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphScope2dInterpolationSpacingPx()" in scope2d_helper_source
         and "return 0.5;" in scope2d_helper_source
         and "function nodeGraphScope2dPointBudget()" in scope2d_helper_source
-        and "return Math.max(65536, globalBudget);" in scope2d_helper_source
+        and "return 262144;" in scope2d_helper_source
         and "function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2dPointBudget())" in scope2d_helper_source
         and "const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints)" in scope2d_helper_source
         and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      budgetedPathPoints," in scope2d_helper_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
-        and "!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])" in scope2d_helper_source
+        and "function nodeGraphScope2dCenterRunMask(square, buffer, count, minimumRunLength = 4)" in scope2d_helper_source
+        and "runEnd - runStart >= minimumRunLength" in scope2d_helper_source
+        and "const centerRunMask = nodeGraphScope2dCenterRunMask(square, buffer, count)" in scope2d_helper_source
+        and "if (centerRunMask[index])" in scope2d_helper_source
+        and "pathPoints.push(null);" in scope2d_helper_source
         and "previousPoint = null;\n      return;" in scope2d_helper_source
+        and "let subpathOpen = false;" in node_graph_source
         and "appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx)" in scope2d_helper_source
         and "let previousPoint = null" in scope2d_helper_source
         and "scope2dLastPoints" not in node_graph_source

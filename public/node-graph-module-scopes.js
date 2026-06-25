@@ -8641,13 +8641,19 @@ function drawNodeGraphScopeCanvasBurnPath(context, points, radius, color, bright
   context.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(1, alpha * 0.9)})`;
   context.shadowBlur = radius * (0.4 + blurAmount * 2.6);
   context.beginPath();
-  context.moveTo(points[0].x, points[0].y);
-  for (let index = 1; index < points.length; index += 1) {
+  let subpathOpen = false;
+  for (let index = 0; index < points.length; index += 1) {
     const point = points[index];
     if (!point) {
+      subpathOpen = false;
       continue;
     }
-    context.lineTo(point.x, point.y);
+    if (!subpathOpen) {
+      context.moveTo(point.x, point.y);
+      subpathOpen = true;
+    } else {
+      context.lineTo(point.x, point.y);
+    }
   }
   context.stroke();
   context.restore();
@@ -8807,10 +8813,7 @@ function nodeGraphScope2dInterpolationSpacingPx() {
 }
 
 function nodeGraphScope2dPointBudget() {
-  const globalBudget = typeof normalizeNodeGraphModuleScopePointBudget === "function"
-    ? normalizeNodeGraphModuleScopePointBudget(nodeGraphMvp?.moduleScopePointBudget ?? 4096)
-    : 4096;
-  return Math.max(65536, globalBudget);
+  return 262144;
 }
 
 function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2dPointBudget()) {
@@ -8827,11 +8830,33 @@ function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2d
   for (let index = 0; index < outputCount; index += 1) {
     const sourceIndex = Math.round((index / Math.max(1, outputCount - 1)) * lastIndex);
     const point = points[sourceIndex];
-    if (point) {
-      capped.push(point);
-    }
+    capped.push(point || null);
   }
   return capped;
+}
+
+function nodeGraphScope2dCenterRunMask(square, buffer, count, minimumRunLength = 4) {
+  const safeCount = Math.max(0, Math.floor(Number(count) || 0));
+  const mask = new Uint8Array(safeCount);
+  let runStart = -1;
+  for (let index = 0; index < safeCount; index += 1) {
+    const centered = !nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index]);
+    if (centered && runStart < 0) {
+      runStart = index;
+    }
+    const runEnded = (!centered || index === safeCount - 1) && runStart >= 0;
+    if (!runEnded) {
+      continue;
+    }
+    const runEnd = centered && index === safeCount - 1 ? index + 1 : index;
+    if (runEnd - runStart >= minimumRunLength) {
+      for (let runIndex = runStart; runIndex < runEnd; runIndex += 1) {
+        mask[runIndex] = 1;
+      }
+    }
+    runStart = -1;
+  }
+  return mask;
 }
 
 function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, settings) {
@@ -8867,9 +8892,13 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   const dotSpace = Math.min(canvas.width, canvas.height);
   const pathPoints = [];
   const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx();
+  const centerRunMask = nodeGraphScope2dCenterRunMask(square, buffer, count);
   let previousPoint = null;
   const appendPointAt = (index) => {
-    if (!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])) {
+    if (centerRunMask[index]) {
+      if (pathPoints[pathPoints.length - 1] !== null) {
+        pathPoints.push(null);
+      }
       previousPoint = null;
       return;
     }
@@ -8887,7 +8916,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
     appendPointAt(index);
   }
   const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints);
-  const pointCount = budgetedPathPoints.length;
+  const pointCount = budgetedPathPoints.filter(Boolean).length;
   if (pointCount < 2) {
     return;
   }
