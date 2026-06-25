@@ -1480,7 +1480,10 @@ async function stopNodeGraphLiveAudio() {
   nodeGraphMvp.live.usesWorklet = false;
   nodeGraphStopGpuAdditiveProducer();
   if (typeof clearNodeGraphModuleScopeBuffers === "function") {
-    clearNodeGraphModuleScopeBuffers();
+    clearNodeGraphModuleScopeBuffers({
+      preserveBuffers: true,
+      preserveDisplay: true,
+    });
   }
   nodeGraphClearVisualControls();
 

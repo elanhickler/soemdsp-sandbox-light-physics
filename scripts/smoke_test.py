@@ -12944,7 +12944,10 @@ def require_node_graph_mvp_contract() -> None:
         and "context.quadraticCurveTo(point.x, point.y" in scope2d_helper_source
         and "function nodeGraphScope2dEffectiveBurnStroke(settings, dotSpace, intensity)" in scope2d_helper_source
         and "const stroke = nodeGraphScope2dEffectiveBurnStroke(settings, dotSpace, intensity);" in scope2d_helper_source
-        and 'context.lineCap = "butt";' in scope2d_helper_source
+        and "function nodeGraphScopeCanvasErfApprox(value)" in scope2d_helper_source
+        and "function nodeGraphScopeCanvasSegmentGaussianEnergy(localX, localY, length, sigma, size)" in scope2d_helper_source
+        and "function drawNodeGraphScopeCanvasGaussianSegment(image, canvas, from, to, radius, color, brightness, blur)" in scope2d_helper_source
+        and "context.putImageData(image, 0, 0);" in scope2d_helper_source
         and "function nodeGraphScope2dDrawStartIndex(canvas, buffer, count)" in scope2d_helper_source
         and "canvas?._nodeGraphScope2dLastDrawnFrame" in scope2d_helper_source
         and "canvas._nodeGraphScope2dLastDrawnFrame = Number(buffer.nodeGraphScopeAbsoluteFrame);" in scope2d_helper_source
@@ -13008,6 +13011,17 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphModuleScopeHasDrawableSlots()" in node_graph_source
         and "return nodeGraphModuleScopeSlots().filter(nodeGraphModuleScopeSlotIsDrawable);" in node_graph_source,
         "module scope drawing should be gated by drawable slots",
+    )
+    live_scope_capture_source = node_graph_source[
+        node_graph_source.index("function beginNodeGraphLiveModuleScopeCapture("):
+        node_graph_source.index("function updateNodeGraphLiveModuleScopeFingerprint(")
+    ]
+    require(
+        "const canReuseBuffers = nodeGraphModuleScopeState.mode === \"live\" &&" in live_scope_capture_source
+        and "nodeGraphModuleScopeState.patchFingerprint === patchFingerprint;" in live_scope_capture_source
+        and "resizeNodeGraphLiveModuleScopeBuffer(previous, frameCapacity)" in live_scope_capture_source
+        and "nextBuffers.set(key, resizeNodeGraphLiveModuleScopeBuffer(previous, frameCapacity));" in live_scope_capture_source,
+        "live scope capture restart should preserve same-patch buffers instead of redrawing startup as a flat zero line",
     )
     require(
         ".node-module-scope-canvas {\n  z-index: 2;" in style_source
@@ -14513,7 +14527,7 @@ def require_node_graph_mvp_contract() -> None:
     )
 
     clear_scope_source = node_graph_source[
-        node_graph_source.index("function clearNodeGraphModuleScopeBuffers()"):
+        node_graph_source.index("function clearNodeGraphModuleScopeBuffers("):
         node_graph_source.index("function clearNodeGraphRenderedModuleScopeBuffers()")
     ]
     require(
@@ -14525,6 +14539,13 @@ def require_node_graph_mvp_contract() -> None:
         "window.clearTimeout(nodeGraphModuleScopeState.drawFrameWatchdog);" in clear_scope_source
         and "window.clearInterval(nodeGraphModuleScopeState.drawFrameHeartbeat);" in clear_scope_source,
         "clearing module scope buffers should clear scope draw watchdog and heartbeat timers",
+    )
+    require(
+        "const preserveDisplay = options?.preserveDisplay === true;" in clear_scope_source
+        and "const preserveBuffers = options?.preserveBuffers === true;" in clear_scope_source
+        and "if (!preserveBuffers) {" in clear_scope_source
+        and "if (!preserveDisplay) {" in clear_scope_source,
+        "live audio stop should be able to pause scopes without erasing display or sampled scope buffers",
     )
 
     require(

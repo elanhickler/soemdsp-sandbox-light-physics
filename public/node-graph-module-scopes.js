@@ -57,6 +57,7 @@ const nodeGraphModuleScopeState = {
   scopeTracesOffActive: false,
   renderer: null,
   sampleRate: 0,
+  scope2dBurnRenderers: new Map(),
   slots: new Map(),
   traceDisplayDrawCache: new Map(),
   traceDisplayScratch: new Map(),
@@ -1181,7 +1182,9 @@ function resetNodeGraphModuleScopeFrameClocks() {
   };
 }
 
-function clearNodeGraphModuleScopeBuffers() {
+function clearNodeGraphModuleScopeBuffers(options = {}) {
+  const preserveDisplay = options?.preserveDisplay === true;
+  const preserveBuffers = options?.preserveBuffers === true;
   if (nodeGraphModuleScopeState.drawFrame) {
     window.cancelAnimationFrame(nodeGraphModuleScopeState.drawFrame);
     nodeGraphModuleScopeState.drawFrame = 0;
@@ -1194,23 +1197,27 @@ function clearNodeGraphModuleScopeBuffers() {
     window.clearInterval(nodeGraphModuleScopeState.drawFrameHeartbeat);
     nodeGraphModuleScopeState.drawFrameHeartbeat = 0;
   }
-  nodeGraphModuleScopeState.buffers.clear();
-  nodeGraphModuleScopeState.traceDisplayDrawCache.clear();
-  nodeGraphModuleScopeState.traceDisplayScratch.clear();
-  nodeGraphModuleScopeState.lightDisplayStates.clear();
-  nodeGraphModuleScopeState.scanHistories.clear();
-  nodeGraphModuleScopeState.frames = 0;
-  nodeGraphModuleScopeState.monitorFingerprint = "";
-  nodeGraphModuleScopeState.mode = "";
-  resetNodeGraphModuleScopeFrameClocks();
-  nodeGraphModuleScopeState.oscillatorPhasors.clear();
-  nodeGraphModuleScopeState.patchFingerprint = "";
-  nodeGraphModuleScopeState.sampleRate = 0;
+  if (!preserveBuffers) {
+    nodeGraphModuleScopeState.buffers.clear();
+    nodeGraphModuleScopeState.traceDisplayDrawCache.clear();
+    nodeGraphModuleScopeState.traceDisplayScratch.clear();
+    nodeGraphModuleScopeState.lightDisplayStates.clear();
+    nodeGraphModuleScopeState.scanHistories.clear();
+    nodeGraphModuleScopeState.frames = 0;
+    nodeGraphModuleScopeState.monitorFingerprint = "";
+    nodeGraphModuleScopeState.mode = "";
+    resetNodeGraphModuleScopeFrameClocks();
+    nodeGraphModuleScopeState.oscillatorPhasors.clear();
+    nodeGraphModuleScopeState.patchFingerprint = "";
+    nodeGraphModuleScopeState.sampleRate = 0;
+  }
   nodeGraphModuleScopeState.animationLastTime = 0;
   nodeGraphModuleScopeState.animationTime = 0;
   nodeGraphModuleScopeState.animationDeltaSeconds = 0;
-  setNodeGraphModuleScopesEnabled(false);
-  clearNodeGraphModuleScopeCanvas();
+  if (!preserveDisplay) {
+    setNodeGraphModuleScopesEnabled(false);
+    clearNodeGraphModuleScopeCanvas();
+  }
 }
 
 function clearNodeGraphRenderedModuleScopeBuffers() {
@@ -1504,18 +1511,33 @@ function beginNodeGraphLiveModuleScopeCapture(plan = {}, options = {}) {
     ? plan.order
     : (Array.isArray(plan.nodes) ? plan.nodes.map((node) => node.id) : []);
   const frameCapacity = nodeGraphLiveModuleScopeFrameCapacity({ ...options, patch: options.patch || nodeGraphMvp?.patch });
-  nodeGraphModuleScopeState.buffers = new Map(
-    ids
-      .map((id) => String(id || ""))
-      .filter(Boolean)
-      .map((id) => [id, new Float32Array(frameCapacity)]),
-  );
-  nodeGraphModuleScopeState.traceDisplayDrawCache.clear();
-  nodeGraphModuleScopeState.traceDisplayScratch.clear();
+  const patchFingerprint = String(plan.patchFingerprint || nodeGraphPatchFingerprint());
+  const canReuseBuffers = nodeGraphModuleScopeState.mode === "live" &&
+    nodeGraphModuleScopeState.patchFingerprint === patchFingerprint;
+  const nextBuffers = new Map();
+  for (const id of ids.map((candidate) => String(candidate || "")).filter(Boolean)) {
+    const previous = canReuseBuffers ? nodeGraphModuleScopeState.buffers.get(id) : null;
+    nextBuffers.set(id, resizeNodeGraphLiveModuleScopeBuffer(previous, frameCapacity));
+  }
+  if (canReuseBuffers) {
+    for (const [key, previous] of nodeGraphModuleScopeState.buffers) {
+      if (!String(key || "").includes(":")) {
+        continue;
+      }
+      const nodeId = String(key).split(":")[0];
+      if (nextBuffers.has(nodeId)) {
+        nextBuffers.set(key, resizeNodeGraphLiveModuleScopeBuffer(previous, frameCapacity));
+      }
+    }
+  } else {
+    nodeGraphModuleScopeState.traceDisplayDrawCache.clear();
+    nodeGraphModuleScopeState.traceDisplayScratch.clear();
+  }
+  nodeGraphModuleScopeState.buffers = nextBuffers;
   nodeGraphModuleScopeState.frames = frameCapacity;
   nodeGraphModuleScopeState.monitorFingerprint = nodeGraphLiveModuleScopeFingerprint(plan);
   nodeGraphModuleScopeState.mode = "live";
-  nodeGraphModuleScopeState.patchFingerprint = String(plan.patchFingerprint || nodeGraphPatchFingerprint());
+  nodeGraphModuleScopeState.patchFingerprint = patchFingerprint;
   nodeGraphModuleScopeState.sampleRate = Number(options.sampleRate) || 0;
   scheduleNodeGraphModuleScopeDraw();
 }
@@ -8860,27 +8882,118 @@ function drawNodeGraphScopeCanvasSmoothPath(context, points) {
   flushSubpath();
 }
 
+function nodeGraphScopeCanvasErfApprox(value) {
+  const x = Number(value) || 0;
+  const sign = x < 0 ? -1 : 1;
+  const a = Math.abs(x);
+  const t = 1 / (1 + (0.278393 + (0.230389 + 0.078108 * a) * a) * a);
+  return sign * (1 - (t * t * t * t));
+}
+
+function nodeGraphScopeCanvasSegmentGaussianEnergy(localX, localY, length, sigma, size) {
+  const safeSigma = Math.max(0.0001, Number(sigma) || 0.0001);
+  const safeSize = Math.max(0.0001, Number(size) || 0.0001);
+  const yEnergy = Math.exp(-(localY * localY) / (2 * safeSigma * safeSigma));
+  if (!(length > 0.000001)) {
+    return Math.exp(-((localX * localX) + (localY * localY)) / (2 * safeSigma * safeSigma)) /
+      (2 * Math.sqrt(safeSize));
+  }
+  const normalizer = Math.SQRT2 * safeSigma;
+  const integrated = nodeGraphScopeCanvasErfApprox(localX / normalizer) -
+    nodeGraphScopeCanvasErfApprox((localX - length) / normalizer);
+  return Math.max(0, (integrated * yEnergy * safeSize) / (2 * length));
+}
+
+function drawNodeGraphScopeCanvasGaussianSegment(image, canvas, from, to, radius, color, brightness, blur) {
+  if (!image?.data || !canvas || !from || !to || !(radius > 0) || !(brightness > 0)) {
+    return;
+  }
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.sqrt((dx * dx) + (dy * dy));
+  if (!Number.isFinite(length)) {
+    return;
+  }
+  const safeRadius = Math.max(0.25, Number(radius) || 0.25);
+  const blurAmount = normalizeNodeGraphModuleScopeDotBlur(blur, 0);
+  const beamSize = Math.max(0.5, safeRadius * 2);
+  const sigma = Math.max(0.2, beamSize * (0.24 + blurAmount * 0.24));
+  const extent = Math.max(1, sigma * 4.5);
+  const minX = Math.max(0, Math.floor(Math.min(from.x, to.x) - extent));
+  const maxX = Math.min(canvas.width - 1, Math.ceil(Math.max(from.x, to.x) + extent));
+  const minY = Math.max(0, Math.floor(Math.min(from.y, to.y) - extent));
+  const maxY = Math.min(canvas.height - 1, Math.ceil(Math.max(from.y, to.y) + extent));
+  if (maxX < minX || maxY < minY) {
+    return;
+  }
+  const pixelCount = (maxX - minX + 1) * (maxY - minY + 1);
+  const sampleStep = Math.max(1, Math.ceil(pixelCount / 24000));
+  const dirX = length > 0.000001 ? dx / length : 1;
+  const dirY = length > 0.000001 ? dy / length : 0;
+  const normX = -dirY;
+  const normY = dirX;
+  const rgb = nodeGraphScopeRgbFloatsToCanvasRgb(color);
+  const intensity = Math.max(0, Number(brightness) || 0);
+  const data = image.data;
+  const width = canvas.width;
+  for (let y = minY; y <= maxY; y += sampleStep) {
+    for (let x = minX; x <= maxX; x += sampleStep) {
+      const relX = x + 0.5 - from.x;
+      const relY = y + 0.5 - from.y;
+      const localX = (relX * dirX) + (relY * dirY);
+      const localY = (relX * normX) + (relY * normY);
+      const energy = nodeGraphScopeCanvasSegmentGaussianEnergy(localX, localY, length, sigma, beamSize);
+      if (!(energy > 0.000001)) {
+        continue;
+      }
+      const light = Math.min(255, energy * intensity * 255);
+      if (!(light > 0)) {
+        continue;
+      }
+      const offset = ((y * width) + x) * 4;
+      data[offset] = Math.min(255, data[offset] + rgb[0] * light);
+      data[offset + 1] = Math.min(255, data[offset + 1] + rgb[1] * light);
+      data[offset + 2] = Math.min(255, data[offset + 2] + rgb[2] * light);
+      data[offset + 3] = Math.min(255, Math.max(data[offset + 3], light));
+      if (sampleStep > 1) {
+        for (let oy = 0; oy < sampleStep && y + oy <= maxY; oy += 1) {
+          for (let ox = 0; ox < sampleStep && x + ox <= maxX; ox += 1) {
+            if (ox === 0 && oy === 0) {
+              continue;
+            }
+            const fillOffset = (((y + oy) * width) + x + ox) * 4;
+            data[fillOffset] = Math.min(255, data[fillOffset] + rgb[0] * light);
+            data[fillOffset + 1] = Math.min(255, data[fillOffset + 1] + rgb[1] * light);
+            data[fillOffset + 2] = Math.min(255, data[fillOffset + 2] + rgb[2] * light);
+            data[fillOffset + 3] = Math.min(255, Math.max(data[fillOffset + 3], light));
+          }
+        }
+      }
+    }
+  }
+}
+
 function drawNodeGraphScopeCanvasBurnPath(context, points, radius, color, brightness, blur) {
   if (!context || !Array.isArray(points) || points.length < 2 || !(radius > 0) || !(brightness > 0)) {
     return;
   }
-  const rgb = nodeGraphScopeRgbFloatsToCanvasRgb(color);
-  const alpha = clampNodeSliderValue(Number(brightness) || 0, 0, 4);
-  const blurAmount = normalizeNodeGraphModuleScopeDotBlur(blur, 0);
-  context.save();
-  context.globalCompositeOperation = "lighter";
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = "high";
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.lineWidth = Math.max(1, radius * 2);
-  context.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(1, alpha)})`;
-  context.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(1, alpha * 0.9)})`;
-  context.shadowBlur = radius * (0.4 + blurAmount * 2.6);
-  context.beginPath();
-  drawNodeGraphScopeCanvasSmoothPath(context, points);
-  context.stroke();
-  context.restore();
+  const canvas = context.canvas;
+  if (!canvas?.width || !canvas?.height) {
+    return;
+  }
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
+  let previous = null;
+  for (const point of points) {
+    if (!point) {
+      previous = null;
+      continue;
+    }
+    if (previous) {
+      drawNodeGraphScopeCanvasGaussianSegment(image, canvas, previous, point, radius, color, brightness, blur);
+    }
+    previous = point;
+  }
+  context.putImageData(image, 0, 0);
 }
 
 function nodeGraphScope2dEffectiveBurnStroke(settings, dotSpace, intensity) {
@@ -8923,6 +9036,507 @@ function nodeGraphScope2dEffectiveBurnStroke(settings, dotSpace, intensity) {
 
 function nodeGraphScope2dStrokeSpace(canvas) {
   return Math.min(canvas?.width || 0, canvas?.height || 0);
+}
+
+function nodeGraphScope2dBurnCanvasForSlot(slot) {
+  const screenElement = slot?.scopeElement;
+  if (!screenElement) {
+    return null;
+  }
+  let canvas = screenElement.querySelector(":scope > .node-module-scope-local-fallback-canvas");
+  if (canvas && canvas.dataset.scope2dRenderer !== "webgl-retained-burn-1") {
+    canvas.remove();
+    canvas = null;
+  }
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    canvas.className = "node-module-scope-local-fallback-canvas";
+    canvas.dataset.scope2dRenderer = "webgl-retained-burn-1";
+    canvas.setAttribute("aria-hidden", "true");
+    screenElement.appendChild(canvas);
+  }
+  return canvas;
+}
+
+function syncNodeGraphScope2dBurnCanvas(canvas, screenElement, pixelRatio) {
+  if (!canvas || !screenElement) {
+    return { resized: false, synced: false };
+  }
+  const rect = screenElement.getBoundingClientRect();
+  const width = Math.max(1, Math.round(rect.width * pixelRatio));
+  const height = Math.max(1, Math.round(rect.height * pixelRatio));
+  const resized = canvas.width !== width || canvas.height !== height;
+  if (resized) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  return { resized, synced: true };
+}
+
+function createNodeGraphScope2dBurnTexture(gl, width, height) {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    Math.max(1, width),
+    Math.max(1, height),
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    null,
+  );
+  return texture;
+}
+
+function createNodeGraphScope2dBurnFramebuffer(gl, texture) {
+  const framebuffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  return framebuffer;
+}
+
+function createNodeGraphScope2dBurnSurface(gl, width, height) {
+  const texture = createNodeGraphScope2dBurnTexture(gl, width, height);
+  return {
+    framebuffer: createNodeGraphScope2dBurnFramebuffer(gl, texture),
+    texture,
+  };
+}
+
+function deleteNodeGraphScope2dBurnSurface(gl, surface) {
+  if (!gl || !surface) {
+    return;
+  }
+  if (surface.framebuffer) {
+    gl.deleteFramebuffer(surface.framebuffer);
+  }
+  if (surface.texture) {
+    gl.deleteTexture(surface.texture);
+  }
+}
+
+function createNodeGraphScope2dBurnRenderer(canvas) {
+  const gl = canvas.getContext("webgl", {
+    alpha: true,
+    antialias: false,
+    premultipliedAlpha: false,
+    preserveDrawingBuffer: false,
+  }) || canvas.getContext("experimental-webgl", {
+    alpha: true,
+    antialias: false,
+    premultipliedAlpha: false,
+    preserveDrawingBuffer: false,
+  });
+  if (!gl) {
+    return null;
+  }
+  const quadVertexSource = `
+    attribute vec2 aPosition;
+    varying vec2 vUv;
+    void main() {
+      vUv = aPosition * 0.5 + 0.5;
+      gl_Position = vec4(aPosition, 0.0, 1.0);
+    }
+  `;
+  const decayProgram = createNodeGraphModuleScopeProgram(gl, quadVertexSource, `
+    precision highp float;
+    uniform sampler2D uTexture;
+    uniform float uDecayFast;
+    uniform float uDecaySlow;
+    uniform float uFloor;
+    varying vec2 vUv;
+    void main() {
+      vec3 color = texture2D(uTexture, vUv).rgb;
+      float luma = max(max(color.r, color.g), color.b);
+      float brightWeight = smoothstep(0.08, 0.7, luma);
+      float decay = mix(uDecaySlow, uDecayFast, brightWeight);
+      color = color * decay;
+      color = max(color - vec3(uFloor), vec3(0.0));
+      color *= smoothstep(0.0, uFloor * 10.0, max(max(color.r, color.g), color.b));
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `);
+  const compositeProgram = createNodeGraphModuleScopeProgram(gl, quadVertexSource, `
+    precision highp float;
+    uniform sampler2D uTexture;
+    uniform float uExposure;
+    varying vec2 vUv;
+    void main() {
+      vec3 energy = texture2D(uTexture, vUv).rgb * uExposure;
+      vec3 mapped = vec3(1.0) - exp(-energy);
+      mapped = pow(mapped, vec3(0.72));
+      float alpha = clamp(max(max(mapped.r, mapped.g), mapped.b), 0.0, 1.0);
+      gl_FragColor = vec4(mapped, alpha);
+    }
+  `);
+  const beamProgram = createNodeGraphModuleScopeProgram(gl, `
+    attribute vec2 aStart;
+    attribute vec2 aEnd;
+    attribute float aCorner;
+    uniform vec2 uCanvasSize;
+    uniform float uRadius;
+    varying vec2 vStart;
+    varying vec2 vEnd;
+    varying vec2 vPosition;
+    void main() {
+      vec2 segment = aEnd - aStart;
+      float segmentLength = max(length(segment), 0.0001);
+      vec2 tangent = segment / segmentLength;
+      vec2 normal = vec2(-tangent.y, tangent.x);
+      float side = (aCorner == 0.0 || aCorner == 2.0) ? 1.0 : -1.0;
+      float endpointMix = aCorner < 2.0 ? 0.0 : 1.0;
+      float cap = aCorner < 2.0 ? -1.0 : 1.0;
+      float padding = max(uRadius * 3.45, 2.0);
+      vec2 endpoint = mix(aStart, aEnd, endpointMix);
+      vec2 position = endpoint + normal * side * padding + tangent * cap * padding;
+      vStart = aStart;
+      vEnd = aEnd;
+      vPosition = position;
+      vec2 clip = vec2(
+        (position.x / uCanvasSize.x) * 2.0 - 1.0,
+        1.0 - (position.y / uCanvasSize.y) * 2.0
+      );
+      gl_Position = vec4(clip, 0.0, 1.0);
+    }
+  `, `
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uBrightness;
+    uniform float uRadius;
+    varying vec2 vStart;
+    varying vec2 vEnd;
+    varying vec2 vPosition;
+    void main() {
+      vec2 segment = vEnd - vStart;
+      float segmentLengthSquared = max(dot(segment, segment), 0.0001);
+      float along = clamp(dot(vPosition - vStart, segment) / segmentLengthSquared, 0.0, 1.0);
+      vec2 closest = vStart + segment * along;
+      float distancePx = length(vPosition - closest);
+      float sigmaCore = max(uRadius * 0.32, 0.35);
+      float sigmaHalo = max(uRadius * 0.92, 0.8);
+      float core = exp(-(distancePx * distancePx) / (2.0 * sigmaCore * sigmaCore));
+      float halo = exp(-(distancePx * distancePx) / (2.0 * sigmaHalo * sigmaHalo));
+      float normalizedDistance = distancePx / max(uRadius, 0.0001);
+      if (normalizedDistance > 2.75) {
+        discard;
+      }
+      float edge = 1.0 - smoothstep(2.45, 2.75, normalizedDistance);
+      float profile = (core * 0.82 + halo * 0.14) * edge;
+      float energy = profile * uBrightness;
+      gl_FragColor = vec4(uColor * energy, energy);
+    }
+  `);
+  if (!decayProgram || !compositeProgram || !beamProgram) {
+    if (decayProgram) {
+      gl.deleteProgram(decayProgram);
+    }
+    if (compositeProgram) {
+      gl.deleteProgram(compositeProgram);
+    }
+    if (beamProgram) {
+      gl.deleteProgram(beamProgram);
+    }
+    return null;
+  }
+  const quadBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1, -1,
+    1, -1,
+    -1, 1,
+    -1, 1,
+    1, -1,
+    1, 1,
+  ]), gl.STATIC_DRAW);
+  const renderer = {
+    beamBuffer: gl.createBuffer(),
+    beamBrightnessLocation: gl.getUniformLocation(beamProgram, "uBrightness"),
+    beamCanvasSizeLocation: gl.getUniformLocation(beamProgram, "uCanvasSize"),
+    beamColorLocation: gl.getUniformLocation(beamProgram, "uColor"),
+    beamCornerLocation: gl.getAttribLocation(beamProgram, "aCorner"),
+    beamEndLocation: gl.getAttribLocation(beamProgram, "aEnd"),
+    beamProgram,
+    beamRadiusLocation: gl.getUniformLocation(beamProgram, "uRadius"),
+    beamStartLocation: gl.getAttribLocation(beamProgram, "aStart"),
+    canvas,
+    compositeExposureLocation: gl.getUniformLocation(compositeProgram, "uExposure"),
+    compositePositionLocation: gl.getAttribLocation(compositeProgram, "aPosition"),
+    compositeProgram,
+    compositeTextureLocation: gl.getUniformLocation(compositeProgram, "uTexture"),
+    decayFastLocation: gl.getUniformLocation(decayProgram, "uDecayFast"),
+    decayFloorLocation: gl.getUniformLocation(decayProgram, "uFloor"),
+    decayPositionLocation: gl.getAttribLocation(decayProgram, "aPosition"),
+    decayProgram,
+    decaySlowLocation: gl.getUniformLocation(decayProgram, "uDecaySlow"),
+    decayTextureLocation: gl.getUniformLocation(decayProgram, "uTexture"),
+    gl,
+    height: 0,
+    lastFrame: NaN,
+    lastPoint: null,
+    quadBuffer,
+    readSurface: null,
+    segmentScratch: new Float32Array(0),
+    width: 0,
+    writeSurface: null,
+  };
+  return renderer;
+}
+
+function nodeGraphScope2dBurnRendererForCanvas(canvas) {
+  if (!canvas) {
+    return null;
+  }
+  const cached = nodeGraphModuleScopeState.scope2dBurnRenderers.get(canvas);
+  if (cached?.canvas === canvas) {
+    return cached;
+  }
+  const renderer = createNodeGraphScope2dBurnRenderer(canvas);
+  if (renderer) {
+    nodeGraphModuleScopeState.scope2dBurnRenderers.set(canvas, renderer);
+  }
+  return renderer;
+}
+
+function resizeNodeGraphScope2dBurnRenderer(renderer, width, height) {
+  if (!renderer?.gl) {
+    return false;
+  }
+  const safeWidth = Math.max(1, Math.floor(Number(width) || 1));
+  const safeHeight = Math.max(1, Math.floor(Number(height) || 1));
+  if (renderer.width === safeWidth && renderer.height === safeHeight && renderer.readSurface && renderer.writeSurface) {
+    return false;
+  }
+  const gl = renderer.gl;
+  deleteNodeGraphScope2dBurnSurface(gl, renderer.readSurface);
+  deleteNodeGraphScope2dBurnSurface(gl, renderer.writeSurface);
+  renderer.readSurface = createNodeGraphScope2dBurnSurface(gl, safeWidth, safeHeight);
+  renderer.writeSurface = createNodeGraphScope2dBurnSurface(gl, safeWidth, safeHeight);
+  renderer.width = safeWidth;
+  renderer.height = safeHeight;
+  renderer.lastPoint = null;
+  renderer.lastFrame = NaN;
+  for (const surface of [renderer.readSurface, renderer.writeSurface]) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, surface.framebuffer);
+    gl.viewport(0, 0, safeWidth, safeHeight);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return true;
+}
+
+function bindNodeGraphScope2dQuad(renderer, program, positionLocation) {
+  const gl = renderer.gl;
+  gl.useProgram(program);
+  gl.bindBuffer(gl.ARRAY_BUFFER, renderer.quadBuffer);
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 8, 0);
+}
+
+function nodeGraphScope2dBurnDecayValues(settings) {
+  const burn = clampNodeSliderValue(Number(settings?.burn) || 0, 0, 1);
+  const decay = clampNodeSliderValue(Number(settings?.decay) || 0, 0, 1);
+  const tail = 1 - decay;
+  return {
+    decayFast: 0.62 + tail * 0.24,
+    decaySlow: 0.9 + tail * 0.09,
+    exposure: 1.35 + burn * 3.5,
+    floor: 0.0007 + decay * 0.0028,
+  };
+}
+
+function decayNodeGraphScope2dBurn(renderer, settings) {
+  const gl = renderer?.gl;
+  if (!gl || !renderer.readSurface || !renderer.writeSurface) {
+    return;
+  }
+  const values = nodeGraphScope2dBurnDecayValues(settings);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.writeSurface.framebuffer);
+  gl.viewport(0, 0, renderer.width, renderer.height);
+  gl.disable(gl.BLEND);
+  bindNodeGraphScope2dQuad(renderer, renderer.decayProgram, renderer.decayPositionLocation);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, renderer.readSurface.texture);
+  gl.uniform1i(renderer.decayTextureLocation, 0);
+  gl.uniform1f(renderer.decayFastLocation, values.decayFast);
+  gl.uniform1f(renderer.decaySlowLocation, values.decaySlow);
+  gl.uniform1f(renderer.decayFloorLocation, values.floor);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+function nodeGraphScope2dBurnLayers(settings, dotSpace) {
+  const layers = [];
+  if (settings?.dot2Enabled !== false) {
+    layers.push({
+      brightness: Math.max(0, Number(settings.dot2Brightness) || 0),
+      color: nodeGraphScopeHexColorToRgb(settings.dot2Color),
+      radius: dotSpace * clampNodeSliderValue(settings.dot2Size, 0, 1) * 0.5,
+    });
+  }
+  if (settings?.dot1Enabled !== false) {
+    layers.push({
+      brightness: Math.max(0, Number(settings.dot1Brightness) || 0),
+      color: nodeGraphScopeHexColorToRgb(settings.dot1Color),
+      radius: dotSpace * clampNodeSliderValue(settings.dot1Size, 0, 1) * 0.5,
+    });
+  }
+  return layers.filter((layer) => layer.radius > 0.25 && layer.brightness > 0);
+}
+
+function appendNodeGraphScope2dBurnSegment(vertices, from, to) {
+  if (!from || !to) {
+    return;
+  }
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  if (!Number.isFinite(distance) || distance < 0.01) {
+    return;
+  }
+  const corners = [0, 1, 2, 1, 3, 2];
+  for (const corner of corners) {
+    vertices.push(from.x, from.y, to.x, to.y, corner);
+  }
+}
+
+function buildNodeGraphScope2dBurnVertices(renderer, pathPoints, maxBridgeDistancePx) {
+  const points = Array.isArray(pathPoints) ? pathPoints : [];
+  const vertices = [];
+  const firstPoint = firstNodeGraphScope2dPathPoint(points);
+  if (
+    renderer?.lastPoint &&
+    firstPoint &&
+    nodeGraphScope2dPointDistance(renderer.lastPoint, firstPoint) <= maxBridgeDistancePx
+  ) {
+    appendNodeGraphScope2dBurnSegment(vertices, renderer.lastPoint, firstPoint);
+  }
+  let previousPoint = null;
+  for (const point of points) {
+    if (!point) {
+      previousPoint = null;
+      continue;
+    }
+    if (previousPoint) {
+      appendNodeGraphScope2dBurnSegment(vertices, previousPoint, point);
+    }
+    previousPoint = point;
+  }
+  return vertices;
+}
+
+function drawNodeGraphScope2dBurnBeamLayer(renderer, vertices, layer, burn) {
+  const gl = renderer?.gl;
+  const vertexCount = Math.floor((vertices?.length || 0) / 5);
+  if (!gl || vertexCount <= 0 || !layer || layer.radius <= 0 || layer.brightness <= 0) {
+    return;
+  }
+  if (renderer.segmentScratch.length < vertices.length) {
+    renderer.segmentScratch = new Float32Array(vertices.length);
+  }
+  renderer.segmentScratch.set(vertices);
+  gl.useProgram(renderer.beamProgram);
+  gl.bindBuffer(gl.ARRAY_BUFFER, renderer.beamBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, renderer.segmentScratch.subarray(0, vertices.length), gl.STREAM_DRAW);
+  const stride = 5 * 4;
+  gl.enableVertexAttribArray(renderer.beamStartLocation);
+  gl.vertexAttribPointer(renderer.beamStartLocation, 2, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(renderer.beamEndLocation);
+  gl.vertexAttribPointer(renderer.beamEndLocation, 2, gl.FLOAT, false, stride, 2 * 4);
+  gl.enableVertexAttribArray(renderer.beamCornerLocation);
+  gl.vertexAttribPointer(renderer.beamCornerLocation, 1, gl.FLOAT, false, stride, 4 * 4);
+  gl.uniform2f(renderer.beamCanvasSizeLocation, renderer.width, renderer.height);
+  gl.uniform1f(renderer.beamRadiusLocation, Math.max(0.5, layer.radius));
+  gl.uniform3f(renderer.beamColorLocation, layer.color[0], layer.color[1], layer.color[2]);
+  gl.uniform1f(renderer.beamBrightnessLocation, layer.brightness * (0.012 + burn * 0.052));
+  gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+  recordNodeGraphModuleScopeRenderMetrics(vertexCount, vertexCount);
+}
+
+function compositeNodeGraphScope2dBurn(renderer, settings, options = {}) {
+  const gl = renderer?.gl;
+  const surface = options.sourceSurface || renderer.writeSurface;
+  if (!gl || !surface) {
+    return;
+  }
+  const values = nodeGraphScope2dBurnDecayValues(settings);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, renderer.width, renderer.height);
+  gl.disable(gl.BLEND);
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  bindNodeGraphScope2dQuad(renderer, renderer.compositeProgram, renderer.compositePositionLocation);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, surface.texture);
+  gl.uniform1i(renderer.compositeTextureLocation, 0);
+  gl.uniform1f(renderer.compositeExposureLocation, values.exposure);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  if (options.swap === false) {
+    return;
+  }
+  const nextRead = renderer.writeSurface;
+  renderer.writeSurface = renderer.readSurface;
+  renderer.readSurface = nextRead;
+}
+
+function drawNodeGraphScope2dRetainedBurn(item, pixelRatio, square, buffer, settings) {
+  const canvas = nodeGraphScope2dBurnCanvasForSlot(item?.slot);
+  const screenElement = item?.screenElement || item?.slot?.scopeElement;
+  const sync = syncNodeGraphScope2dBurnCanvas(canvas, screenElement, pixelRatio);
+  if (!sync.synced) {
+    return;
+  }
+  const renderer = nodeGraphScope2dBurnRendererForCanvas(canvas);
+  if (!renderer) {
+    return;
+  }
+  resizeNodeGraphScope2dBurnRenderer(renderer, canvas.width, canvas.height);
+  const gl = renderer.gl;
+  if (nodeGraphModuleScopePaused()) {
+    compositeNodeGraphScope2dBurn(renderer, settings, {
+      sourceSurface: renderer.readSurface,
+      swap: false,
+    });
+    return;
+  }
+  decayNodeGraphScope2dBurn(renderer, settings);
+  const count = Math.min(buffer?.x?.length || 0, buffer?.y?.length || 0);
+  const drawStartIndex = nodeGraphScope2dDrawStartIndex(renderer, buffer, count);
+  const pathPoints = drawStartIndex < count
+    ? buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, drawStartIndex, { interpolate: false })
+    : [];
+  const dotSpace = nodeGraphScope2dStrokeSpace(canvas);
+  const maxLayerRadius = Math.max(
+    1,
+    ...nodeGraphScope2dBurnLayers(settings, dotSpace).map((layer) => layer.radius),
+  );
+  const maxBridgeDistance = Math.max(maxLayerRadius * 3.5, dotSpace * 0.42);
+  const vertices = buildNodeGraphScope2dBurnVertices(renderer, pathPoints, maxBridgeDistance);
+  const lastPathPoint = lastNodeGraphScope2dPathPoint(pathPoints);
+  if (lastPathPoint) {
+    renderer.lastPoint = lastPathPoint;
+  }
+  if (Number.isFinite(Number(buffer.nodeGraphScopeAbsoluteFrame))) {
+    renderer.lastFrame = Number(buffer.nodeGraphScopeAbsoluteFrame);
+    renderer._nodeGraphScope2dLastDrawnFrame = renderer.lastFrame;
+  }
+  if (vertices.length > 0) {
+    const burn = clampNodeSliderValue(Number(settings?.burn) || 0, 0, 1);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.writeSurface.framebuffer);
+    gl.viewport(0, 0, renderer.width, renderer.height);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    for (const layer of nodeGraphScope2dBurnLayers(settings, dotSpace)) {
+      drawNodeGraphScope2dBurnBeamLayer(renderer, vertices, layer, burn);
+    }
+    gl.disable(gl.BLEND);
+  }
+  compositeNodeGraphScope2dBurn(renderer, settings);
 }
 
 function drawNodeGraphOneDimensionalBurnTrail(item, pixelRatio, point, settings) {
@@ -9196,7 +9810,7 @@ function nodeGraphScope2dDrawStartIndex(canvas, buffer, count) {
   return Math.min(Math.max(0, Math.floor(Number(count) || 0) - 1), frameOffset);
 }
 
-function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, startIndex = 0) {
+function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, startIndex = 0, options = {}) {
   const count = Math.min(buffer?.x?.length || 0, buffer?.y?.length || 0);
   if (!count) {
     return [];
@@ -9204,6 +9818,7 @@ function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, start
   const pathPoints = [];
   const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx();
   const pathStartOffsetPx = nodeGraphScope2dPathStartOffsetPx();
+  const interpolate = options.interpolate !== false;
   let previousPoint = null;
   for (let index = Math.max(0, Math.floor(Number(startIndex) || 0)); index < count; index += 1) {
     if (!nodeGraphScope2dSampleIsFinite(buffer.x[index], buffer.y[index])) {
@@ -9224,7 +9839,12 @@ function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, start
       previousPoint = null;
       continue;
     }
-    previousPoint = appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx);
+    if (interpolate) {
+      previousPoint = appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx);
+    } else {
+      pathPoints.push(point);
+      previousPoint = point;
+    }
   }
   return pathPoints;
 }
@@ -9239,9 +9859,9 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   if (!context) {
     return;
   }
-  if (canvas.dataset.scope2dRenderer !== "interpolated-path-1") {
+  if (canvas.dataset.scope2dRenderer !== "gaussian-integral-path-1") {
     context.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.dataset.scope2dRenderer = "interpolated-path-1";
+    canvas.dataset.scope2dRenderer = "gaussian-integral-path-1";
     delete canvas._nodeGraphScope2dLastDrawnPoint;
     delete canvas._nodeGraphScope2dLastDrawnFrame;
   }
@@ -9274,7 +9894,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   if (drawStartIndex >= count) {
     return;
   }
-  const pathPoints = buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, drawStartIndex);
+  const pathPoints = buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, drawStartIndex, { interpolate: false });
   const pointCount = pathPoints.filter(Boolean).length;
   if (pointCount < 2) {
     return;
@@ -9283,12 +9903,16 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   const intensity = 0.012 + burn * 0.09;
   const stroke = nodeGraphScope2dEffectiveBurnStroke(settings, dotSpace, intensity);
   if (stroke) {
-    const maxBridgeDistance = Math.max(nodeGraphScope2dInterpolationSpacingPx() * 2, stroke.radius);
+    const maxBridgeDistance = Math.max(
+      nodeGraphScope2dInterpolationSpacingPx() * 2,
+      stroke.radius * 2,
+      dotSpace * 0.32,
+    );
     const bridgedPathPoints = bridgeNodeGraphScope2dAdjacentFramePath(
       canvas,
       pathPoints,
       maxBridgeDistance,
-      nodeGraphScope2dInterpolationSpacingPx(),
+      Math.max(1, stroke.radius),
     );
     const lastPathPoint = lastNodeGraphScope2dPathPoint(pathPoints);
     if (lastPathPoint) {
@@ -9318,7 +9942,7 @@ function drawNodeGraphScope2dItem(renderer, item, pixelRatio) {
   renderNodeGraphModuleScopeAnalyzer(item.slot, buffer);
   const square = nodeGraphModuleScopeCenteredSquareRect(rect);
   const settings = nodeGraphScope2dSettingsForNode(nodeGraphModuleScopeNodeForSlot(item.slot));
-  drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, settings);
+  drawNodeGraphScope2dRetainedBurn(item, pixelRatio, square, buffer, settings);
 }
 
 function drawNodeGraphModuleScopes() {

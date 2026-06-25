@@ -1,4 +1,4 @@
-{
+﻿{
   "format": {
     "kind": "soemdsp-sandbox-user-ui-settings",
     "version": 3
@@ -128,7 +128,7 @@
     "moduleOscilloscopesVisible": true,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
-    "globalSmoothingSeconds": 5,
+    "globalSmoothingSeconds": 0.1,
     "globalSmoothingManual": true,
     "moduleScopeDotCore1Enabled": true,
     "moduleScopeDotCore1Size": 1.94,
@@ -607,10 +607,10 @@
     "workspaceWindowStatesVersion": 1,
     "workspaceWindowStates": {
       "commandCenter": {
-        "open": false,
+        "open": true,
         "position": {
-          "left": 600,
-          "top": 221
+          "left": 582,
+          "top": 147
         }
       },
       "moduleActions": {
@@ -650,15 +650,15 @@
         "open": false
       },
       "traceDisplaySettings": {
-        "open": false,
-        "targetNode": "ellipsoid-2"
+        "open": true,
+        "targetNode": "ellipsoid-1"
       }
     },
-    "sharedInspectorActive": "moduleActions",
+    "sharedInspectorActive": "traceDisplaySettings",
     "sharedInspectorWindowState": {
       "position": {
-        "left": 484,
-        "top": 253
+        "left": 514,
+        "top": 272
       },
       "size": {
         "width": 186,
@@ -667,10 +667,10 @@
     },
     "workspaceView": {
       "pan": {
-        "x": 1311.68,
-        "y": -253.3325
+        "x": 57.1363525390625,
+        "y": -239.2280622209821
       },
-      "zoom": 6.623183592811418
+      "zoom": 1.2100308800730333
     },
     "moduleStoreDepartment": "",
     "savedPatchBankIndex": 0,
@@ -963,28 +963,28 @@
             }
           },
           "params": {
-            "frequency": 1,
-            "phase": 0.48,
-            "offsetX": 0.19,
-            "offsetY": 0,
-            "shapeX": 0,
+            "frequency": 470.59791070973,
+            "phase": 0.3900000000000001,
+            "offsetX": -0.95,
+            "offsetY": -0.6,
+            "shapeX": 0.43,
             "shapeY": 0,
-            "scaleX": 1,
-            "scaleY": 1,
+            "scaleX": 0.58,
+            "scaleY": 0.09,
             "level": 0.41
           },
           "type": "ellipsoid",
           "traceDisplaySettings": {
-            "burn": 0.82,
-            "decay": 0.12,
-            "dot1Brightness": 0.92,
+            "burn": 0,
+            "decay": 0,
+            "dot1Brightness": 0.2156,
             "dot1Color": "#75ebff",
             "dot1Enabled": true,
-            "dot1Size": 0.01,
-            "dot2Brightness": 0.18,
-            "dot2Color": "#184fff",
-            "dot2Enabled": false,
-            "dot2Size": 0.24,
+            "dot1Size": 0.2841,
+            "dot2Brightness": 0.2595,
+            "dot2Color": "#b9becf",
+            "dot2Enabled": true,
+            "dot2Size": 0.8195,
             "dot2LineThickness": 0.48,
             "lineThickness": 0.2
           },
@@ -1011,7 +1011,7 @@
       "view": {
         "heightGu": 24,
         "widthGu": 24,
-        "zoom": 6.623183592811418
+        "zoom": 1.2100308800730333
       },
       "visual": {
         "background": {
