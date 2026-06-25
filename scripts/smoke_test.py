@@ -12797,11 +12797,9 @@ def require_node_graph_mvp_contract() -> None:
         and "return null;" in scope2d_buffer_source
         and "function nodeGraphScope2dInterpolationSpacingPx()" in scope2d_helper_source
         and "return 0.5;" in scope2d_helper_source
-        and "function nodeGraphScope2dMaxBridgeDistancePx(square, pixelRatio)" in scope2d_helper_source
-        and "const maxBridgeDistancePx = nodeGraphScope2dMaxBridgeDistancePx(square, pixelRatio)" in scope2d_helper_source
-        and "let skippedCenterSamples = 0" in scope2d_helper_source
-        and "skippedCenterSamples += 1;" in scope2d_helper_source
-        and "if (Math.sqrt(dx * dx + dy * dy) > maxBridgeDistancePx)" in scope2d_helper_source
+        and "function nodeGraphScope2dMaxBridgeDistancePx" not in scope2d_helper_source
+        and "nodeGraphScope2dMaxBridgeDistancePx(square, pixelRatio)" not in scope2d_helper_source
+        and "skippedCenterSamples" not in scope2d_helper_source
         and "if (distance < safeSpacing)" in scope2d_helper_source
         and "return previousPoint;" in scope2d_helper_source
         and "function nodeGraphScope2dPointBudget()" not in scope2d_helper_source
@@ -12811,17 +12809,14 @@ def require_node_graph_mvp_contract() -> None:
         and "if (pointCount < 2) {\n    return;\n  }\n  nodeGraphOneDimensionalBurnFadeTrail(context, canvas, settings);" in scope2d_helper_source
         and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      pathPoints," in scope2d_helper_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
-        and "function nodeGraphScope2dCenterRunMask(square, buffer, count, minimumRunLength = 4)" in scope2d_helper_source
-        and "runEnd - runStart >= minimumRunLength" in scope2d_helper_source
-        and "const centerRunMask = nodeGraphScope2dCenterRunMask(square, buffer, count)" in scope2d_helper_source
-        and "if (centerRunMask[index])" in scope2d_helper_source
+        and "function nodeGraphScope2dCenterRunMask" not in scope2d_helper_source
+        and "centerRunMask" not in scope2d_helper_source
         and "pathPoints.push(null);" in scope2d_helper_source
         and "function nodeGraphScope2dCanvasSettingsSignature(settings)" in scope2d_helper_source
         and "canvas.dataset.scope2dSettingsSignature !== settingsSignature" in scope2d_helper_source
         and "scrubNodeGraphScope2dCanvasCenter" not in scope2d_helper_source
         and "scheduleNodeGraphModuleScopeDraw();\n    return;" in scope2d_helper_source
         and "if (!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])) {" in scope2d_helper_source
-        and "skippedCenterSamples = 0;" in scope2d_helper_source
         and "previousPoint = null;" in scope2d_helper_source
         and "let subpathOpen = false;" in node_graph_source
         and "appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx)" in scope2d_helper_source
