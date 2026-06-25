@@ -8908,6 +8908,9 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
       previousPoint = null;
       return;
     }
+    if (!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])) {
+      return;
+    }
     const point = nodeGraphScope2dPointToCanvas(
       item,
       pixelRatio,
