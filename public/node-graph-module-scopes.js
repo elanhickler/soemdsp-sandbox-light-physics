@@ -8914,6 +8914,38 @@ function nodeGraphScope2dCenterRunMask(square, buffer, count, minimumRunLength =
   return mask;
 }
 
+function nodeGraphScope2dCanvasSettingsSignature(settings) {
+  const safeSettings = normalizeNodeGraphScope2dSettings(settings);
+  return [
+    safeSettings.burn,
+    safeSettings.decay,
+    safeSettings.dot1Enabled ? 1 : 0,
+    safeSettings.dot1Size,
+    safeSettings.dot1Brightness,
+    safeSettings.dot1Color,
+    safeSettings.lineThickness,
+    safeSettings.dot2Enabled ? 1 : 0,
+    safeSettings.dot2Size,
+    safeSettings.dot2Brightness,
+    safeSettings.dot2Color,
+    safeSettings.dot2LineThickness,
+  ].join("|");
+}
+
+function scrubNodeGraphScope2dCanvasCenter(context, canvas) {
+  if (!context || !canvas?.width || !canvas?.height) {
+    return;
+  }
+  const radius = Math.max(8, Math.min(canvas.width, canvas.height) * 0.08);
+  context.save();
+  context.globalCompositeOperation = "destination-out";
+  context.fillStyle = "rgba(0, 0, 0, 1)";
+  context.beginPath();
+  context.arc(canvas.width * 0.5, canvas.height * 0.5, radius, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
 function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, settings) {
   const canvas = nodeGraphModuleScopeLocalFallbackCanvas(item?.slot);
   const screenElement = item?.screenElement || item?.slot?.scopeElement;
@@ -8928,6 +8960,11 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
     context.clearRect(0, 0, canvas.width, canvas.height);
     canvas.dataset.scope2dRenderer = "interpolated-path-1";
   }
+  const settingsSignature = nodeGraphScope2dCanvasSettingsSignature(settings);
+  if (canvas.dataset.scope2dSettingsSignature && canvas.dataset.scope2dSettingsSignature !== settingsSignature) {
+    scrubNodeGraphScope2dCanvasCenter(context, canvas);
+  }
+  canvas.dataset.scope2dSettingsSignature = settingsSignature;
   const burn = clampNodeSliderValue(Number(settings?.burn) || 0, 0, 1);
   const count = Math.min(buffer.x.length, buffer.y.length);
   if (!count) {
