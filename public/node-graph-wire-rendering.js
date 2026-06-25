@@ -4,19 +4,19 @@ function nodeGraphTraceModuleRect(nodeId) {
   if (!surface || !node) {
     return null;
   }
-  const surfaceRect = surface.getBoundingClientRect();
   const nodeRect = node.getBoundingClientRect();
-  const zoom = nodeGraphZoom();
   const titleRowRect = node.querySelector(".node-header-title-row")?.getBoundingClientRect();
+  const topLeft = nodeGraphClientToZoomSurfacePoint(nodeRect.left, nodeRect.top, surface);
+  const bottomRight = nodeGraphClientToZoomSurfacePoint(nodeRect.right, nodeRect.bottom, surface);
   const titleBottom = titleRowRect
-    ? (titleRowRect.bottom - surfaceRect.top) / zoom
-    : (nodeRect.top - surfaceRect.top) / zoom;
+    ? nodeGraphClientToZoomSurfacePoint(titleRowRect.left, titleRowRect.bottom, surface).y
+    : topLeft.y;
   return {
-    bottom: (nodeRect.bottom - surfaceRect.top) / zoom,
-    left: (nodeRect.left - surfaceRect.left) / zoom,
-    right: (nodeRect.right - surfaceRect.left) / zoom,
+    bottom: bottomRight.y,
+    left: topLeft.x,
+    right: bottomRight.x,
     titleBottom,
-    top: (nodeRect.top - surfaceRect.top) / zoom,
+    top: topLeft.y,
   };
 }
 

@@ -4098,7 +4098,7 @@ def require_node_graph_mvp_contract() -> None:
             "\n".join([graph_contract_sources["index"], graph_contract_sources["state"], graph_contract_sources["runtime"]]),
             [
                 "ellipsoid-xy-1",
-                "typed-display-settings-1",
+                "floating-arrow-editable-1",
                 "node-graph-graph-utils.js",
                 "graphNodeDragging: null",
                 "graphClipboard: null",
@@ -4175,7 +4175,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=polyblep-runtime-contract-1'],
+            ['node-live-audio-worklet.js?v=trace-zoom-resize-1'],
         ),
     ]:
         for snippet in snippets:
@@ -6234,7 +6234,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneOpenUiSettings",
         "nodeSceneOpenPostProcessing",
         "scene-context-window-button",
-        "typed-display-settings-1",
+        "floating-arrow-editable-1",
         "share-link-1",
         "hidden-io-proxy-1",
         "control-surface-visibility-1",
@@ -6366,7 +6366,6 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneScopeTime",
         "nodeSceneScopeSync",
         "nodeSceneScopeOscillatorTraceMode",
-        "nodeSceneScopeOutputTraceMode",
         "nodeSceneBlinkLightControls",
         "nodeSceneBlinkLightShape",
         'data-scope-input="blinkLightShape"',
@@ -6382,7 +6381,6 @@ def require_node_graph_mvp_contract() -> None:
         'value="60"',
         'data-scope-input="cycles"',
         'data-scope-control="oscillatorTraceMode"',
-        'data-scope-control="outputTraceMode"',
         "freq reset",
         "nodeSceneTextBoxTextSizeControls",
         "nodeSceneTextBoxTextSizeDecrease",
@@ -7193,7 +7191,7 @@ def require_node_graph_mvp_contract() -> None:
                 "audioPlayer: counts.audioPlayer || 0",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=polyblep-runtime-contract-1',
+                'node-live-audio-worklet.js?v=trace-zoom-resize-1',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
@@ -7748,6 +7746,10 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphTraceDisplaySettingsDefaults",
         "normalizeNodeGraphTraceDisplaySettings",
         "nodeGraphTraceDisplaySettingsForSlot",
+        "function nodeGraphModuleDisplayTypeHasLocalSettings(displayType)",
+        "function nodeGraphNodeHasLocalDisplaySettings(node)",
+        "function nodeGraphNodeCanOpenDisplaySettings(node)",
+        "nodeGraphPatchNodeHasHideableOscilloscope(node)",
         "function nodeGraphTraceDisplayVisibleSamples",
         "function nodeGraphTraceDisplayBufferView",
         "nodeTraceDisplaySettingsPopover",
@@ -7756,8 +7758,12 @@ def require_node_graph_mvp_contract() -> None:
         "nodeTraceDisplayBrightness",
         "nodeTraceDisplayColor",
         "openNodeGraphTraceDisplaySettings",
+        "function nodeGraphTraceDisplaySettingsOpenPosition(popover, sharedInspectorState = {}, replacementRect = null, event = {})",
+        "nodeGraphFloatingWindowPosition(popover, x, y",
+        "nodeGraphNodeLabels?.[node.type] || \"Display\"",
+        "if (!nodeGraphNodeCanOpenDisplaySettings(node))",
         "traceDisplaySettings: normalizeNodeGraphTraceDisplaySettings(node.traceDisplaySettings)",
-        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace") {\n    buffer = prepareNodeGraphTraceDisplayBuffer(\n      capturedBuffer || nodeGraphModuleScopeOfflineInputDisplayBuffer(slot),\n      nodeGraphTraceDisplaySettingsForSlot(slot),\n    );',
+        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace") {\n    buffer = prepareNodeGraphTraceDisplayBuffer(\n      capturedBuffer,\n      nodeGraphTraceDisplaySettingsForSlot(slot),\n    );',
         '"traceDisplaySettings"',
         'traceDisplaySettings: "nodeTraceDisplaySettingsPopover"',
         "const nodeGraphSharedInspectorWindowKeys = Object.freeze([",
@@ -8745,9 +8751,11 @@ def require_node_graph_mvp_contract() -> None:
         "adjustNodeGraphModuleWidthFromContext",
         "adjustNodeGraphTextBoxTextSizeFromContext",
         'nodeGraphApplyTooltip(actionButton, "module.actionsTitle", {}, { title: false })',
+        'actionButton.textContent = "\\u2699\\uFE0F"',
         'nodeGraphApplyTooltip(displayButton, "module.displaySettings", {}, { title: false })',
-        'node.querySelector(".node-display-settings-button")?.addEventListener("click", toggleNodeModuleDisplayVisibility)',
+        'node.querySelector(".node-display-settings-button")?.addEventListener("click", openNodeModuleDisplaySettings)',
         'node.querySelector(".node-display-settings-button")?.addEventListener("contextmenu", openNodeModuleDisplaySettings)',
+        "if (event?.altKey) {\n    toggleNodeModuleDisplayVisibility(event);",
         "function toggleNodeModuleDisplayVisibility(event)",
         "--node-grid-width-units",
         "--node-grid-height-units",
@@ -8999,18 +9007,16 @@ def require_node_graph_mvp_contract() -> None:
         "function closeNodeSceneContextMenu(options = {})",
         "const nodeSceneContextWindowDefaultSize = Object.freeze",
         "const nodeModuleActionsWindowDefaultSize = Object.freeze",
+        "width: 185",
+        "height: 620",
         "minWidth: 24",
         "maxWidth: 360",
-        "maxHeight: 520",
+        "minHeight: 120",
+        "maxHeight: 820",
         "function normalizeNodeSceneContextWindowSize(size = {})",
         "function normalizeNodeModuleActionsWindowSize(size = {})",
-        "function nodeModuleActionsWindowEmptyStateHeight(menu, headingHeight)",
-        'getPropertyValue("--node-floating-window-button-height")',
-        "return Math.ceil(headingHeight + (buttonHeight * 3));",
-        "function nodeModuleActionsWindowContentHeightLimit(menu = document.getElementById(\"nodeModuleActionsWindow\"))",
-        "const emptyStateHeight = nodeModuleActionsWindowEmptyStateHeight(menu, headingHeight)",
         "function syncNodeModuleActionsWindowHeightLimit()",
-        "menu.style.setProperty(\"--node-module-actions-content-height\"",
+        "Number(normalized.height) || nodeModuleActionsWindowDefaultSize.height",
         "function applyNodeSceneContextWindowSize(size = nodeGraphMvp.sceneContextWindowSize)",
         "function applyNodeModuleActionsWindowSize(size = nodeGraphMvp.moduleActionWindowSize)",
         "syncNodeModuleActionsWindowHeightLimit();",
@@ -10774,7 +10780,6 @@ def require_node_graph_mvp_contract() -> None:
         "setNodeGraphViewMode(\"modular\")",
         "function renderNodeGraphGridToggle()",
         "function renderNodeGraphModuleVisibilityToggles()",
-        "function normalizeNodeGraphModuleScopeBurn(value)",
         "function normalizeNodeGraphModuleScopeLineThickness(value)",
         "function normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(value)",
         "function normalizeNodeGraphModuleScopeDotCoreColor(value, fallback = \"#ffffff\")",
@@ -10789,10 +10794,6 @@ def require_node_graph_mvp_contract() -> None:
         "core2Color,\n      core2Size",
         "context.putImageData(imageData, 0, 0)",
         "function renderNodeGraphModuleScopeBrightnessControl()",
-        "function setNodeGraphModuleScopeBurn(value)",
-        "function handleNodeGraphModuleScopeBurnInput(event)",
-        "moduleScopeBurn: 0",
-        "normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0)",
         "function setNodeGraphModuleScopeLineThickness(value)",
         "function setNodeGraphModuleScopeDiscontinuitySkipSamples(value)",
         "function setNodeGraphModuleScopeDotCoreEnabled(dotName, enabled)",
@@ -10867,8 +10868,6 @@ def require_node_graph_mvp_contract() -> None:
         'addEventListener("click", (event) => zoomNodeGraphBy(1, event))',
         'document.getElementById("nodeModuleButtonsToggleButton").addEventListener("click", toggleNodeGraphModuleButtonsVisibility)',
         'document.getElementById("nodeOscilloscopeToggleButton").addEventListener("click", toggleNodeGraphOscilloscopeVisibility)',
-        'getElementById("nodeMasterScopeBurn")',
-        'addEventListener("input", handleNodeGraphModuleScopeBurnInput)',
         'getElementById("nodeMasterScopeFps")',
         'addEventListener("input", handleNodeGraphModuleScopeFramesPerSecondInput)',
         'getElementById("nodeMasterScopeDotCore1Size")',
@@ -10978,7 +10977,6 @@ def require_node_graph_mvp_contract() -> None:
         "element.style.setProperty(\"--node-grid-height-units\", String(heightGu))",
         "syncNodeGraphVisibleModuleGridHeights();",
         "moduleSlidersVisible",
-        "moduleScopeBurn",
         "moduleScopeFramesPerSecond",
         "moduleScopeLineThickness",
         "sceneContextWindowSize",
@@ -11000,6 +10998,9 @@ def require_node_graph_mvp_contract() -> None:
         "workingPatch",
         "currentSavedPatchFilename",
         "patchDirtyState",
+        "function readNodeUiDevSettingsFromControls(options = {})",
+        "const includeWorkingPatch = options.includeWorkingPatch !== false",
+        "serializeNodeUiDevSettings({ includeWorkingPatch: false })",
         "nodeGraphMvp.workingPatch = normalized.view.workingPatch",
         "nodeGraphMvp.currentSavedPatchFilename = String(normalized.view.currentSavedPatchFilename || \"\")",
         "nodeGraphMvp.patchDirtyState = [\"saved\", \"edited\", \"untouched\"].includes(normalized.view.patchDirtyState)",
@@ -11036,7 +11037,6 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGlobalScopeMenu",
         "nodeGlobalScopeDragHandle",
         "nodeGlobalScopeCloseMenu",
-        "nodeMasterScopeBurn",
         "nodeMasterScopeLineThickness",
         "nodeMasterScopeDiscontinuitySkipSamples",
         "nodeMasterScopeDotCore1Enabled",
@@ -11074,7 +11074,7 @@ def require_node_graph_mvp_contract() -> None:
         "function createNodeUserUiSettingsSliderLayoutControl()",
         "nodeUserSliderLayoutCycleButton",
         "ui settings view must be an object",
-        "function serializeNodeUiDevSettings()",
+        "function serializeNodeUiDevSettings(options = {})",
         "function loadNodeUiDevSettingsFromScript(text)",
         "function applyNodeUiDevSettings(settings)",
         "function normalizeNodeGraphWorkspaceViewState(view = {})",
@@ -11721,12 +11721,13 @@ def require_node_graph_mvp_contract() -> None:
         "scopeElement.addEventListener(\"contextmenu\", beginNodeGraphModuleScopeWindowNumberEdit)",
         "function beginNodeGraphModuleScopeWindowNumberEdit(event)",
         "openNodeGraphTraceDisplaySettings(nodeId, event)",
-        'nodeGraphModuleDisplayTypeForType(node.type) === "trace"',
-        "return openNodeGraphGlobalTraceSettings(event)",
+        "function nodeGraphModuleDisplayTypeHasLocalSettings(displayType)",
+        "function nodeGraphNodeHasLocalDisplaySettings(node)",
+        "function nodeGraphNodeCanOpenDisplaySettings(node)",
+        "if (!nodeGraphNodeCanOpenDisplaySettings(node))",
         "input.addEventListener(\"pointerdown\", beginNodeGraphScopeNumberDrag)",
         'getElementById("nodeSceneScopeSync")',
         'getElementById("nodeSceneScopeOscillatorTraceMode")',
-        'getElementById("nodeSceneScopeOutputTraceMode")',
         'addEventListener("click", handleNodeGraphSceneScopeControlClick)',
         'getElementById("nodeSceneBlinkLightShape")',
         'addEventListener("change", handleNodeGraphSceneScopeOptionInput)',
@@ -12078,9 +12079,8 @@ def require_node_graph_mvp_contract() -> None:
         "varying vec2 vPosition",
         "float normalizedDistance = length(vPosition - closest) / radius",
         "float beamHalfWidth = max(uSize * 1.85, 1.5)",
-        "float halo = exp(-distanceSquared * 0.52)",
-        "float gaussian = exp(-distanceSquared * 3.1)",
-        "float core = exp(-distanceSquared * 18.0)",
+        "float edgeWidth = mix(0.01, 1.0, blur)",
+        "float alpha = clamp((1.0 - smoothstep(1.0 - edgeWidth, 1.0 + edgeWidth, normalizedDistance)) * uIntensity, 0.0, 1.0)",
         "gl_FragColor = vec4(uColor * alpha, alpha)",
         "traceImageTexture: {",
         "function nodeGraphModuleScopePixelPoints(points, canvas)",
@@ -12183,8 +12183,6 @@ def require_node_graph_mvp_contract() -> None:
         "Math.max(2, Math.min(visualPointLimit, Math.ceil(visibleSamples)))",
         "buffer?.nodeGraphScopeHoldPoint === true",
         "buffer.nodeGraphScopeHoldPoint = true",
-        "buffer.nodeGraphScopeHoldPointX = 1",
-        "buffer.nodeGraphScopeClassicOutputDecay = true",
         "pointIndex / Math.max(1, pointCount - 1)",
         "view.start + progress * Math.max(0, visibleSamples - 1)",
         "function nodeGraphModuleScopeScreenItems(workspace, canvas, pixelRatio)",
@@ -12217,19 +12215,10 @@ def require_node_graph_mvp_contract() -> None:
         "sampleHeight: nodeGraphModuleScopeUnzoomedLength(drawRect.height, zoomScale)",
         "function captureNodeGraphRenderedScopeFrame(",
         "function finishNodeGraphRenderedScopeCapture(capture)",
-        "function nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer = null)",
-        "nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer)",
-        "capturedBuffer.nodeGraphScopePeriodSamples = sourceFrequency > 0 ? sampleRate / sourceFrequency : 0",
-        "capturedBuffer.nodeGraphScopeSourceFrequency = sourceFrequency",
-        "capturedBuffer.nodeGraphScopeSyncBuffer = capturedBuffer",
         'oscillatorTraceMode: "frequencyReset"',
-        'outputTraceMode: "scroll"',
         'source.oscillatorTraceMode === "window" ? "window" : "frequencyReset"',
-        'source.outputTraceMode === "decay" ? "decay" : "scroll"',
         'button.dataset.scopeControl === "oscillatorTraceMode"',
         'oscillatorTraceMode: setting.oscillatorTraceMode === "window" ? "frequencyReset" : "window"',
-        'button.dataset.scopeControl === "outputTraceMode"',
-        'outputTraceMode: setting.outputTraceMode === "decay" ? "scroll" : "decay"',
         "const requestedCycles = nodeGraphModuleScopeEffectiveCycles(settings) || nodeGraphModuleScopeDefaultSettings.cycles",
         "const visibleCycles = requestedCycles",
         "const sweepCycles = visibleCycles",
@@ -12261,7 +12250,8 @@ def require_node_graph_mvp_contract() -> None:
         "if (nodeGraphModuleScopeTracesOff())",
         "nodeGraphModuleScopeState.scopeTracesOffActive",
         "clearNodeGraphModuleScopeCanvas();",
-        "if (nodeGraphModuleScopePaused())",
+        "const scopePaused = nodeGraphModuleScopePaused();",
+        "if (scopePaused && !nodeGraphModuleScopeHasModelDisplay())",
         "drawFrameRequestedAt",
         "drawFrameWatchdog",
         "drawFrameHeartbeat",
@@ -12598,6 +12588,16 @@ def require_node_graph_mvp_contract() -> None:
     require('displayType: "value"' in module_definitions_source, "1D Value oscilloscope should declare value display type")
     require('displayType: "lineBurn"' in module_definitions_source, "1D Burn oscilloscope should declare lineBurn display type")
     require('displayType: "scope2d"' in module_definitions_source, "2D Burn should declare scope2d display type")
+    trace_display_definition = module_definitions_source[
+        module_definitions_source.index("traceDisplay: {"):
+        module_definitions_source.index("dotOscilloscope: {")
+    ]
+    require(
+        "parameters: []" in trace_display_definition
+        and 'label: "Gain"' not in trace_display_definition
+        and 'label: "Offset"' not in trace_display_definition,
+        "1D Trace should expose raw captured input without Gain or Offset sliders",
+    )
     require(
         'canvas: {\n    bufferedInputs: ["a_buffer"],\n    displayHeightGu: 5,' in module_definitions_source
         and 'valueOscilloscope: {\n    bufferedInputs: ["In"],\n    displayHeightGu: 5,' in module_definitions_source
@@ -12608,25 +12608,151 @@ def require_node_graph_mvp_contract() -> None:
     require(
         "function nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer = null)" in node_graph_source
         and 'slot?.type === "dotOscilloscope"' in node_graph_source
-        and "nodeGraphScopeLightDisplay: true" in node_graph_source
         and "capturedBuffer.nodeGraphScopeLightTarget =" in node_graph_source
-        and "nodeGraphModuleScopeCapturedFrameLightTarget(capturedBuffer) ??" in node_graph_source
+        and "nodeGraphModuleScopeCapturedFramePositiveLightTarget(capturedBuffer) ??" in node_graph_source
+        and "nodeGraphModuleScopeCapturedCurrentPositiveLightTarget(capturedBuffer) ??" in node_graph_source
+        and "capturedBuffer.nodeGraphScopeRecentSampleCount" in node_graph_source
+        and "buffer.nodeGraphScopeRecentSampleCount = count;" in node_graph_source
         and "return capturedBuffer;" in node_graph_source,
-        "0D Burn should keep the captured signal buffer and annotate it with frame brightness",
+        "0D Burn should keep the captured signal buffer and annotate it with positive newest-frame brightness",
+    )
+    dot_buffer_start = node_graph_source.index("function nodeGraphModuleScopeDotOscilloscopeLightBuffer")
+    dot_buffer_end = node_graph_source.index("function nodeGraphModuleScopeContinuousScanProgress", dot_buffer_start)
+    dot_buffer_source = node_graph_source[dot_buffer_start:dot_buffer_end]
+    require(
+        "nodeGraphScopeLightDisplay" not in dot_buffer_source
+        and "nodeGraphScopeLightShape" not in dot_buffer_source
+        and "nodeGraphScopeLightReleaseSeconds" not in dot_buffer_source,
+        "0D Burn should not route through the generic light-display renderer",
     )
     dot_draw_start = node_graph_source.index("function drawNodeGraphDotOscilloscopeItem")
     dot_draw_end = node_graph_source.index("function drawNodeGraphValueOscilloscopeItem", dot_draw_start)
     dot_draw_source = node_graph_source[dot_draw_start:dot_draw_end]
     require(
-        "nodeGraphModuleScopeCapturedFrameLightTarget(buffer)" in dot_draw_source
+        "Number(buffer.nodeGraphScopeLightTarget) || 0" in dot_draw_source
         and dot_draw_source.count("drawNodeGraphOscilloscopeBeam(") >= 2
+        and "dotHalfLength" in dot_draw_source
+        and "clampNodeSliderValue(settings.dot1Size, 0, 1)" in dot_draw_source
+        and "clampNodeSliderValue(settings.dot2Size, 0, 1)" in dot_draw_source
+        and "blur: settings.lineThickness" in dot_draw_source
+        and "blur: settings.dot2LineThickness" in dot_draw_source
+        and "nodeGraphZeroDBurnSettingsForNode(nodeGraphModuleScopeNodeForSlot(item.slot))" in dot_draw_source
+        and "nodeGraphTraceDisplaySettingsForNode" not in dot_draw_source
         and "outerThickness" in dot_draw_source
         and "innerThickness" in dot_draw_source,
-        "0D Burn should draw its own visible two-pass dot mark",
+        "0D Burn should draw its own frame-brightness dot mark with normalized size and thick controls",
     )
-    require("function drawNodeGraphValueOscilloscopeItem" in node_graph_source, "Value oscilloscope should have a renderer")
+    require(
+        'uniform float uBlur;' in node_graph_source
+        and 'float edgeWidth = mix(0.01, 1.0, blur);' in node_graph_source
+        and 'float alpha = clamp((1.0 - smoothstep(1.0 - edgeWidth, 1.0 + edgeWidth, normalizedDistance)) * uIntensity, 0.0, 1.0);' in node_graph_source
+        and "float gaussianFalloff" not in node_graph_source
+        and "float solidAlpha" not in node_graph_source
+        and "float softAlpha" not in node_graph_source
+        and "mix(solidAlpha" not in node_graph_source
+        and "beamBlurLocation" in node_graph_source
+        and "gl.uniform1f(renderer.beamBlurLocation, clampNodeSliderValue(Number(options.blur) || 0, 0, 1));" in node_graph_source,
+        "0D Burn blur should be a direct shader control from solid disc to soft dot",
+    )
+    value_draw_start = node_graph_source.index("function drawNodeGraphValueOscilloscopeItem")
+    value_draw_end = node_graph_source.index("function nodeGraphOneDimensionalBurnSample", value_draw_start)
+    value_draw_source = node_graph_source[value_draw_start:value_draw_end]
+    require(
+        "function drawNodeGraphValueOscilloscopeItem" in node_graph_source
+        and "nodeGraphValueOscilloscopeSettingsDefaults" in node_graph_source
+        and "function normalizeNodeGraphValueOscilloscopeSettings(settings = {})" in node_graph_source
+        and "lineLength: 0.88" in node_graph_source
+        and "const lineLength = clampNodeSliderValue(settings.lineLength, 0, 1)" in value_draw_source
+        and "const displayWidth = Math.max(1, Number(rect.width) || 1)" in value_draw_source
+        and "const halfLine = displayWidth * 0.5 * lineLength" in value_draw_source
+        and "nodeGraphTraceDisplaySettingsForNode(node)" in value_draw_source
+        and "drawNodeGraphOscilloscopeBeam(renderer, item, pixelRatio, x1, y, x2, y, options)" in value_draw_source
+        and "settings.capEnabled !== false && capLength > 0 && capThickness > 0" in value_draw_source
+        and "capLength = square.height * clampNodeSliderValue(settings.capLength, 0, 1) * 0.5" in value_draw_source
+        and "capThickness = Math.max(0, lineBase * clampNodeSliderValue(settings.capSize, 0, 1))" in value_draw_source
+        and "drawNodeGraphOscilloscopeBeam(renderer, item, pixelRatio, x1, y - capLength, x1, y + capLength, options)" in value_draw_source
+        and "drawNodeGraphOscilloscopeBeam(renderer, item, pixelRatio, x2, y - capLength, x2, y + capLength, options)" in value_draw_source
+        and "settings.dot1Enabled" in value_draw_source
+        and "settings.dot2Enabled" in value_draw_source,
+        "1D Value should use local trace-style settings and draw a dedicated line with separately controlled start/end caps",
+    )
     require("function drawNodeGraphLineBurnOscilloscopeItem" in node_graph_source, "LineBurn oscilloscope should have a renderer")
+    line_burn_start = node_graph_source.index("function drawNodeGraphLineBurnOscilloscopeItem")
+    line_burn_end = node_graph_source.index("function drawNodeGraphScope2dItem", line_burn_start)
+    line_burn_source = node_graph_source[line_burn_start:line_burn_end]
+    require(
+        "function nodeGraphOneDimensionalBurnSample(buffer, settings)" in node_graph_source
+        and "function nodeGraphOneDimensionalBurnSampleToY(sample, rect)" in node_graph_source
+        and "function nodeGraphOneDimensionalBurnSweepX(settings, rect" in node_graph_source
+        and "function nodeGraphOneDimensionalBurnScrollX(rect)" in node_graph_source
+        and "function nodeGraphOneDimensionalBurnFadeTrail(context, canvas, settings)" in node_graph_source
+        and "function drawNodeGraphOneDimensionalBurnTrail(item, pixelRatio, point, settings)" in node_graph_source
+        and "function drawNodeGraphOneDimensionalBurnDot(renderer, item, pixelRatio, point, settings)" in node_graph_source
+        and "nodeGraphOneDimensionalBurnSample(buffer, settings)" in line_burn_source
+        and "normalizeNodeGraphLineBurnMode(settings.lineBurnMode)" in line_burn_source
+        and 'mode === "scroll"' in line_burn_source
+        and "nodeGraphOneDimensionalBurnScrollX(rect)" in line_burn_source
+        and "nodeGraphOneDimensionalBurnSweepX(settings, rect)" in line_burn_source
+        and "drawNodeGraphOneDimensionalBurnTrail(item, pixelRatio, { x, y }, settings)" in line_burn_source
+        and "drawNodeGraphOneDimensionalBurnDot(renderer, item, pixelRatio, { x, y }, settings)" in line_burn_source
+        and "clearNodeGraphModuleScopeLocalFallback(item.slot)" not in line_burn_source
+        and "drawNodeGraphModuleScopeBufferWebGl" not in line_burn_source,
+        "1D Burn should use a local sweep/scroll burn trail instead of the full trace-line renderer",
+    )
+    require(
+        "const nodeGraphLineBurnSettingsDefaults = Object.freeze" in node_graph_source
+        and "burn: 0.82" in node_graph_source
+        and "decay: 0.12" in node_graph_source
+        and 'lineBurnMode: "sweep"' in node_graph_source
+        and "function normalizeNodeGraphLineBurnMode(value)" in node_graph_source
+        and "function normalizeNodeGraphLineBurnSettings(settings = {})" in node_graph_source
+        and 'data-trace-display-field="burn"' in node_graph_source
+        and 'data-trace-display-field="decay"' in node_graph_source
+        and 'data-trace-display-choice="lineBurnMode"' in node_graph_source
+        and 'popover.addEventListener("change", updateNodeGraphTraceDisplaySettingsDraft)' in node_graph_source,
+        "1D Burn settings should expose and save local Burn/Decay and Sweep/Scroll mode",
+    )
     require("function drawNodeGraphScope2dItem" in node_graph_source, "2D Scope should have a renderer")
+    require(
+        "function nodeGraphModuleScopeSlotIsDrawable(slot)" in node_graph_source
+        and "function nodeGraphModuleScopeHasDrawableSlots()" in node_graph_source
+        and "return nodeGraphModuleScopeSlots().filter(nodeGraphModuleScopeSlotIsDrawable);" in node_graph_source,
+        "module scope drawing should be gated by drawable slots",
+    )
+    require(
+        ".node-module-scope-canvas {\n  z-index: 2;" in style_source
+        and ".node-module-scope-light-canvas {\n  z-index: 2;" in style_source
+        and ".node-graph-zoom-surface" in style_source
+        and "z-index: 1" in style_source,
+        "module scope canvases should layer above the zoom surface so drawn traces are visible",
+    )
+    display_buffer_start = node_graph_source.index("function nodeGraphModuleScopeDisplayBuffer")
+    display_buffer_end = node_graph_source.index("const nodeGraphTraceDisplaySettingsWindowSize", display_buffer_start)
+    display_buffer_source = node_graph_source[display_buffer_start:display_buffer_end]
+    require(
+        "function nodeGraphModuleScopeCapturedScope2dBuffer(slot)" in node_graph_source
+        and "nodeGraphModuleScopeCapturedScope2dBuffer(slot);" in display_buffer_source
+        and "nodeGraphModuleScopeOfflineInputDisplayBuffer" not in display_buffer_source
+        and "nodeGraphModuleScopeOfflineScope2dBuffer" not in display_buffer_source,
+        "oscilloscope testbed displays should measure captured input buffers only",
+    )
+    require(
+        '["traceDisplay", "dotOscilloscope", "valueOscilloscope", "lineBurnOscilloscope"].includes(slot.type)' in node_graph_source
+        and 'slot.type === "scope2d"' in node_graph_source
+        and 'nodeGraphModuleScopeConnectionsTo(slot.nodeId, "Y").length > 0' in node_graph_source,
+        "connected oscilloscope display modules should count as model displays while waiting for captured buffers",
+    )
+    require(
+        "scopeSlots = slotDebug" in node_graph_source
+        and 'entry.skip = "no-buffer"' in node_graph_source
+        and 'entry.skip = "offscreen"' in node_graph_source,
+        "module scope debug state should record per-slot buffer and geometry status",
+    )
+    require(
+        "function nodeGraphModuleScopeDebugSnapshot()" in node_graph_source
+        and "window.nodeGraphModuleScopeDebugSnapshot = nodeGraphModuleScopeDebugSnapshot;" in node_graph_source,
+        "module scope debug snapshot should be readable from browser dev tools",
+    )
     require('type !== "transport"' in execution_plan_source and 'type === "transport"' in execution_plan_source, "execution plan should treat Transport as a supported source")
     require("timing: normalizeNodeGraphPatchTiming(patch.timing)" in execution_plan_source, "compiled live plan should carry patch timing")
     require("function nodeGraphTransportSample" in live_frame_source and 'node?.type === "transport"' in live_frame_source, "browser fallback should evaluate Transport")
@@ -12880,6 +13006,116 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphModuleScopeOfflineTraceDisplayBuffer" not in node_graph_source,
         "Trace Display must draw only its captured In buffer, not secretly evaluate upstream modules through wires",
     )
+    require(
+        'clock: {\n    displayType: "dot"' in module_definitions_source
+        and 'if (type === "clock") {\n    return "clock";\n  }' not in node_graph_source
+        and 'slot?.type === "clock"' in node_graph_source
+        and "nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer) ||\n      nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer)" in node_graph_source,
+        "Clock display should use the shared 0D Burn dot renderer path",
+    )
+    require(
+        'osc: {\n    displayType: "trace"' in module_definitions_source
+        and 'polyBlep: {\n    displayType: "trace"' in module_definitions_source
+        and 'fbPolyBlepOsc: {\n    displayType: "trace"' in module_definitions_source
+        and 'if (nodeGraphModuleScopeIsOscillatorType(type)) {\n    return "trace";\n  }' in node_graph_source,
+        "Oscillator module faces should resolve to the typed 1D Trace renderer",
+    )
+    trace_slot_settings_source = node_graph_source[
+        node_graph_source.index("function nodeGraphTraceDisplaySettingsForSlot"):
+        node_graph_source.index("function prepareNodeGraphTraceDisplayBuffer")
+    ]
+    require(
+        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_slot_settings_source
+        and "return nodeGraphGlobalTraceSettings();" in trace_slot_settings_source
+        and 'slot?.type !== "traceDisplay"' not in trace_slot_settings_source,
+        "All trace displays should share global Trace Settings until local overrides are deliberately restored",
+    )
+    trace_buffer_view_source = node_graph_source[
+        node_graph_source.index("function nodeGraphModuleScopeBufferView"):
+        node_graph_source.index("function nodeGraphModuleScopeBufferProgressRanges")
+    ]
+    trace_webgl_source = node_graph_source[
+        node_graph_source.index("function drawNodeGraphModuleScopeBufferWebGl"):
+        node_graph_source.index("const vertices = []", node_graph_source.index("function drawNodeGraphModuleScopeBufferWebGl"))
+    ]
+    trace_segment_source = node_graph_source[
+        node_graph_source.index("function nodeGraphModuleScopeDiscontinuitySkipSamplesForSlot"):
+        node_graph_source.index("function nodeGraphModuleScopeBufferSegmentPoints")
+    ]
+    require(
+        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_buffer_view_source
+        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_webgl_source
+        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_segment_source
+        and 'slot?.type === "traceDisplay"' not in trace_buffer_view_source
+        and 'slot?.type === "traceDisplay"' not in trace_webgl_source
+        and 'slot?.type === "traceDisplay"' not in trace_segment_source
+        and 'slot?.type !== "traceDisplay"' not in trace_segment_source,
+        "Typed trace displays should use the same buffer view and WebGL trace renderer as 1D Trace",
+    )
+    require(
+        "function normalizeNodeGraphTraceDisplayZoomSeconds(value, fallback)" in node_graph_source
+        and "return Math.max(0, number);" in node_graph_source
+        and "return Number.isFinite(safeFallback) ? Math.max(0, safeFallback) : 0;" in node_graph_source
+        and "zoomSeconds: normalizeNodeGraphTraceDisplayZoomSeconds(zoomSeconds, defaults.zoomSeconds)" in node_graph_source
+        and "nodeGraphLineBurnSettingsForNode(nodeGraphModuleScopeNodeForSlot(slot))" in node_graph_source,
+        "1D Trace should allow zero zoom seconds and 1D Burn should use local preparation settings",
+    )
+    trace_vertices_source = node_graph_source[
+        node_graph_source.index("function buildNodeGraphTraceDisplayVertices"):
+        node_graph_source.index("function nodeGraphModuleScopeXyBeamVertices")
+    ]
+    require(
+        "if (view.end <= view.start) {" in trace_vertices_source
+        and "appendNodeGraphTraceDisplayBeamSegment(" in trace_vertices_source
+        and "rect.left * pixelRatio" in trace_vertices_source
+        and "(rect.left + rect.width) * pixelRatio" in trace_vertices_source
+        and "pointCount: 1" in trace_vertices_source,
+        "Trace zero zoom should draw a horizontal value line instead of an edge line",
+    )
+    line_burn_render_source = node_graph_source[
+        node_graph_source.index("function drawNodeGraphLineBurnOscilloscopeItem"):
+        node_graph_source.index("function drawNodeGraphScope2dItem")
+    ]
+    require(
+        line_burn_render_source.index("drawNodeGraphOneDimensionalBurnDot") <
+        line_burn_render_source.index("drawNodeGraphOneDimensionalBurnTrail"),
+        "1D Burn should draw its live dot even if the trail canvas is unavailable",
+    )
+    global_trace_settings_open_source = node_graph_source[
+        node_graph_source.index("function openNodeGraphGlobalTraceSettings"):
+        node_graph_source.index("function beginNodeGraphTraceDisplaySettingsDrag")
+    ]
+    module_trace_settings_open_source = node_graph_source[
+        node_graph_source.index("function openNodeGraphTraceDisplaySettings"):
+        node_graph_source.index("function nodeGraphTraceDisplayVisibleSamples")
+    ]
+    require(
+        'nodeGraphMvp.traceDisplaySettingsTargetNode === "__globalTraceSettings"' in global_trace_settings_open_source
+        and "pulseNodeGraphFloatingWindowAttention(existingPopover)" in global_trace_settings_open_source
+        and "nodeGraphMvp.traceDisplaySettingsTargetNode === node.id" in module_trace_settings_open_source
+        and "pulseNodeGraphFloatingWindowAttention(existingPopover)" in module_trace_settings_open_source
+        and 'displayType === "lineBurn"\n      ? normalizeNodeGraphLineBurnSettings(node.traceDisplaySettings)' in module_trace_settings_open_source,
+        "Display settings should pulse when already open and preserve 1D Burn settings shape",
+    )
+    require(
+        "function nodeGraphTraceDisplaySettingsEditingTraceDefaults()" in node_graph_source
+        and "nodeGraphModuleDisplayTypeForType(node?.type) === \"trace\"" in node_graph_source
+        and "nodeGraphTraceDisplaySettingsEditingTraceDefaults() &&" in node_graph_source
+        and "nodeGraphMvp.traceSettings = normalizeNodeGraphTraceDisplaySettings(nodeGraphMvp.traceDisplaySettingsDraft)" in node_graph_source
+        and ": nodeGraphGlobalTraceSettings();" in module_trace_settings_open_source,
+        "Trace display settings form should edit the global trace defaults used by all trace displays",
+    )
+    trace_value_normalize_source = node_graph_source[
+        node_graph_source.index("function normalizeNodeGraphTraceDisplaySettingValueForKey"):
+        node_graph_source.index("function nodeGraphTraceDisplayFieldFromTarget")
+    ]
+    require(
+        '["burn", "decay", "dot1Size", "dot2Size", "lineLength", "capSize", "capLength"].includes(key)' in trace_value_normalize_source
+        and 'formType === "dot" && ["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)' in trace_value_normalize_source
+        and '["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)' in trace_value_normalize_source
+        and "return Math.max(0, Number(value) || 0);" in trace_value_normalize_source,
+        "Trace settings numeric ranges should clamp size to 0..1 and keep brightness/thickness nonnegative",
+    )
     for snippet in [
         "function nodeGraphTraceDisplayTimingEnabled()",
         "function nodeGraphTraceDisplayTimingObject(slot)",
@@ -12932,15 +13168,30 @@ def require_node_graph_mvp_contract() -> None:
         and "minPointSpacingPx" not in trace_display_geometry_source,
         "Trace Display point density should stay screen-space stable across zoom",
     )
-    live_scope_capacity_source = node_graph_source[
-        node_graph_source.index("function nodeGraphLiveModuleScopeFrameCapacity(options = {})"):
-        node_graph_source.index("function nodeGraphLiveModuleScopeFingerprint(plan = {})")
+    visual_sink_capacity_source = execution_plan_source[
+        execution_plan_source.index("function nodeGraphVisualSinkBufferSampleLimit(node)"):
+        execution_plan_source.index("function nodeGraphNodeSignalOutputRequired")
+    ]
+    visual_input_buffer_source = node_graph_source[
+        node_graph_source.index("function createNodeGraphVisualInputBuffer"):
+        node_graph_source.index("function nodeGraphModuleScopeBuffersCurrent")
+    ]
+    worklet_visual_buffer_source = worklet_source[
+        worklet_source.index("createVisualInputBuffer(capacity = 262144)"):
+        worklet_source.index("captureModuleScopeOutput(nodeId, output)")
     ]
     require(
-        "traceDisplay" not in live_scope_capacity_source
-        and "zoomSeconds" not in live_scope_capacity_source
-        and "nodeGraphTraceDisplayWindowFrameCapacity" not in node_graph_source,
-        "Trace Display zoom must not grow the live scope capture buffer",
+        "zoomSeconds * sampleRate" in visual_sink_capacity_source
+        and "nodeGraphVisualSinkBufferSampleLimit(node)" in execution_plan_source
+        and "function normalizeNodeGraphVisualInputBufferCapacity" in visual_input_buffer_source
+        and "function resizeNodeGraphVisualInputBufferState" in visual_input_buffer_source
+        and "runtime.visualInputBuffers.set(key, resizeNodeGraphVisualInputBufferState(current, capacity))" in visual_input_buffer_source
+        and "Math.min(1048576" not in visual_input_buffer_source
+        and "normalizeVisualInputBufferCapacity(capacity = 262144)" in worklet_visual_buffer_source
+        and "resizeVisualInputBufferState(state, capacity = 262144)" in worklet_visual_buffer_source
+        and "this.visualInputBuffers.set(key, this.resizeVisualInputBufferState(current, capacity))" in worklet_visual_buffer_source
+        and "Math.min(1048576" not in worklet_visual_buffer_source,
+        "Trace Display zoom should grow retained visual input buffers without a hidden cap or blanking prior samples on resize",
     )
     require(
         "applyNodeGraphTraceDisplaySettingsWindowSize(metadataRect" not in node_graph_source
@@ -12951,12 +13202,6 @@ def require_node_graph_mvp_contract() -> None:
         'data-trace-display-field="sampleFrames"',
         'data-trace-display-field="pointLimit"',
         'data-trace-display-field="minPointSpacingPx"',
-        'data-trace-display-field="dot1Size"',
-        'data-trace-display-field="dot2Size"',
-        'data-trace-display-toggle="dot1Enabled"',
-        'data-trace-display-toggle="dot2Enabled"',
-        "nodeTraceDisplayDot1Enabled",
-        "nodeTraceDisplayDot2Enabled",
         "nodeTraceDisplayDot1Preview",
         "nodeTraceDisplayDot2Preview",
         "traceDisplaySettings.sampleFrames",
@@ -12968,6 +13213,108 @@ def require_node_graph_mvp_contract() -> None:
             snippet not in node_graph_source and snippet not in tooltip_source,
             f"Trace Display should not expose fake trace sample/point-limit controls: {snippet}",
         )
+    require(
+        'data-trace-display-field="dot1Size"' in node_graph_source
+        and 'data-trace-display-field="dot2Size"' in node_graph_source
+        and 'data-trace-display-field="lineThickness"' in node_graph_source
+        and 'data-trace-display-field="dot2LineThickness"' in node_graph_source
+        and 'data-trace-display-field="dot1Blur"' not in node_graph_source
+        and 'data-trace-display-field="dot2Blur"' not in node_graph_source
+        and 'data-trace-display-field="dot1Brightness"' in node_graph_source
+        and 'data-trace-display-toggle="dot1Enabled"' in node_graph_source
+        and 'data-trace-display-toggle="dot2Enabled"' in node_graph_source
+        and 'data-trace-display-color="dot1Color"' in node_graph_source
+        and "const nodeGraphZeroDBurnSettingsDefaults = Object.freeze" in node_graph_source
+        and "function normalizeNodeGraphZeroDBurnSettings(settings = {})" in node_graph_source
+        and "function nodeGraphZeroDBurnSettingsForNode(node)" in node_graph_source
+        and "node.zeroDBurnSettings = normalizeNodeGraphZeroDBurnSettings" in node_graph_source
+        and "lineThickness: normalizeNodeGraphTraceDisplayNumber(" in node_graph_source
+        and "dot2LineThickness: normalizeNodeGraphTraceDisplayNumber(" in node_graph_source
+        and "dot1Enabled: source.dot1Enabled !== false" in node_graph_source
+        and "dot2Enabled: source.dot2Enabled !== false" in node_graph_source
+        and "dot1Size: normalizeNodeGraphTraceDisplayNumber(" in node_graph_source
+        and "dot2Size: normalizeNodeGraphTraceDisplayNumber(" in node_graph_source
+        and "gl.uniform1f(renderer.beamBlurLocation, clampNodeSliderValue(Number(options.blur) || 0, 0, 1))" in node_graph_source
+        and "const dot2ThicknessPx = traceScale * clampNodeSliderValue(settings.dot2Size, 0, 1)" in node_graph_source
+        and "const dot1ThicknessPx = traceScale * clampNodeSliderValue(settings.dot1Size, 0, 1)" in node_graph_source
+        and "settings.dot2Enabled !== false && settings.dot2Brightness > 0 && dot2ThicknessPx > 0" in node_graph_source
+        and "settings.dot1Enabled !== false && settings.brightness > 0 && dot1ThicknessPx > 0" in node_graph_source
+        and '["sourceSync", "dot1Enabled", "dot2Enabled", "capEnabled"]' in node_graph_source
+        and '["burn", "decay", "dot1Size", "dot2Size", "lineLength", "capSize", "capLength"].includes(key)' in node_graph_source
+        and 'formType === "dot" && ["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)' in node_graph_source
+        and '["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)' in node_graph_source
+        and "function setNodeGraphTraceDisplaySettingsFormType(node = null)" in node_graph_source
+        and "popover.dataset.displaySettingsType = displayType;" in node_graph_source
+        and "const dotDisplay = displayType === \"dot\"" in node_graph_source
+        and "element.hidden = dotDisplay" in node_graph_source
+        and "normalizeNodeGraphTraceDisplaySettingValueForKey(key, value)" in node_graph_source
+        and "for (const key of [\"dot1Color\", \"dot2Color\"])" in node_graph_source
+        and "zeroDBurnSettings: normalizeNodeGraphZeroDBurnSettings(node.zeroDBurnSettings)" in node_graph_source,
+        "0D Burn settings should expose real normalized dot sizes and restore both dot colors",
+    )
+    require(
+        '["lineThickness", "Dot 1 blur"]' in node_graph_source
+        and '["dot2LineThickness", "Dot 2 blur"]' in node_graph_source
+        and "<span>Blur</span>" in node_graph_source
+        and "Blur of the 1D Trace Dot 1 beam." in tooltip_source
+        and "Blur of the 1D Trace Dot 2 beam." in tooltip_source,
+        "Oscilloscope settings should present Thick controls as Blur",
+    )
+    require(
+        '.node-trace-display-settings-popover[data-display-settings-type="dot"] .node-trace-display-trace-section' in style_source
+        and ".node-trace-display-dot2-thickness-row" in style_source
+        and 'element.hidden = !(dotDisplay || valueDisplay || displayType === "trace")' in node_graph_source,
+        "0D Burn, 1D Value, and 1D Trace settings should expose dot toggle rows while dot settings hide trace-only rows",
+    )
+    require(
+        "node-trace-display-caps-title" in node_graph_source
+        and "node-trace-display-caps-section" in node_graph_source
+        and 'data-trace-display-toggle="capEnabled"' in node_graph_source
+        and 'data-trace-display-field="lineLength"' in node_graph_source
+        and 'data-trace-display-field="capSize"' in node_graph_source
+        and 'data-trace-display-field="capLength"' in node_graph_source
+        and 'element.hidden = !valueDisplay' in node_graph_source
+        and "capEnabled: \"traceDisplaySettings.capEnabled\"" in node_graph_source
+        and "lineLength: \"traceDisplaySettings.lineLength\"" in node_graph_source
+        and "capSize: \"traceDisplaySettings.capSize\"" in node_graph_source
+        and "capLength: \"traceDisplaySettings.capLength\"" in node_graph_source
+        and "1D Value line length. 1 reaches the display edge; lower values pull both ends inward." in tooltip_source
+        and "1D Value cap thickness as a 0..1 fraction of the display square." in tooltip_source,
+        "1D Value settings should expose a Value-only Caps section with line length, caps on, size, and cap length controls",
+    )
+    require(
+        "function nodeGraphTraceDisplayNumberDragMultiplier(event)" in node_graph_source
+        and "nodeGraphNumericDragMultiplier(event)" in node_graph_source
+        and "typeof nodeGraphNumericModifierReserved === \"function\" && nodeGraphNumericModifierReserved(event)" in node_graph_source
+        and "multiplier: nodeGraphTraceDisplayNumberDragMultiplier(event)" in node_graph_source
+        and "drag.quantum * drag.multiplier" in node_graph_source,
+        "Display settings number dragging should share the app-wide numeric mouse modifier policy",
+    )
+    require(
+        "function preventNodeGraphTraceDisplayReadonlyFieldTextInteraction(event)" in node_graph_source
+        and "if (event.type === \"focusin\")" in node_graph_source
+        and "popover.addEventListener(\"focusin\", preventNodeGraphTraceDisplayReadonlyFieldTextInteraction, true)" in node_graph_source
+        and "popover.addEventListener(\"selectstart\", preventNodeGraphTraceDisplayReadonlyFieldTextInteraction, true)" in node_graph_source
+        and "popover.addEventListener(\"dragstart\", preventNodeGraphTraceDisplayReadonlyFieldTextInteraction, true)" in node_graph_source,
+        "Display settings number fields should drag by default and only become text-editable after double click",
+    )
+    require(
+        "function setNodeGraphTraceDisplayZoomEditActive(active)" in node_graph_source
+        and "nodeGraphMvp.traceDisplayZoomEditActive = Boolean(active)" in node_graph_source
+        and "const zoomEditActive = Boolean(nodeGraphMvp?.traceDisplayZoomEditActive)" in node_graph_source
+        and "const estimatedCycle = settings.sourceSync && !zoomEditActive" in node_graph_source
+        and 'input.dataset.traceDisplayField === "zoomSeconds"' in node_graph_source,
+        "Trace zoom editing should not re-trigger source-sync anchoring on every drag or text edit",
+    )
+    require(
+        "Sync to source" not in node_graph_source
+        and "          Sync\n" in node_graph_source,
+        "Trace settings source-sync label should be shortened to Sync",
+    )
+    require(
+        "nodeGraphModuleLabel(" not in node_graph_source,
+        "Display settings opener should not call a nonexistent module-label helper",
+    )
     require(
         'slot.type === "noise"' not in model_display_source
         and 'slot.type === "stereoNoise"' not in model_display_source,
@@ -13290,24 +13637,25 @@ def require_node_graph_mvp_contract() -> None:
     )
 
     require(
-        "function nodeGraphModuleScopeOfflineOutputAnalyzerBuffer(slot)" in node_graph_source
-        and "nodeGraphModuleScopeOfflineOutputAnalyzerBuffer(slot)" in node_graph_source
-        and "function nodeGraphModuleScopeShouldPreferOfflineOutputAnalyzer(slot, buffer)" in node_graph_source
-        and "const offlineAnalyzer = nodeGraphModuleScopeOfflineOutputAnalyzerBuffer(slot)" in node_graph_source
-        and "nodeGraphModuleScopeShouldPreferOfflineOutputAnalyzer(slot, offlineAnalyzer)" in node_graph_source
-        and 'slot.type === "output" && nodeGraphModuleScopeOutputConnectionList(' in node_graph_source
-        and "buffer.nodeGraphScopePeriodSamples = sourceFrequency > 0 ? frames / cycles : 0" in node_graph_source,
-        "output module scope should use a sync-aware analyzer buffer before falling back to capture",
+        'output: {\n    displayType: "trace"' in module_definitions_source
+        and "function nodeGraphModuleScopeOfflineOutputAnalyzerBuffer(slot)" not in node_graph_source
+        and "function nodeGraphModuleScopeShouldPreferOfflineOutputAnalyzer(slot, buffer)" not in node_graph_source
+        and "function nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer = null)" not in node_graph_source
+        and "const capturedAnalyzer = nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer)" not in node_graph_source,
+        "output module scope should use the typed 1D Trace display path and no output-specific analyzer",
+    )
+    require(
+        "outputTraceMode" not in node_graph_source
+        and "nodeSceneScopeOutputTraceMode" not in index_source
+        and "nodeGraphScopeClassicOutputDecay" not in node_graph_source,
+        "old output oscilloscope scroll/decay controls should be removed",
     )
 
     gain_scope_source = node_graph_source[
         node_graph_source.find("function nodeGraphModuleScopeOfflineGainAnalyzerBuffer"):
         node_graph_source.find("function nodeGraphModuleScopeOutputInputConnections")
     ]
-    output_scope_source = node_graph_source[
-        node_graph_source.find("function nodeGraphModuleScopeOfflineOutputAnalyzerBuffer"):
-        node_graph_source.find("function nodeGraphModuleScopeCapturedOutputAnalyzerBuffer")
-    ]
+    output_scope_source = ""
     shader_display_source = node_graph_source[
         node_graph_source.find("function nodeGraphModuleScopeApplyShaderDisplayMode"):
         node_graph_source.find("function nodeGraphModuleScopeDisplayBuffer")
@@ -13609,7 +13957,10 @@ def require_node_graph_mvp_contract() -> None:
         "function stepNodeGraphFloatingWindowKeyboardLoop(nowMs = 0)",
         "nowMs - nodeGraphFloatingWindowKeyboardState.lastStepMs >= nodeGraphFloatingWindowKeyboardStepMs",
         "window.requestAnimationFrame(",
+        "function nodeGraphFloatingWindowKeyboardEventIsEditable(event)",
+        "active?.closest?.(\"input, textarea, select, [contenteditable='true']\")",
         "function handleNodeGraphFloatingWindowKeyboardNudge(event)",
+        "if (nodeGraphFloatingWindowKeyboardEventIsEditable(event))",
         "nodeGraphFloatingWindowHeldArrowKeys.add(event.key)",
         "nodeGraphFloatingWindowKeyboardState.shiftKey = Boolean(event.shiftKey)",
         "function handleNodeGraphFloatingWindowKeyboardRelease(event)",
@@ -13801,8 +14152,8 @@ def require_node_graph_mvp_contract() -> None:
         and '"scope2d"' in node_graph_source
         and '"canvas"' in node_graph_source
         and "function nodeGraphVisibleModuleScopeSlots()" in node_graph_source
-        and "return slots.filter(nodeGraphModuleScopeSlotIgnoresGlobalHide);" in node_graph_source
-        and "nodeGraphMvp.moduleOscilloscopesVisible === false && !nodeGraphVisibleModuleScopeSlots().length" in node_graph_source,
+        and "nodeGraphModuleScopeSlotIgnoresGlobalHide(slot)" in node_graph_source
+        and "if (!nodeGraphModuleScopeHasDrawableSlots())" in node_graph_source,
         "display testbed, visual oscilloscope, and canvas scope faces should keep drawing when global module scopes are hidden",
     )
 
@@ -14964,13 +15315,30 @@ def require_node_graph_mvp_contract() -> None:
         "node graph world bounds should use layout size with CSS zoom",
     )
     require(
+        "function nodeGraphZoomSurfaceClientScale(surface = nodeGraphZoomSurface())" in script_sources["./public/node-graph-workspace-geometry.js"]
+        and "rect.width / width" in script_sources["./public/node-graph-workspace-geometry.js"]
+        and "function nodeGraphClientToZoomSurfacePoint(clientX, clientY, surface = nodeGraphZoomSurface())" in script_sources["./public/node-graph-workspace-geometry.js"]
+        and "return nodeGraphClientToZoomSurfacePoint(anchor.x, anchor.y);" in script_sources["./public/node-graph-port-geometry.js"]
+        and "const topLeft = nodeGraphClientToZoomSurfacePoint(nodeRect.left, nodeRect.top, surface);" in script_sources["./public/node-graph-wire-rendering.js"],
+        "wire and port geometry should use measured zoom-surface scale",
+    )
+    require(
         "function nodeGraphRenderedPanValue(value, origin = 0)" in script_sources["./public/node-graph-workspace-geometry.js"]
         and "Math.round(originNumber + number) - originNumber" in script_sources["./public/node-graph-workspace-geometry.js"]
-        and "const renderedPan = nodeGraphRenderedPan(pan);" in script_sources["./public/node-graph-workspace-view.js"]
-        and 'workspace.style.setProperty("--node-graph-pan-x", `${renderedPan.x}px`);' in script_sources["./public/node-graph-workspace-view.js"]
-        and 'workspace.style.setProperty("--node-graph-pan-y", `${renderedPan.y}px`);' in script_sources["./public/node-graph-workspace-view.js"]
-        and 'heatmap.style.setProperty("--node-grid-heatmap-grid-position", `${pan.x}px ${pan.y}px`);' in script_sources["./public/node-graph-workspace-geometry.js"],
-        "node graph rendered pan should snap to whole pixels for crisp text",
+        and "function nodeGraphWorkspaceCenterOffset(container = document.getElementById(\"nodeGraphWorkspace\"))" in script_sources["./public/node-graph-workspace-geometry.js"]
+        and "function nodeGraphRenderedOriginOffset(" in script_sources["./public/node-graph-workspace-geometry.js"]
+        and "const originOffset = nodeGraphRenderedOriginOffset(pan, workspace);" in script_sources["./public/node-graph-workspace-view.js"]
+        and 'workspace.style.setProperty("--node-graph-pan-x", `${originOffset.x}px`);' in script_sources["./public/node-graph-workspace-view.js"]
+        and 'workspace.style.setProperty("--node-graph-pan-y", `${originOffset.y}px`);' in script_sources["./public/node-graph-workspace-view.js"]
+        and 'heatmap.style.setProperty("--node-grid-heatmap-grid-position", `${origin.x}px ${origin.y}px`);' in script_sources["./public/node-graph-workspace-geometry.js"],
+        "node graph rendered pan should snap to whole pixels around a center origin",
+    )
+    require(
+        "const oldOrigin = workspace ? nodeGraphRenderedOriginOffset(oldPan, workspace) : oldPan;" in script_sources["./public/node-graph-workspace-zoom.js"]
+        and "const nextCenter = workspace ? nodeGraphWorkspaceCenterOffset(workspace) : { x: 0, y: 0 };" in script_sources["./public/node-graph-workspace-zoom.js"]
+        and "x: anchorPoint.x - workspaceRect.left - nextCenter.x - anchoredContentPoint.x * zoom" in script_sources["./public/node-graph-workspace-zoom.js"]
+        and "function withNodeGraphWorkspaceContentAnchored(workspace, update) {\n  update();\n  applyNodeGraphPan();\n}" in script_sources["./public/node-graph-grid-utils.js"],
+        "node graph zoom and resize should preserve the center-origin pan contract",
     )
     require(
         ".node-wiring-panel.modular-only-view .node-graph-resize-handle {\n  display: none;" not in style_source,

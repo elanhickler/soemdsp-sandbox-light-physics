@@ -11,23 +11,7 @@ function nodeGraphGridHeight() {
 }
 
 function withNodeGraphWorkspaceContentAnchored(workspace, update) {
-  const before = workspace.getBoundingClientRect();
   update();
-  const after = workspace.getBoundingClientRect();
-  const deltaX = before.left - after.left;
-  const deltaY = before.top - after.top;
-  if (
-    !Number.isFinite(deltaX) ||
-    !Number.isFinite(deltaY) ||
-    (Math.abs(deltaX) < 0.001 && Math.abs(deltaY) < 0.001)
-  ) {
-    return;
-  }
-  const pan = nodeGraphMvp.pan || { x: 0, y: 0 };
-  nodeGraphMvp.pan = {
-    x: (Number(pan.x) || 0) + deltaX,
-    y: (Number(pan.y) || 0) + deltaY,
-  };
   applyNodeGraphPan();
 }
 

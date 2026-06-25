@@ -1430,7 +1430,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   createVisualInputBuffer(capacity = 262144) {
-    const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || 262144)));
+    const safeCapacity = this.normalizeVisualInputBufferCapacity(capacity);
     return {
       absoluteFrame: 0,
       buffer: new Float32Array(safeCapacity),
@@ -1438,6 +1438,33 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       length: 0,
       writeIndex: 0,
     };
+  }
+
+  normalizeVisualInputBufferCapacity(capacity = 262144) {
+    return Math.max(1, Math.round(Number(capacity) || 262144));
+  }
+
+  resizeVisualInputBufferState(state, capacity = 262144) {
+    const safeCapacity = this.normalizeVisualInputBufferCapacity(capacity);
+    if (!state || state.capacity !== safeCapacity || !(state.buffer instanceof Float32Array)) {
+      const next = this.createVisualInputBuffer(safeCapacity);
+      if (!state?.buffer?.length || !state?.length) {
+        return next;
+      }
+      const oldCapacity = state.capacity || state.buffer.length;
+      const oldLength = Math.min(Number(state.length) || 0, oldCapacity);
+      const copyCount = Math.min(oldLength, safeCapacity);
+      const first = ((Number(state.writeIndex) || 0) - oldLength + oldCapacity) % oldCapacity;
+      for (let index = 0; index < copyCount; index += 1) {
+        const oldIndex = (first + oldLength - copyCount + index) % oldCapacity;
+        next.buffer[index] = state.buffer[oldIndex] || 0;
+      }
+      next.length = copyCount;
+      next.writeIndex = copyCount % safeCapacity;
+      next.absoluteFrame = Math.max(Number(state.absoluteFrame) || 0, copyCount);
+      return next;
+    }
+    return state;
   }
 
   syncVisualInputBuffers() {
@@ -1456,13 +1483,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           continue;
         }
         const key = `${nodeId}:${port}`;
-        expected.set(key, Math.max(1, Math.min(1048576, Math.round(Number(sink.bufferSampleLimit) || 262144))));
+        expected.set(key, this.normalizeVisualInputBufferCapacity(sink.bufferSampleLimit));
       }
     }
     for (const [key, capacity] of expected) {
       const current = this.visualInputBuffers.get(key);
       if (!current || current.capacity !== capacity) {
-        this.visualInputBuffers.set(key, this.createVisualInputBuffer(capacity));
+        this.visualInputBuffers.set(key, this.resizeVisualInputBufferState(current, capacity));
       }
     }
     for (const key of [...this.visualInputBuffers.keys()]) {
@@ -1475,9 +1502,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   writeVisualInputBufferSample(nodeId, port, value, capacity = 262144) {
     const key = `${nodeId}:${port}`;
     let buffer = this.visualInputBuffers.get(key);
-    const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || 262144)));
+    const safeCapacity = this.normalizeVisualInputBufferCapacity(capacity);
     if (!buffer || buffer.capacity !== safeCapacity) {
-      buffer = this.createVisualInputBuffer(safeCapacity);
+      buffer = this.resizeVisualInputBufferState(buffer, safeCapacity);
       this.visualInputBuffers.set(key, buffer);
     }
     buffer.buffer[buffer.writeIndex] = this.scopeScalarValue(value);

@@ -38,6 +38,7 @@ function setNodeGraphZoom(nextZoom, anchor = null) {
   const workspaceRect = workspace?.getBoundingClientRect();
   const oldZoom = nodeGraphZoom();
   const oldPan = nodeGraphMvp.pan || { x: 0, y: 0 };
+  const oldOrigin = workspace ? nodeGraphRenderedOriginOffset(oldPan, workspace) : oldPan;
   const anchorPoint = workspaceRect
     ? (anchor || {
       x: workspaceRect.left + workspaceRect.width / 2,
@@ -46,8 +47,8 @@ function setNodeGraphZoom(nextZoom, anchor = null) {
     : null;
   const anchoredContentPoint = workspaceRect && anchorPoint
     ? {
-      x: (anchorPoint.x - workspaceRect.left - (Number(oldPan.x) || 0)) / oldZoom,
-      y: (anchorPoint.y - workspaceRect.top - (Number(oldPan.y) || 0)) / oldZoom,
+      x: (anchorPoint.x - workspaceRect.left - (Number(oldOrigin.x) || 0)) / oldZoom,
+      y: (anchorPoint.y - workspaceRect.top - (Number(oldOrigin.y) || 0)) / oldZoom,
     }
     : null;
   const zoom = clampNodeGraphZoom(nextZoom);
@@ -56,10 +57,11 @@ function setNodeGraphZoom(nextZoom, anchor = null) {
   }
   nodeGraphMvp.zoom = zoom;
   syncNodeGraphPatchViewZoom(zoom);
+  const nextCenter = workspace ? nodeGraphWorkspaceCenterOffset(workspace) : { x: 0, y: 0 };
   const nextPan = workspaceRect && anchorPoint && anchoredContentPoint
     ? {
-      x: anchorPoint.x - workspaceRect.left - anchoredContentPoint.x * zoom,
-      y: anchorPoint.y - workspaceRect.top - anchoredContentPoint.y * zoom,
+      x: anchorPoint.x - workspaceRect.left - nextCenter.x - anchoredContentPoint.x * zoom,
+      y: anchorPoint.y - workspaceRect.top - nextCenter.y - anchoredContentPoint.y * zoom,
     }
     : oldPan;
   nodeGraphMvp.pan = {

@@ -682,7 +682,8 @@ function normalizeNodeUiDevSettings(settings = {}) {
   };
 }
 
-function readNodeUiDevSettingsFromControls() {
+function readNodeUiDevSettingsFromControls(options = {}) {
+  const includeWorkingPatch = options.includeWorkingPatch !== false;
   const controls = {};
   for (const definition of nodeUiDevSettingControls) {
     const input = document.getElementById(definition.id);
@@ -759,21 +760,25 @@ function readNodeUiDevSettingsFromControls() {
       }),
       moduleStoreDepartment: normalizeNodeGraphModuleStoreDepartmentState(nodeGraphMvp.moduleStoreDepartment),
       savedPatchExplorerView: nodeGraphMvp.savedPatchExplorerView === "patches" ? "patches" : "banks",
-      workingPatch: nodeGraphMvp.workingPatch
+      workingPatch: includeWorkingPatch && nodeGraphMvp.workingPatch
         ? cloneNodeGraphPatch(nodeGraphMvp.workingPatch)
         : null,
-      currentSavedPatchFilename: nodeGraphMvp.currentSavedPatchFilename || "",
-      patchDirtyState: ["saved", "edited", "untouched"].includes(nodeGraphMvp.patchDirtyState)
-        ? nodeGraphMvp.patchDirtyState
-        : nodeGraphMvp.workingPatch
-          ? "edited"
-          : "untouched",
+      currentSavedPatchFilename: includeWorkingPatch ? (nodeGraphMvp.currentSavedPatchFilename || "") : "",
+      patchDirtyState: !includeWorkingPatch
+        ? "untouched"
+        : (
+          ["saved", "edited", "untouched"].includes(nodeGraphMvp.patchDirtyState)
+            ? nodeGraphMvp.patchDirtyState
+            : nodeGraphMvp.workingPatch
+              ? "edited"
+              : "untouched"
+        ),
     },
   });
 }
 
-function serializeNodeUiDevSettings() {
-  return JSON.stringify(readNodeUiDevSettingsFromControls(), null, 2);
+function serializeNodeUiDevSettings(options = {}) {
+  return JSON.stringify(readNodeUiDevSettingsFromControls(options), null, 2);
 }
 
 function loadNodeUiDevSettingsFromScript(text) {
@@ -1062,7 +1067,7 @@ function clearNodeUserStartupState() {
   const removed = clearNodeUserStartupLocalStorage();
   clearNodeUserStartupRuntimeState();
   const text = typeof serializeNodeUiDevSettings === "function"
-    ? serializeNodeUiDevSettings()
+    ? serializeNodeUiDevSettings({ includeWorkingPatch: false })
     : "";
   if (
     text &&

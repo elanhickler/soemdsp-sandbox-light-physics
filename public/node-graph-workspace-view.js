@@ -4,11 +4,11 @@ function applyNodeGraphPan() {
     return;
   }
   const pan = nodeGraphMvp.pan || { x: 0, y: 0 };
-  const renderedPan = nodeGraphRenderedPan(pan);
-  workspace.style.setProperty("--node-graph-pan-x", `${renderedPan.x}px`);
-  workspace.style.setProperty("--node-graph-pan-y", `${renderedPan.y}px`);
-  workspace.dataset.panX = String(renderedPan.x);
-  workspace.dataset.panY = String(renderedPan.y);
+  const originOffset = nodeGraphRenderedOriginOffset(pan, workspace);
+  workspace.style.setProperty("--node-graph-pan-x", `${originOffset.x}px`);
+  workspace.style.setProperty("--node-graph-pan-y", `${originOffset.y}px`);
+  workspace.dataset.panX = String(pan.x);
+  workspace.dataset.panY = String(pan.y);
   syncNodeGraphOriginMarker();
   syncNodeGraphWorldPositionReadout();
   syncNodeGraphModularViewSizeReadout();
@@ -412,6 +412,7 @@ function alignNodeGraphViewToGridWithOptions(options = {}) {
   const rect = workspace?.getBoundingClientRect();
   const oldZoom = nodeGraphZoom();
   const oldPan = nodeGraphMvp.pan || { x: 0, y: 0 };
+  const oldOrigin = workspace ? nodeGraphRenderedOriginOffset(oldPan, workspace) : oldPan;
   const zoomStep = 1 / Math.max(1, nodeGraphGridSize());
   const nextZoom = Math.max(
     nodeGraphZoomLimits.min,
@@ -425,8 +426,8 @@ function alignNodeGraphViewToGridWithOptions(options = {}) {
     : null;
   const anchoredContentPoint = rect && anchor
     ? {
-      x: (anchor.x - rect.left - (Number(oldPan.x) || 0)) / oldZoom,
-      y: (anchor.y - rect.top - (Number(oldPan.y) || 0)) / oldZoom,
+      x: (anchor.x - rect.left - (Number(oldOrigin.x) || 0)) / oldZoom,
+      y: (anchor.y - rect.top - (Number(oldOrigin.y) || 0)) / oldZoom,
     }
     : null;
   nodeGraphMvp.zoom = nextZoom;
@@ -444,10 +445,11 @@ function alignNodeGraphViewToGridWithOptions(options = {}) {
       y: nextRect.top + nextRect.height / 2,
     }
     : anchor;
+  const nextCenter = workspace ? nodeGraphWorkspaceCenterOffset(workspace) : { x: 0, y: 0 };
   const unsnappedPan = nextRect && nextAnchor && anchoredContentPoint
     ? {
-      x: nextAnchor.x - nextRect.left - anchoredContentPoint.x * nextZoom,
-      y: nextAnchor.y - nextRect.top - anchoredContentPoint.y * nextZoom,
+      x: nextAnchor.x - nextRect.left - nextCenter.x - anchoredContentPoint.x * nextZoom,
+      y: nextAnchor.y - nextRect.top - nextCenter.y - anchoredContentPoint.y * nextZoom,
     }
     : oldPan;
   const snapPan = (value, gridSize) => snapNodeGraphPanValueToGrid(value, gridSize, nextZoom);

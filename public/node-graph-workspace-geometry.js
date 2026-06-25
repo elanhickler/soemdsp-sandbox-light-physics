@@ -57,6 +57,19 @@ function nodeGraphRenderedPanValue(value, origin = 0) {
   return Object.is(rendered, -0) ? 0 : rendered;
 }
 
+function nodeGraphWorkspaceCenterOffset(container = document.getElementById("nodeGraphWorkspace")) {
+  const rect = container?.getBoundingClientRect?.();
+  const style = container ? getComputedStyle(container) : null;
+  const borderLeft = Number.parseFloat(style?.borderLeftWidth) || 0;
+  const borderTop = Number.parseFloat(style?.borderTopWidth) || 0;
+  const borderRight = Number.parseFloat(style?.borderRightWidth) || 0;
+  const borderBottom = Number.parseFloat(style?.borderBottomWidth) || 0;
+  return {
+    x: borderLeft + Math.max(0, (Number(rect?.width) || 0) - borderLeft - borderRight) * 0.5,
+    y: borderTop + Math.max(0, (Number(rect?.height) || 0) - borderTop - borderBottom) * 0.5,
+  };
+}
+
 function nodeGraphRenderedPan(pan = nodeGraphMvp.pan || { x: 0, y: 0 }, container = document.getElementById("nodeGraphWorkspace")) {
   const rect = container?.getBoundingClientRect?.();
   const style = container ? getComputedStyle(container) : null;
@@ -65,6 +78,18 @@ function nodeGraphRenderedPan(pan = nodeGraphMvp.pan || { x: 0, y: 0 }, containe
   return {
     x: nodeGraphRenderedPanValue(pan.x, (rect?.left || 0) + borderLeft),
     y: nodeGraphRenderedPanValue(pan.y, (rect?.top || 0) + borderTop),
+  };
+}
+
+function nodeGraphRenderedOriginOffset(
+  pan = nodeGraphMvp.pan || { x: 0, y: 0 },
+  container = document.getElementById("nodeGraphWorkspace"),
+) {
+  const center = nodeGraphWorkspaceCenterOffset(container);
+  const renderedPan = nodeGraphRenderedPan(pan, container);
+  return {
+    x: center.x + renderedPan.x,
+    y: center.y + renderedPan.y,
   };
 }
 
@@ -81,14 +106,33 @@ function nodeGraphGraphRect() {
   };
 }
 
-function nodeGraphClientPoint(event) {
-  const surface = nodeGraphZoomSurface();
-  const surfaceRect = surface.getBoundingClientRect();
-  const zoom = nodeGraphZoom();
+function nodeGraphZoomSurfaceClientScale(surface = nodeGraphZoomSurface()) {
+  const rect = surface?.getBoundingClientRect?.();
+  const width = Number(surface?.offsetWidth) || 0;
+  const height = Number(surface?.offsetHeight) || 0;
+  const fallback = Math.max(0.0001, nodeGraphZoom());
+  const scaleX = rect && width > 0 ? rect.width / width : fallback;
+  const scaleY = rect && height > 0 ? rect.height / height : fallback;
   return {
-    x: (event.clientX - surfaceRect.left) / zoom,
-    y: (event.clientY - surfaceRect.top) / zoom,
+    x: Number.isFinite(scaleX) && scaleX > 0 ? scaleX : fallback,
+    y: Number.isFinite(scaleY) && scaleY > 0 ? scaleY : fallback,
   };
+}
+
+function nodeGraphClientToZoomSurfacePoint(clientX, clientY, surface = nodeGraphZoomSurface()) {
+  const rect = surface?.getBoundingClientRect?.();
+  if (!rect) {
+    return { x: 0, y: 0 };
+  }
+  const scale = nodeGraphZoomSurfaceClientScale(surface);
+  return {
+    x: (clientX - rect.left) / scale.x,
+    y: (clientY - rect.top) / scale.y,
+  };
+}
+
+function nodeGraphClientPoint(event) {
+  return nodeGraphClientToZoomSurfacePoint(event.clientX, event.clientY);
 }
 
 function positionNodeGraphNode(node, point, options = {}) {
@@ -150,8 +194,8 @@ function updateNodeGraphGridHeatmap() {
   const maskLayers = [];
   const visibleNodes = [...surface.querySelectorAll(".dsp-node:not(.removed):not([hidden])")];
   const zoom = nodeGraphZoom();
-  const pan = nodeGraphRenderedPan();
-  heatmap.style.setProperty("--node-grid-heatmap-grid-position", `${pan.x}px ${pan.y}px`);
+  const origin = nodeGraphRenderedOriginOffset();
+  heatmap.style.setProperty("--node-grid-heatmap-grid-position", `${origin.x}px ${origin.y}px`);
   heatmap.style.setProperty(
     "--node-grid-heatmap-grid-size",
     `${(nodeGraphGridWidth() * zoom).toFixed(2)}px ${(nodeGraphGridHeight() * zoom).toFixed(2)}px`,
@@ -165,8 +209,8 @@ function updateNodeGraphGridHeatmap() {
   );
   for (const node of visibleNodes) {
     const bounds = nodeGraphNodeBounds(node);
-    const centerX = (bounds.left + (bounds.right - bounds.left) / 2) * zoom + (Number(pan.x) || 0);
-    const centerY = (bounds.top + (bounds.bottom - bounds.top) / 2) * zoom + (Number(pan.y) || 0);
+    const centerX = (bounds.left + (bounds.right - bounds.left) / 2) * zoom + (Number(origin.x) || 0);
+    const centerY = (bounds.top + (bounds.bottom - bounds.top) / 2) * zoom + (Number(origin.y) || 0);
     const radiusX = Math.max(nodeGraphGridWidth() * 5, (bounds.right - bounds.left) * 1.18) * spread * zoom;
     const radiusY = Math.max(nodeGraphGridHeight() * 5, (bounds.bottom - bounds.top) * 1.35) * spread * zoom;
     glowLayers.push(

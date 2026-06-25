@@ -35,11 +35,12 @@ const nodeSceneContextWindowDefaultSize = Object.freeze({
 });
 
 const nodeModuleActionsWindowDefaultSize = Object.freeze({
-  width: 140,
+  width: 185,
+  height: 620,
   minWidth: 24,
   maxWidth: 360,
-  minHeight: 40,
-  maxHeight: 520,
+  minHeight: 120,
+  maxHeight: 820,
 });
 
 function pulseNodeGraphFloatingWindowAttention(element) {
@@ -64,54 +65,16 @@ function normalizeNodeModuleActionsWindowSize(size = {}) {
   return normalizeNodeGraphFloatingWindowSize(size, nodeModuleActionsWindowDefaultSize);
 }
 
-function nodeModuleActionsWindowEmptyStateHeight(menu, headingHeight) {
-  const styles = menu ? window.getComputedStyle(menu) : null;
-  const buttonHeight = Number.parseFloat(styles?.getPropertyValue("--node-floating-window-button-height")) || 30;
-  return Math.ceil(headingHeight + (buttonHeight * 3));
-}
-
-function nodeModuleActionsWindowContentHeightLimit(menu = document.getElementById("nodeModuleActionsWindow")) {
-  if (!menu || menu.hidden) {
-    return null;
-  }
-  const heading = document.getElementById("nodeModuleActionsWindowHeading");
-  const body = document.getElementById("nodeModuleActionsWindowBody");
-  const headingHeight = Math.ceil(heading?.getBoundingClientRect?.().height || 0);
-  let bodyHeight = 0;
-  if (body) {
-    for (const child of body.children) {
-      if (child.hidden || child.getClientRects().length === 0) {
-        continue;
-      }
-      bodyHeight = Math.max(bodyHeight, child.offsetTop + child.offsetHeight);
-    }
-  }
-  const viewportMax = Math.max(
-    nodeModuleActionsWindowDefaultSize.minHeight,
-    Math.min(nodeModuleActionsWindowDefaultSize.maxHeight, (window.innerHeight || 760) - 28),
-  );
-  const emptyStateHeight = nodeModuleActionsWindowEmptyStateHeight(menu, headingHeight);
-  const contentHeight = Math.max(
-    nodeModuleActionsWindowDefaultSize.minHeight,
-    emptyStateHeight,
-    headingHeight + bodyHeight,
-  );
-  return Math.min(viewportMax, Math.ceil(contentHeight));
-}
-
 function syncNodeModuleActionsWindowHeightLimit() {
   const menu = document.getElementById("nodeModuleActionsWindow");
-  const contentHeight = nodeModuleActionsWindowContentHeightLimit(menu);
-  if (!menu || !Number.isFinite(Number(contentHeight))) {
+  if (!menu) {
     return null;
   }
   const normalized = normalizeNodeModuleActionsWindowSize(nodeGraphMvp.moduleActionWindowSize || nodeModuleActionsWindowDefaultSize);
-  const requestedHeight = Number.isFinite(Number(normalized.height)) ? Number(normalized.height) : contentHeight;
   const effectiveHeight = Math.max(
     nodeModuleActionsWindowDefaultSize.minHeight,
-    Math.min(Number(contentHeight), requestedHeight),
+    Math.min(nodeModuleActionsWindowDefaultSize.maxHeight, Number(normalized.height) || nodeModuleActionsWindowDefaultSize.height),
   );
-  menu.style.setProperty("--node-module-actions-content-height", `${Math.round(Number(contentHeight))}px`);
   menu.style.setProperty("--node-module-actions-height", `${Math.round(effectiveHeight)}px`);
   return effectiveHeight;
 }

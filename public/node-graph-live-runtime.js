@@ -1507,7 +1507,7 @@ async function createNodeGraphLiveWorkletNode(context) {
     throw new Error("AudioWorklet unavailable");
   }
   await nodeGraphLiveAwaitStartup(
-    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=polyblep-runtime-contract-1"),
+    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=trace-zoom-resize-1"),
     "AudioWorklet startup timed out",
   );
   const workletNode = new AudioWorkletNode(

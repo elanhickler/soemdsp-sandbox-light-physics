@@ -133,8 +133,8 @@
     "moduleScopeBackgroundColor": "#000000",
     "moduleScopeBurn": 0,
     "moduleScopeDecay": 0,
-    "globalSmoothingSeconds": 0.01600907029478458,
-    "globalSmoothingManual": false,
+    "globalSmoothingSeconds": 5,
+    "globalSmoothingManual": true,
     "moduleScopeDotCore1Enabled": true,
     "moduleScopeDotCore1Size": 1.94,
     "moduleScopeDotCore1Brightness": 33.5,
@@ -149,11 +149,15 @@
     "traceSettings": {
       "brightness": 0.92,
       "color": "#75ebff",
+      "dot1Enabled": true,
+      "dot1Size": 0.08,
       "dot2Brightness": 0.18,
       "dot2Color": "#184fff",
-      "dot2LineThickness": 4,
+      "dot2Enabled": true,
+      "dot2Size": 0.24,
+      "dot2LineThickness": 0.48,
       "cycles": 2,
-      "lineThickness": 1.4,
+      "lineThickness": 0.2,
       "padding": 0,
       "skipSamples": 1,
       "sourceSync": true,
@@ -603,7 +607,11 @@
     "workspaceWindowStatesVersion": 1,
     "workspaceWindowStates": {
       "commandCenter": {
-        "open": false
+        "open": false,
+        "position": {
+          "left": 29,
+          "top": 234
+        }
       },
       "moduleActions": {
         "open": false
@@ -618,21 +626,17 @@
         "open": false
       },
       "moduleBrowser": {
-        "open": false
+        "open": false,
+        "position": {
+          "left": 17,
+          "top": 166
+        }
       },
       "visibilityMenu": {
-        "open": false,
-        "position": {
-          "left": 673,
-          "top": 114
-        }
+        "open": false
       },
       "uiSettings": {
-        "open": false,
-        "position": {
-          "left": 477,
-          "top": 96
-        }
+        "open": false
       },
       "uiDev": {
         "open": false
@@ -645,18 +649,16 @@
     "sharedInspectorWindowState": {},
     "workspaceView": {
       "pan": {
-        "x": -35.24727813197546,
-        "y": -21.459062111118953
+        "x": -159.52423469387753,
+        "y": 26.621173469387756
       },
-      "zoom": 0.6355180784048308
+      "zoom": 1.058399097277098
     },
     "moduleStoreDepartment": "",
     "savedPatchBankIndex": 0,
     "savedPatchBankName": "",
     "savedPatchGridColumns": 3,
     "savedPatchExplorerView": "banks",
-    "workingPatch": null,
-    "currentSavedPatchFilename": "",
     "patchDirtyState": "untouched"
   }
 });

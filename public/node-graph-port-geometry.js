@@ -80,18 +80,11 @@ function nodeGraphGraphInputPortCenter(node, graphInput) {
 }
 
 function nodeGraphElementCenter(element, io = null) {
-  const surface = nodeGraphZoomSurface();
   if (!element) {
     return { x: 0, y: 0 };
   }
-
-  const surfaceRect = surface.getBoundingClientRect();
-  const zoom = nodeGraphZoom();
   const anchor = nodeGraphElementPatchPointClientCenter(element, io);
-  return {
-    x: (anchor.x - surfaceRect.left) / zoom,
-    y: (anchor.y - surfaceRect.top) / zoom,
-  };
+  return nodeGraphClientToZoomSurfacePoint(anchor.x, anchor.y);
 }
 
 function nodeGraphElementPatchPointClientCenter(element, io = null) {

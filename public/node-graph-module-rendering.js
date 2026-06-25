@@ -192,7 +192,7 @@ function attachNodeGraphNodeEvents(node) {
   node.querySelectorAll(".node-parameter-row")
     .forEach((row) => row.addEventListener("pointerdown", beginNodeGraphNodeDrag));
   node.querySelector(".node-bypass-button")?.addEventListener("click", toggleNodeGraphModuleBypass);
-  node.querySelector(".node-display-settings-button")?.addEventListener("click", toggleNodeModuleDisplayVisibility);
+  node.querySelector(".node-display-settings-button")?.addEventListener("click", openNodeModuleDisplaySettings);
   node.querySelector(".node-display-settings-button")?.addEventListener("contextmenu", openNodeModuleDisplaySettings);
   node.querySelector(".node-action-button")?.addEventListener("click", openNodeModuleActionMenu);
   node.addEventListener("lostpointercapture", endNodeGraphNodeDrag);
@@ -267,6 +267,10 @@ function attachNodeGraphNodeEvents(node) {
 }
 
 function openNodeModuleDisplaySettings(event) {
+  if (event?.altKey) {
+    toggleNodeModuleDisplayVisibility(event);
+    return;
+  }
   event.preventDefault();
   event.stopPropagation();
   const nodeId = event.currentTarget?.dataset?.node;
@@ -274,7 +278,11 @@ function openNodeModuleDisplaySettings(event) {
     return;
   }
   if (typeof setNodeInteractionHelp === "function") {
-    setNodeInteractionHelp("This display does not have a settings form yet. Click the TV button to show or hide it.");
+    setNodeInteractionHelp(
+      typeof nodeGraphTooltipText === "function"
+        ? nodeGraphTooltipText("module.displaySettings")
+        : "Click to open this module's display settings. Alt+click shows or hides the display.",
+    );
   }
 }
 

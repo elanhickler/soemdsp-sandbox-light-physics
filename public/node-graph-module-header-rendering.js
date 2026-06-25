@@ -275,36 +275,6 @@ function createNodeGraphHeaderTimingWidgets() {
         step: 1,
       },
     ),
-    createNodeGraphHeaderScopeInput(
-      "nodeMasterScopeBurn",
-      "Burn",
-      normalizeNodeGraphModuleScopeBurn(nodeGraphMvp.moduleScopeBurn ?? 0).toFixed(2),
-      {
-        ariaLabel: "Display screen burn under construction",
-        max: 1,
-        min: 0,
-        scopeInput: "burn",
-        step: 0.01,
-        title: "Burn is under construction.",
-        tooltipKey: "timing.burnUnderConstruction",
-        underConstruction: true,
-      },
-    ),
-    createNodeGraphHeaderScopeInput(
-      "nodeMasterScopeDecay",
-      "Decay",
-      normalizeNodeGraphModuleScopeDecay(nodeGraphMvp.moduleScopeDecay ?? 0).toFixed(2),
-      {
-        ariaLabel: "Display initial phosphor decay under construction",
-        max: 1,
-        min: 0,
-        scopeInput: "decay",
-        step: 0.01,
-        title: "Decay is under construction.",
-        tooltipKey: "timing.decayUnderConstruction",
-        underConstruction: true,
-      },
-    ),
     createNodeGraphHeaderSpeedPlaceholder(),
   );
   return group;
@@ -377,6 +347,14 @@ function createNodeGraphModuleHeader(type, node, definition) {
   nodeGraphApplyTooltip(displayButton, "module.displaySettings", {}, { title: false });
   displayButton.textContent = "\u{1F4FA}";
   actionRow.append(displayButton);
+  const actionButton = document.createElement("button");
+  actionButton.className = "node-action-button";
+  actionButton.type = "button";
+  actionButton.dataset.node = node;
+  actionButton.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} module settings`);
+  nodeGraphApplyTooltip(actionButton, "module.actionsTitle", {}, { title: false });
+  actionButton.textContent = "\u2699\uFE0F";
+  actionRow.append(actionButton);
   const orderBadge = document.createElement("span");
   orderBadge.className = "node-execution-order-badge";
   orderBadge.dataset.executionState = "inactive";
@@ -406,14 +384,6 @@ function createNodeGraphModuleHeader(type, node, definition) {
     nodeGraphApplyTooltip(bypassButton, "module.bypass", {}, { title: false });
     actionRow.append(bypassButton);
   }
-  const actionButton = document.createElement("button");
-  actionButton.className = "node-action-button";
-  actionButton.type = "button";
-  actionButton.dataset.node = node;
-  actionButton.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} module settings`);
-  nodeGraphApplyTooltip(actionButton, "module.actionsTitle", {}, { title: false });
-  actionButton.textContent = "\u2699";
-  actionRow.append(actionButton);
   header.append(actionRow);
 
   return header;

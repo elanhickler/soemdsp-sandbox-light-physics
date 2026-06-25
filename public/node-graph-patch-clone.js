@@ -262,6 +262,9 @@ function cloneNodeGraphPatch(patch) {
         ...(node.type === "traceDisplay"
           ? { traceDisplaySettings: normalizeNodeGraphTraceDisplaySettings(node.traceDisplaySettings) }
           : {}),
+        ...(node.type === "dotOscilloscope"
+          ? { zeroDBurnSettings: normalizeNodeGraphZeroDBurnSettings(node.zeroDBurnSettings) }
+          : {}),
         ...(Object.hasOwn(node, "scopeShader")
           ? { scopeShader: normalizeNodeGraphScopeShader(node.scopeShader) }
           : {}),

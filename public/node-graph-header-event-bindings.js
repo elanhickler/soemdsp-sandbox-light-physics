@@ -36,18 +36,6 @@ function bindNodeGraphHeaderControlEvents() {
     .getElementById("nodeMasterScopeBackgroundColor")
     ?.addEventListener("input", (event) => setNodeGraphModuleScopeBackgroundColor(event.currentTarget.value));
   document
-    .getElementById("nodeMasterScopeBurn")
-    ?.addEventListener("input", handleNodeGraphModuleScopeBurnInput);
-  document
-    .getElementById("nodeMasterScopeBurn")
-    ?.addEventListener("change", handleNodeGraphModuleScopeBurnInput);
-  document
-    .getElementById("nodeMasterScopeDecay")
-    ?.addEventListener("input", handleNodeGraphModuleScopeDecayInput);
-  document
-    .getElementById("nodeMasterScopeDecay")
-    ?.addEventListener("change", handleNodeGraphModuleScopeDecayInput);
-  document
     .getElementById("nodeMasterScopeFps")
     ?.addEventListener("input", handleNodeGraphModuleScopeFramesPerSecondInput);
   document

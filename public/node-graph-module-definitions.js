@@ -153,6 +153,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     parameters: [],
   },
   osc: {
+    displayType: "trace",
     inputs: ["Reset", "0.1V/Oct", "Increment"],
     outputAliases: {
       Out: "Wave Out",
@@ -210,6 +211,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   polyBlep: {
+    displayType: "trace",
     inputs: ["Reset", "0.1V/Oct", "Increment"],
     outputAliases: {
       Out: "Wave Out",
@@ -267,6 +269,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   fbPolyBlepOsc: {
+    displayType: "trace",
     inputs: ["Reset", "0.1V/Oct", "Increment"],
     outputAliases: {
       Out: "Wave Out",
@@ -714,7 +717,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   clock: {
-    displayType: "clock",
+    displayType: "dot",
     displayRenderer: "pulseDot",
     inputs: ["Reset"],
     outputAliases: {
@@ -1688,10 +1691,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     inputs: ["In"],
     layout: "traceDisplay",
     outputs: [],
-    parameters: [
-      { defaultValue: "1", key: "gain", label: "Gain", max: "8", mid: "1", min: "0", step: "any" },
-      { defaultValue: "0", key: "offset", label: "Offset", max: "1", mid: "0", min: "-1", step: "any" },
-    ],
+    parameters: [],
     visualInputs: [
       { key: "traceDisplay", label: "In", port: "In" },
     ],
@@ -1766,6 +1766,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     parameters: [],
   },
   output: {
+    displayType: "trace",
     inputs: ["Mono", "Left", "Right"],
     output: true,
     parameters: [

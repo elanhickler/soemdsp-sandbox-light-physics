@@ -48,8 +48,6 @@
     "help": "Mouse: click to step patch history."
   },
   "timing": {
-    "burnUnderConstruction": "Burn control is under construction. It is shown here for the future display persistence system, but it is not active yet.",
-    "decayUnderConstruction": "Decay control is under construction. It is shown here for the future display persistence system, but it is not active yet.",
     "speedUnderConstruction": "Speed control is under construction. It is shown here as a future global timing multiplier, but it is not active yet."
   },
   "script": {
@@ -83,7 +81,7 @@
     "titleMove": "Mouse: drag to move modules. Click to select; Ctrl/Shift+click adds or removes from selection. Alt+click an empty I/O section to toggle bypass. When module buttons are hidden, Alt+click the title also toggles bypass.",
     "actions": "Mouse: click to open module settings.",
     "actionsTitle": "Module settings",
-    "displaySettings": "Click to show or hide this module's display. Right-click to open display settings.",
+    "displaySettings": "Click to open this module's display settings. Alt+click shows or hides the display.",
     "textBoxEdit": "Display-only text. Edit content from this module's actions menu. Text clips to the box height and scales down to fit width. Mouse wheel zooms the modular view.",
     "bypass": "Mouse: click to bypass this module. Bypassed modules are removed from the compiled engine.",
     "include": "Mouse: click to include this module in the compiled engine.",
@@ -126,14 +124,22 @@
     "closeDiscard": "Discard changes and close Trace Display settings.",
     "cycles": "Legacy Trace Display cycle setting.",
     "zoomSeconds": "Trace Display zoom window in seconds.",
+    "burn": "1D Burn trail amount. 0 clears the trail; 1 keeps the longest trail.",
+    "decay": "1D Burn fade speed. 0 fades slowly; 1 fades quickly.",
     "skipSamples": "Samples skipped after a vertical discontinuity. Use 0, 1, or 2.",
     "padding": "Trace Display vertical padding per side. 0 uses the full display height.",
-    "lineThickness": "Thickness of the Trace Display waveform line.",
-    "brightness": "Brightness of the Trace Display waveform.",
-    "color": "Color of the Trace Display waveform.",
-    "dot2LineThickness": "Thickness of Trace Display Dot 2.",
-    "dot2Brightness": "Brightness of Trace Display Dot 2.",
-    "dot2Color": "Color of Trace Display Dot 2.",
+    "dot1Size": "Dot 1 size as a 0..1 fraction of the display square.",
+    "lineThickness": "Blur of the 1D Trace Dot 1 beam.",
+    "brightness": "Dot 1 or 1D Trace brightness. Values above 1 are allowed.",
+    "color": "Dot 1 or 1D Trace color.",
+    "dot2Size": "Dot 2 size as a 0..1 fraction of the display square.",
+    "dot2LineThickness": "Blur of the 1D Trace Dot 2 beam.",
+    "dot2Brightness": "Dot 2 brightness. Values above 1 are allowed.",
+    "dot2Color": "Dot 2 color.",
+    "capEnabled": "Show or hide the 1D Value line end caps.",
+    "lineLength": "1D Value line length. 1 reaches the display edge; lower values pull both ends inward.",
+    "capSize": "1D Value cap thickness as a 0..1 fraction of the display square.",
+    "capLength": "1D Value cap length as a 0..1 fraction of the display height.",
     "sourceSync": "Align Trace Display start to the detected source cycle. Zoom (s) still controls length."
   },
   "wire": {

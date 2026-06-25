@@ -612,8 +612,21 @@ function startNodeGraphFloatingWindowKeyboardLoop() {
   );
 }
 
+function nodeGraphFloatingWindowKeyboardEventIsEditable(event) {
+  const target = event?.target;
+  const active = document.activeElement;
+  return Boolean(
+    target?.closest?.("input, textarea, select, [contenteditable='true']") ||
+    active?.closest?.("input, textarea, select, [contenteditable='true']"),
+  );
+}
+
 function handleNodeGraphFloatingWindowKeyboardNudge(event) {
   if (!nodeGraphFloatingWindowArrowDeltas[event.key] || event.ctrlKey || event.metaKey || event.altKey) {
+    return false;
+  }
+  if (nodeGraphFloatingWindowKeyboardEventIsEditable(event)) {
+    clearNodeGraphFloatingWindowKeyboardState();
     return false;
   }
   const target = nodeGraphActiveFloatingWindowKeyboardTarget();
