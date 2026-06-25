@@ -8747,6 +8747,14 @@ function nodeGraphScope2dPointFromSamples(square, x, y) {
   };
 }
 
+function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5) {
+  const sampleX = Number(x) || 0;
+  const sampleY = Number(y) || 0;
+  const radiusX = Math.max(1, Number(square?.width) || 1) * 0.44;
+  const radiusY = Math.max(1, Number(square?.height) || 1) * 0.44;
+  return Math.sqrt((sampleX * radiusX) ** 2 + (sampleY * radiusY) ** 2) > Math.max(0, Number(minimumPixels) || 0);
+}
+
 function nodeGraphScope2dPointToCanvas(item, pixelRatio, point) {
   const screenRect = item?.screenRect;
   if (!screenRect || !point) {
@@ -8847,8 +8855,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   if (!canContinueFromPreviousPoint) {
     while (
       firstIndex < count - 1 &&
-      Math.abs(Number(buffer.x[firstIndex]) || 0) <= 0.000001 &&
-      Math.abs(Number(buffer.y[firstIndex]) || 0) <= 0.000001
+      !nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[firstIndex], buffer.y[firstIndex])
     ) {
       firstIndex += 1;
     }
