@@ -8785,9 +8785,14 @@ function nodeGraphScope2dPointToCanvas(item, pixelRatio, point) {
   if (!screenRect || !point) {
     return null;
   }
+  const x = (point.x - screenRect.left) * pixelRatio;
+  const y = (point.y - screenRect.top) * pixelRatio;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return null;
+  }
   return {
-    x: (point.x - screenRect.left) * pixelRatio,
-    y: (point.y - screenRect.top) * pixelRatio,
+    x,
+    y,
   };
 }
 
@@ -8803,6 +8808,9 @@ function appendNodeGraphScope2dInterpolatedPoint(points, point, spacingPx = 0.5)
   const dx = point.x - previous.x;
   const dy = point.y - previous.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
+  if (!Number.isFinite(distance)) {
+    return;
+  }
   const safeSpacing = Math.max(0.25, Number(spacingPx) || 0.5);
   if (distance < safeSpacing) {
     return;

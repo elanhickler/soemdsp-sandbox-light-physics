@@ -12799,9 +12799,11 @@ def require_node_graph_mvp_contract() -> None:
         and "return Number.isFinite(sample) ? sample : null;" in scope2d_helper_source
         and "function nodeGraphScope2dInterpolationSpacingPx()" in scope2d_helper_source
         and "return 0.5;" in scope2d_helper_source
+        and "if (!Number.isFinite(x) || !Number.isFinite(y)) {\n    return null;\n  }" in scope2d_helper_source
         and "function nodeGraphScope2dMaxBridgeDistancePx" not in scope2d_helper_source
         and "nodeGraphScope2dMaxBridgeDistancePx(square, pixelRatio)" not in scope2d_helper_source
         and "skippedCenterSamples" not in scope2d_helper_source
+        and "if (!Number.isFinite(distance)) {\n    return;\n  }" in scope2d_helper_source
         and "if (distance < safeSpacing)" in scope2d_helper_source
         and "return previousPoint;" in scope2d_helper_source
         and "function nodeGraphScope2dPointBudget()" not in scope2d_helper_source
