@@ -34,6 +34,53 @@ function setNodeGraphLiveOutputMuted(muted) {
   }
 }
 
+let nodeGraphLiveNativeModuleCatalogPromise = null;
+let nodeGraphLiveNativeModuleBytes = {};
+
+async function fetchNodeGraphLiveNativeModuleCatalog() {
+  if (!nodeGraphLiveNativeModuleCatalogPromise) {
+    nodeGraphLiveNativeModuleCatalogPromise = fetch("/api/native-modules", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { modules: [] })
+      .catch(() => ({ modules: [] }));
+  }
+  return nodeGraphLiveNativeModuleCatalogPromise;
+}
+
+async function fetchNodeGraphLiveNativeModuleBytes(entry) {
+  const wasmUrl = String(entry?.wasmUrl || "");
+  if (!wasmUrl) {
+    return null;
+  }
+  if (!nodeGraphLiveNativeModuleBytes[wasmUrl]) {
+    nodeGraphLiveNativeModuleBytes[wasmUrl] = fetch(wasmUrl, { cache: "no-store" })
+      .then((response) => response.ok ? response.arrayBuffer() : null)
+      .catch(() => null);
+  }
+  return nodeGraphLiveNativeModuleBytes[wasmUrl];
+}
+
+async function sendNodeGraphLiveNativeModules(liveNode) {
+  if (!liveNode?.port) {
+    return;
+  }
+  const catalog = await fetchNodeGraphLiveNativeModuleCatalog();
+  const nativeModules = Array.isArray(catalog?.modules) ? catalog.modules : [];
+  for (const entry of nativeModules) {
+    if (entry?.targetType !== "ellipsoid" || !entry?.wasmAvailable) {
+      continue;
+    }
+    const bytes = await fetchNodeGraphLiveNativeModuleBytes(entry);
+    if (!(bytes instanceof ArrayBuffer)) {
+      continue;
+    }
+    const transferableBytes = bytes.slice(0);
+    liveNode.port.postMessage(
+      { type: "setNativeModuleWasm", name: entry.name || "ellipsoid", bytes: transferableBytes },
+      [transferableBytes],
+    );
+  }
+}
+
 async function refreshNodeGraphLiveMicrophonePermissionState() {
   if (!navigator.permissions?.query) {
     nodeGraphMvp.live.inputPermissionStatus = "unsupported";
@@ -909,6 +956,14 @@ function handleNodeGraphLiveWorkletMessage(event) {
         protectionMuteCount: Number(message.protectionMuteCount) || 0,
       });
     }
+  } else if (message.type === "nativeModuleStatus") {
+    setNodeGraphLiveEvidence("native-module", message);
+    if (message.status && message.status !== "ready") {
+      setNodeGraphLivePlanStatus(
+        `${message.name || "native module"} ${message.status}`,
+        "warn",
+      );
+    }
   } else if (message.type === "patchCommand") {
     if (message.sessionId !== nodeGraphMvp.live.sessionId || !nodeGraphMvp.live.node) {
       return;
@@ -1516,7 +1571,7 @@ async function createNodeGraphLiveWorkletNode(context) {
     throw new Error("AudioWorklet unavailable");
   }
   await nodeGraphLiveAwaitStartup(
-    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=0026"),
+    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=0028"),
     "AudioWorklet startup timed out",
   );
   const workletNode = new AudioWorkletNode(
@@ -1532,6 +1587,7 @@ async function createNodeGraphLiveWorkletNode(context) {
   workletNode.onprocessorerror = () => {
     setNodeGraphLiveProcessorError("AudioWorklet processor crashed");
   };
+  sendNodeGraphLiveNativeModules(workletNode);
   return workletNode;
 }
 

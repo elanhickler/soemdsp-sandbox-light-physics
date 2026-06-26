@@ -21,6 +21,7 @@ PUBLIC = ROOT / "public"
 DEFAULT_PRESET = PUBLIC / "presets" / "default.json"
 DEFAULT_UI_SETTINGS = PUBLIC / "presets" / "useruisettings.json"
 DEFAULT_UI_SETTINGS_SCRIPT = PUBLIC / "presets" / "useruisettings.js"
+NATIVE_MODULES = ROOT / "native_modules"
 SAVED_PATCHES = ROOT / "saved-patches"
 MAX_PRESET_BYTES = 512 * 1024
 MAX_AUDIO_FILE_BYTES = 128 * 1024 * 1024
@@ -45,7 +46,11 @@ DEFAULT_MANIFEST = (
 STATIC_MIME_TYPES = {
     ".css": "text/css",
     ".js": "application/javascript",
+    ".wasm": "application/wasm",
 }
+NATIVE_MODULE_HEADER_RE = re.compile(
+    r"^\s*//\s*soemdsp-native-([a-zA-Z0-9_-]+)\s*:\s*(.*?)\s*$"
+)
 # Mirrors soemdsp::meta::MetaType defaults from ../soemdsp/include/soemdsp/meta.hpp.
 NODE_METADATA_KIND_TEMPLATES = {
     "decimal": {
@@ -334,11 +339,23 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.serve_public(relative, send_body=send_body)
             return
 
+        if parsed.path.startswith("/native_modules/"):
+            relative = parsed.path.removeprefix("/native_modules/")
+            self.serve_native_module_file(relative, send_body=send_body)
+            return
+
         if parsed.path == "/api/manifest":
             if not send_body:
                 self.send_error(405, "Method not allowed")
                 return
             self.serve_manifest()
+            return
+
+        if parsed.path == "/api/native-modules":
+            if not send_body:
+                self.send_error(405, "Method not allowed")
+                return
+            self.serve_native_modules()
             return
 
         if parsed.path == "/api/node-metadata-kinds":
@@ -374,6 +391,53 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.send_error(403, "Forbidden")
             return
         self.serve_file(path, send_body=send_body)
+
+    def serve_native_module_file(self, relative: str, send_body: bool) -> None:
+        path = (NATIVE_MODULES / unquote(relative)).resolve()
+        if not path.is_relative_to(NATIVE_MODULES):
+            self.send_error(403, "Forbidden")
+            return
+        self.serve_file(path, send_body=send_body)
+
+    def native_module_entry_from_source(self, source_path: Path) -> dict[str, object] | None:
+        headers: dict[str, str] = {}
+        try:
+            for line in source_path.read_text(encoding="utf-8").splitlines()[:48]:
+                match = NATIVE_MODULE_HEADER_RE.match(line)
+                if match:
+                    headers[match.group(1).lower()] = match.group(2).strip()
+        except OSError:
+            return None
+        name = headers.get("module") or headers.get("name") or source_path.parent.name
+        target_type = headers.get("target") or name
+        label = headers.get("label") or name
+        wasm_path = source_path.with_suffix(".wasm")
+        relative_source = source_path.relative_to(ROOT).as_posix()
+        relative_wasm = wasm_path.relative_to(ROOT).as_posix()
+        return {
+            "name": name,
+            "label": label,
+            "targetType": target_type,
+            "kind": headers.get("kind") or "",
+            "source": relative_source,
+            "sourceUrl": f"/{relative_source}",
+            "wasm": relative_wasm,
+            "wasmUrl": f"/{relative_wasm}",
+            "wasmAvailable": wasm_path.exists(),
+        }
+
+    def serve_native_modules(self) -> None:
+        modules = []
+        if NATIVE_MODULES.exists():
+            for source_path in sorted(NATIVE_MODULES.glob("*/*.cpp")):
+                entry = self.native_module_entry_from_source(source_path)
+                if entry:
+                    modules.append(entry)
+        self.send_json({
+            "ok": True,
+            "root": str(NATIVE_MODULES.resolve()),
+            "modules": modules,
+        })
 
     def serve_manifest(self) -> None:
         manifest_path = self.manifest_path.resolve()

@@ -632,6 +632,7 @@ const nodeGraphModuleActionControlIds = [
   "nodeSceneTextBoxHorizontalAlignControls",
   "nodeSceneTextBoxVerticalAlignControls",
   "nodeSceneToggleModuleEnabled",
+  "nodeSceneOpenNativeCode",
   "nodeSceneDeleteModule",
 ];
 
@@ -831,6 +832,7 @@ function configureNodeSceneContextMenu(mode) {
   const graphRemoveNode = document.getElementById("nodeSceneGraphRemoveNode");
   const toggleButtonsButton = document.getElementById("nodeSceneToggleButtons");
   const toggleModuleEnabledButton = document.getElementById("nodeSceneToggleModuleEnabled");
+  const nativeCodeButton = document.getElementById("nodeSceneOpenNativeCode");
   const toggleOscilloscopeButton = document.getElementById("nodeSceneToggleOscilloscope");
   const toggleInterfaceControlsButton = document.getElementById("nodeSceneToggleInterfaceControls");
   const toggleSlidersButton = document.getElementById("nodeSceneToggleSliders");
@@ -876,6 +878,10 @@ function configureNodeSceneContextMenu(mode) {
     nodeGraphMvp.lastModuleActionTargetNode = targetNodeId;
   }
   const targetNode = targetNodeId ? nodeGraphPatchNode(targetNodeId) : null;
+  const nativeCodeEntry =
+    targetNode && typeof nodeGraphNativeModulesForType === "function"
+      ? nodeGraphNativeModulesForType(targetNode.type).find((entry) => entry?.sourceUrl)
+      : null;
   const selectedWire = wireMode ? nodeGraphWireFromSelection(nodeGraphMvp.selected) : null;
   const hasModuleActionTarget = Boolean(targetNode) || multiModuleMode;
   const canDelete = wireMode
@@ -969,6 +975,9 @@ function configureNodeSceneContextMenu(mode) {
   codeblockControls.hidden = !(moduleMode && !multiModuleMode && targetNode?.type === "codeblock");
   graphControls.hidden = !(moduleMode && !multiModuleMode && targetIsGraphType);
   toggleModuleEnabledButton.hidden = !moduleMode || multiModuleMode;
+  if (nativeCodeButton) {
+    nativeCodeButton.hidden = !moduleMode || multiModuleMode || !nativeCodeEntry;
+  }
   toggleButtonsButton.hidden = !moduleMode || multiModuleMode;
   toggleOscilloscopeButton.hidden = !(moduleMode && !multiModuleMode && nodeGraphPatchNodeHasHideableOscilloscope(targetNode));
   toggleInterfaceControlsButton.hidden = !(moduleMode && !multiModuleMode && nodeGraphModuleTypeHasInterfaceControls(targetNode?.type));
@@ -1057,6 +1066,13 @@ function configureNodeSceneContextMenu(mode) {
     toggleModuleEnabledButton.title = targetNodeDisabled
       ? "Enable this module."
       : "Disable this module.";
+    if (nativeCodeButton) {
+      nativeCodeButton.disabled = !nativeCodeEntry;
+      nativeCodeButton.querySelector("span").textContent = "Code";
+      nativeCodeButton.title = nativeCodeEntry
+        ? `Open ${nativeCodeEntry.source || "native C++ source"}.`
+        : "Native C++ source unavailable.";
+    }
     toggleButtonsButton.disabled = !targetNode;
     toggleButtonsButton.querySelector("span").textContent = buttonsHidden ? "Show buttons" : "Hide buttons";
     toggleButtonsButton.setAttribute("aria-pressed", buttonsHidden ? "true" : "false");

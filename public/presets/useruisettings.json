@@ -128,7 +128,7 @@
     "moduleOscilloscopesVisible": true,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
-    "globalSmoothingSeconds": 0.3347648532356554,
+    "globalSmoothingSeconds": 0.05408842546175556,
     "globalSmoothingManual": false,
     "moduleScopeDotCore1Enabled": true,
     "moduleScopeDotCore1Size": 1.94,
@@ -149,7 +149,7 @@
       "dot1Size": 0.0175,
       "dot2Brightness": 0.93,
       "dot2Color": "#184fff",
-      "dot2Enabled": true,
+      "dot2Enabled": false,
       "dot2Size": 0.1,
       "dot2LineThickness": 0,
       "cycles": 2,
@@ -157,7 +157,7 @@
       "padding": 0,
       "skipSamples": 1,
       "sourceSync": false,
-      "zoomSeconds": 0.2
+      "zoomSeconds": 0.2625
     },
     "sliderLayout": "text-inside",
     "sliderAmountVisible": false,
@@ -636,8 +636,8 @@
       "moduleBrowser": {
         "open": false,
         "position": {
-          "left": 1577,
-          "top": 140
+          "left": 1411,
+          "top": 143
         },
         "size": {
           "width": 179,
@@ -667,23 +667,23 @@
       "traceDisplaySettings": {
         "open": false,
         "locked": true,
-        "targetNode": "scope2d-1"
+        "targetNode": "ellipsoid-1"
       }
     },
     "sharedInspectorActive": "",
     "sharedInspectorWindowState": {},
     "workspaceView": {
       "pan": {
-        "x": -96.53316326530614,
-        "y": -74.92984693877543
+        "x": 256.8799999999999,
+        "y": -126.17250000000001
       },
-      "zoom": 0.7549238838327371
+      "zoom": 1.3304338281216725
     },
-    "moduleStoreDepartment": "",
+    "moduleStoreDepartment": "Oscillator",
     "savedPatchBankIndex": 0,
     "savedPatchBankName": "basic",
     "savedPatchGridColumns": 3,
-    "savedPatchExplorerView": "banks",
+    "savedPatchExplorerView": "patches",
     "currentSavedPatchFilename": "",
     "patchDirtyState": "untouched"
   }

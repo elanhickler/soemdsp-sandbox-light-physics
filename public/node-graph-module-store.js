@@ -110,6 +110,10 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "textBox",
 ]);
 
+let nodeGraphNativeModuleEntries = Object.freeze([]);
+let nodeGraphNativeModuleEntriesByTarget = Object.freeze({});
+let nodeGraphNativeModuleCatalogLoadStarted = false;
+
 const nodeGraphModuleStoreUnderConstructionTypes = Object.freeze(new Set([
   "groupInput",
   "groupOutput",
@@ -985,9 +989,67 @@ function saveNodeGraphModuleCatalogVisibilityLocal(value = nodeGraphModuleCatalo
   }
 }
 
+function normalizeNodeGraphNativeModuleEntry(entry = {}) {
+  const name = String(entry.name || "").trim();
+  const targetType = String(entry.targetType || entry.target || name || "").trim();
+  if (!name || !targetType) {
+    return null;
+  }
+  return Object.freeze({
+    kind: String(entry.kind || ""),
+    label: String(entry.label || name),
+    name,
+    source: String(entry.source || ""),
+    sourceUrl: String(entry.sourceUrl || ""),
+    targetType,
+    wasm: String(entry.wasm || ""),
+    wasmAvailable: Boolean(entry.wasmAvailable),
+    wasmUrl: String(entry.wasmUrl || ""),
+  });
+}
+
+function applyNodeGraphNativeModuleCatalog(entries = []) {
+  const normalized = (Array.isArray(entries) ? entries : [])
+    .map((entry) => normalizeNodeGraphNativeModuleEntry(entry))
+    .filter(Boolean);
+  const byTarget = {};
+  for (const entry of normalized) {
+    if (!byTarget[entry.targetType]) {
+      byTarget[entry.targetType] = [];
+    }
+    byTarget[entry.targetType].push(entry);
+  }
+  nodeGraphNativeModuleEntries = Object.freeze(normalized);
+  nodeGraphNativeModuleEntriesByTarget = Object.freeze(byTarget);
+  renderNodeGraphModuleStoreCatalog();
+}
+
+async function loadNodeGraphNativeModuleCatalog() {
+  if (nodeGraphNativeModuleCatalogLoadStarted || typeof fetch !== "function") {
+    return nodeGraphNativeModuleEntries;
+  }
+  nodeGraphNativeModuleCatalogLoadStarted = true;
+  try {
+    const response = await fetch("/api/native-modules", { cache: "no-store" });
+    if (!response.ok) {
+      return nodeGraphNativeModuleEntries;
+    }
+    const payload = await response.json();
+    applyNodeGraphNativeModuleCatalog(payload?.modules || []);
+  } catch (_error) {
+    // Native modules are optional; the JS module catalog remains usable without them.
+  }
+  return nodeGraphNativeModuleEntries;
+}
+
+function nodeGraphNativeModulesForType(type) {
+  return nodeGraphNativeModuleEntriesByTarget[String(type || "")] || [];
+}
+
 function nodeGraphModuleStoreEntries() {
   return nodeGraphModuleStoreTypes
     .map((type) => {
+      const nativeModules = nodeGraphNativeModulesForType(type);
       const implemented =
         Object.hasOwn(nodeGraphModuleDefinitions, type) &&
         !nodeGraphModuleStoreUnderConstructionTypes.has(type);
@@ -1004,6 +1066,8 @@ function nodeGraphModuleStoreEntries() {
         homeVisible: nodeGraphModuleIsStoreVisible(type, "home") && implemented,
         implemented,
         label: nodeGraphModuleStoreCatalog[type]?.label || nodeGraphNodeLabels[type] || type,
+        nativeAvailable: nativeModules.some((entry) => entry.wasmAvailable),
+        nativeModules,
         shopVisible: publicVisible,
         visible: publicVisible,
       };
@@ -1361,13 +1425,25 @@ function createNodeGraphModuleStoreButton(entry) {
 
   const label = document.createElement("strong");
   label.textContent = entry.label;
+  const nativeStatus = entry.nativeAvailable ? document.createElement("small") : null;
+  if (nativeStatus) {
+    nativeStatus.textContent = "Native C++";
+    nativeStatus.className = "node-module-store-native-status";
+  }
 
   if (entry.implemented) {
     card.append(label);
+    if (nativeStatus) {
+      card.append(nativeStatus);
+    }
   } else {
     const status = document.createElement("small");
     status.textContent = "Under construction";
-    card.append(label, status);
+    card.append(label);
+    if (nativeStatus) {
+      card.append(nativeStatus);
+    }
+    card.append(status);
   }
   return card;
 }
@@ -1704,4 +1780,10 @@ function closeNodeGraphModuleShop() {
 
 function loadNodeGraphModuleStoreStateLocal() {
   renderNodeGraphModuleStoreCatalog();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", loadNodeGraphNativeModuleCatalog, { once: true });
+} else {
+  loadNodeGraphNativeModuleCatalog();
 }

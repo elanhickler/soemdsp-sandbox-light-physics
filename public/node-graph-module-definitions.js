@@ -476,10 +476,11 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { defaultValue: "0", key: "shapeY", label: "Shape Y", max: "1", mid: "0", min: "-1", step: "0.01" },
       { defaultValue: "1", key: "scaleX", label: "Scale X", max: "10", mid: "1", min: "0", step: "0.01" },
       { defaultValue: "1", key: "scaleY", label: "Scale Y", max: "10", mid: "1", min: "0", step: "0.01" },
-      { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "0.01" },
+      { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "0.01", unboundedMax: true },
     ],
   },
   spiral: {
+    displayType: "scope2d",
     outputs: ["X", "Y", "Z"],
     parameters: [
       { key: "frequency", label: "Frequency", defaultValue: "440", min: "40", mid: "440", max: "2000", step: "any", unit: "Hz" },
@@ -498,6 +499,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   lorenzAttractor: {
+    displayType: "scope2d",
     inputs: ["Reset"],
     outputs: ["X", "Y", "Z"],
     parameters: [
@@ -1743,6 +1745,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   visualOscilloscope: {
     bufferedInputs: ["In", "X", "Y"],
+    displayType: "scope2dTrace",
     inputAliases: { Mono: "In" },
     inputLabels: { In: "Mono" },
     inputs: ["In", "X", "Y"],

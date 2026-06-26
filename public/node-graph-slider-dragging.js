@@ -339,6 +339,24 @@ function reanchorNodeSliderDragAtPointer(drag, event) {
   drag.startY = event.clientY;
 }
 
+function nodeSliderValueAtPointer(slider, surface, event) {
+  if (!slider || !surface || !event) {
+    return NaN;
+  }
+  return nodeSliderShouldDisplayChoices(slider) && nodeSliderShouldDivideChoicesVisibly(slider)
+    ? nodeSliderSegmentValueFromPointer(slider, surface, event.clientX)
+    : nodeSliderValueFromPointer(slider, surface, event.clientX);
+}
+
+function setNodeSliderValueAtPointer(slider, surface, event, options = {}) {
+  const value = nodeSliderValueAtPointer(slider, surface, event);
+  if (!Number.isFinite(value)) {
+    return false;
+  }
+  setNodeSliderValue(slider, quantizeNodeSliderDragValue(slider, value), options);
+  return true;
+}
+
 function beginNodeSliderDrag(event) {
   if (nodeGraphMvp.sliderDragging || event.button > 0 || event.detail > 1) {
     return;
@@ -365,9 +383,14 @@ function beginNodeSliderDrag(event) {
 
   const lane = nodeSliderVisualLane(surface, slider);
   const resetToDefaultOnClick = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey;
+  const jumpToPointerOnClick = event.altKey;
   const pointerMode = "relative";
   let startTravel = nodeSliderTravelFromValue(slider, Number(slider.value));
-  if (!resetToDefaultOnClick && nodeSliderShouldDisplayChoices(slider) && nodeSliderShouldDivideChoicesVisibly(slider)) {
+  if (jumpToPointerOnClick) {
+    if (setNodeSliderValueAtPointer(slider, surface, event, { interaction: "drag" })) {
+      startTravel = nodeSliderTravelFromValue(slider, Number(slider.value));
+    }
+  } else if (!resetToDefaultOnClick && nodeSliderShouldDisplayChoices(slider) && nodeSliderShouldDivideChoicesVisibly(slider)) {
     setNodeChoiceSliderFromPointer(slider, surface, event.clientX, { interaction: "drag" });
     startTravel = nodeSliderTravelFromValue(slider, Number(slider.value));
   }
@@ -410,6 +433,14 @@ function dragNodeSlider(event) {
   const verticalDelta = drag.startY - event.clientY;
   if (Math.abs(horizontalDelta) > 1 || Math.abs(verticalDelta) > 1) {
     drag.moved = true;
+  }
+  if (event.altKey && (typeof nodeGraphNumericModifierReserved !== "function" || !nodeGraphNumericModifierReserved(event))) {
+    if (setNodeSliderValueAtPointer(drag.slider, drag.surface, event, { interaction: "drag" })) {
+      reanchorNodeSliderDragAtPointer(drag, event);
+    }
+    updateNodeSliderDotCursor(event);
+    event.preventDefault();
+    return;
   }
   const visualTravelWidth = Math.max(1, drag.width * (Number(drag.visualScale) || 1));
   const travelDelta = ((horizontalDelta + verticalDelta) / visualTravelWidth) * drag.fineScale;

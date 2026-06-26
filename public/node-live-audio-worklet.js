@@ -66,6 +66,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.delayEffectStates = new Map();
     this.expAdsrStates = new Map();
     this.ellipsoidOutputFrames = new Map();
+    this.nativeEllipsoid = null;
+    this.nativeEllipsoidReady = false;
     this.fractalBrownianNoiseStates = new Map();
     this.graphInputConnections = new Map();
     this.gpuAdditiveQueues = new Map();
@@ -231,6 +233,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.setPlan(message.plan, message);
       return;
     }
+    if (message.type === "setNativeModuleWasm") {
+      this.setNativeModuleWasm(message);
+      return;
+    }
     if (message.type === "setParams") {
       this.setParams(message.nodes, message);
       return;
@@ -253,6 +259,31 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     if (message.type === "externalButtonEvent") {
       this.setExternalButtonEvent(message.name);
+    }
+  }
+
+  async setNativeModuleWasm(message) {
+    if (message.name !== "ellipsoid" || !(message.bytes instanceof ArrayBuffer)) {
+      return;
+    }
+    try {
+      const result = await WebAssembly.instantiate(message.bytes, {});
+      this.nativeEllipsoid = result?.instance?.exports || null;
+      this.nativeEllipsoidReady = Boolean(this.nativeEllipsoid?.soemdsp_ellipsoid_vector_sample);
+      this.port.postMessage({
+        type: "nativeModuleStatus",
+        name: "ellipsoid",
+        status: this.nativeEllipsoidReady ? "ready" : "missing exports",
+      });
+    } catch (error) {
+      this.nativeEllipsoid = null;
+      this.nativeEllipsoidReady = false;
+      this.port.postMessage({
+        type: "nativeModuleStatus",
+        name: "ellipsoid",
+        status: "error",
+        message: String(error?.message || error || "native module load failed"),
+      });
     }
   }
 
@@ -2059,9 +2090,56 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     shapeX = 0,
     shapeY = 0,
   ) {
-    const level = this.clampValue(Number(levelValue) || 0, 0, 1);
+    const level = Number(levelValue) || 0;
     const x = this.ellipsoidSample(phase, offsetX, shapeX, scaleX) * level;
     const y = this.ellipsoidSample(phase - Math.PI * 0.5, offsetY, shapeY, scaleY) * level;
+    const output = target || {};
+    output.Out = x;
+    output.Mono = x;
+    output.X = x;
+    output.Y = y;
+    output.Wave = x;
+    output["Wave Out"] = x;
+    return output;
+  }
+
+  nativeEllipsoidVectorSample(
+    target,
+    phase,
+    levelValue = 1,
+    offsetX = 0,
+    offsetY = 0,
+    scaleX = 1,
+    scaleY = 1,
+    shapeX = 0,
+    shapeY = 0,
+  ) {
+    const native = this.nativeEllipsoidReady ? this.nativeEllipsoid : null;
+    if (!native?.soemdsp_ellipsoid_vector_sample) {
+      return this.ellipsoidVectorSample(
+        target,
+        phase,
+        levelValue,
+        offsetX,
+        offsetY,
+        scaleX,
+        scaleY,
+        shapeX,
+        shapeY,
+      );
+    }
+    native.soemdsp_ellipsoid_vector_sample(
+      Number(phase) || 0,
+      Number(levelValue) || 0,
+      Number(offsetX) || 0,
+      Number(offsetY) || 0,
+      Number(scaleX) || 0,
+      Number(scaleY) || 0,
+      Number(shapeX) || 0,
+      Number(shapeY) || 0,
+    );
+    const x = this.clampValue(Number(native.soemdsp_ellipsoid_x?.()) || 0, -1, 1);
+    const y = this.clampValue(Number(native.soemdsp_ellipsoid_y?.()) || 0, -1, 1);
     const output = target || {};
     output.Out = x;
     output.Mono = x;
@@ -4788,7 +4866,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           ellipsoidFrame = { Mono: 0, Out: 0, Wave: 0, "Wave Out": 0, X: 0, Y: 0 };
           this.ellipsoidOutputFrames.set(nodeId, ellipsoidFrame);
         }
-        value = this.ellipsoidVectorSample(
+        value = this.nativeEllipsoidVectorSample(
           ellipsoidFrame,
           phase + phaseOffset,
           this.readEffectiveParameter(node, "level", 1, frame, frames, frameValues),

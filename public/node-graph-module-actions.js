@@ -1675,6 +1675,27 @@ function copySelectedNodeGraphModule() {
   return true;
 }
 
+function nodeGraphNativeModuleCodeEntryForNode(node) {
+  if (!node || typeof nodeGraphNativeModulesForType !== "function") {
+    return null;
+  }
+  return nodeGraphNativeModulesForType(node.type).find((entry) => entry?.sourceUrl) || null;
+}
+
+function openNodeGraphNativeModuleCodeFromContext() {
+  const targetNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
+  const entry = nodeGraphNativeModuleCodeEntryForNode(targetNode);
+  if (!entry?.sourceUrl) {
+    return;
+  }
+  const opened = window.open(entry.sourceUrl, "_blank", "noopener");
+  if (!opened) {
+    window.location.href = entry.sourceUrl;
+    return;
+  }
+  setNodeInteractionHelp(`Opened ${entry.source || entry.sourceUrl}.`);
+}
+
 function deleteNodeGraphModuleFromContext() {
   const targetNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
   if (nodeGraphNodeCanBeDeleted(targetNode)) {

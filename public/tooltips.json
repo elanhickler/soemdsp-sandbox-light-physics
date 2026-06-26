@@ -152,8 +152,8 @@
     "modulationInput": "Plain drag between this modulation input and an output to create a wire. To change an existing modulation, select and delete the wire, then create a new one."
   },
   "slider": {
-    "numeric": "Mouse: drag adjusts, Alt+click jumps, Ctrl+click resets to default, Ctrl/Shift drag fine tunes, double-click types, right-click edits metadata.",
-    "choices": "Mouse: click a segment to choose, Ctrl+click resets to default, Alt+click jumps, double-click types, right-click edits metadata."
+    "numeric": "Mouse: drag adjusts, Alt+drag sticks to the mouse, Ctrl+click resets to default, Ctrl/Shift drag fine tunes, double-click types, right-click edits metadata.",
+    "choices": "Mouse: click a segment to choose, Alt+drag sticks to the mouse, Ctrl+click resets to default, double-click types, right-click edits metadata."
   },
   "audio": {
     "inputDevice": "Browser audio input device",

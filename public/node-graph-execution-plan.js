@@ -631,26 +631,13 @@ function nodeGraphCompiledVisualSinks(graph, reachableNodes) {
     });
 }
 
+const nodeGraphVisualSinkHistorySeconds = 10;
+
 function nodeGraphVisualSinkBufferSampleLimit(node) {
   const fallback = Math.max(1, Math.round(Number(nodeGraphBufferedInputSampleLimit) || 262144));
-  const definition = nodeGraphModuleDefinitions[node?.type] || {};
-  const displayType = String(definition.displayType || "");
-  if (!["trace", "lineBurn"].includes(displayType)) {
-    return fallback;
-  }
   const sampleRate = Math.max(1, Math.round(Number(nodeGraphMvp?.sampleRate) || 44100));
-  const settings = displayType === "lineBurn"
-    ? (typeof nodeGraphLineBurnSettingsForNode === "function"
-      ? nodeGraphLineBurnSettingsForNode(node)
-      : node?.traceDisplaySettings)
-    : (typeof nodeGraphGlobalTraceSettings === "function"
-      ? nodeGraphGlobalTraceSettings()
-      : (nodeGraphMvp?.traceSettings || node?.traceDisplaySettings));
-  const zoomSeconds = Number(settings?.zoomSeconds);
-  if (!Number.isFinite(zoomSeconds) || zoomSeconds <= 0) {
-    return fallback;
-  }
-  return Math.max(fallback, Math.ceil(zoomSeconds * sampleRate));
+  void node;
+  return Math.max(fallback, Math.ceil(sampleRate * nodeGraphVisualSinkHistorySeconds));
 }
 
 function nodeGraphNodeSignalOutputRequired(graph, nodeId) {
