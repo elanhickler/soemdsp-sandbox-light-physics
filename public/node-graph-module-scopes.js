@@ -3912,6 +3912,7 @@ function nodeGraphTraceDisplaySizeControlField(key) {
 
 function nodeGraphTraceDisplaySensitiveControlField(key) {
   return nodeGraphTraceDisplaySizeControlField(key) ||
+    key === "historySeconds" ||
     ["dot1Brightness", "dot2Brightness"].includes(key);
 }
 
@@ -8645,10 +8646,9 @@ function syncNodeGraphScope2dBurnCanvas(canvas, screenElement, pixelRatio) {
     return { resized: false, synced: false };
   }
   const rect = screenElement.getBoundingClientRect();
-  const cssWidth = Number(screenElement.clientWidth) || Number(screenElement.offsetWidth) || rect.width;
-  const cssHeight = Number(screenElement.clientHeight) || Number(screenElement.offsetHeight) || rect.height;
-  const width = Math.max(1, Math.round(cssWidth * pixelRatio));
-  const height = Math.max(1, Math.round(cssHeight * pixelRatio));
+  const backingPixelRatio = nodeGraphModuleScopeBackingPixelRatio(rect, pixelRatio);
+  const width = Math.max(1, Math.round(Math.max(1, rect.width) * backingPixelRatio));
+  const height = Math.max(1, Math.round(Math.max(1, rect.height) * backingPixelRatio));
   const resized = canvas.width !== width || canvas.height !== height;
   if (resized) {
     canvas.width = width;
