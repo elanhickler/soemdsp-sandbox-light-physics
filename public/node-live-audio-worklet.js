@@ -41,6 +41,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.meterSquareSum = 0;
     this.macroControls = new Array(10).fill(0);
     this.externalButtonEvents = new Map();
+    this.wireBreakEvent = { pulseSamples: 0, gateSamples: 0 };
+    this.wireConnectEvent = { pulseSamples: 0 };
+    this.wireDisconnectEvent = { pulseSamples: 0 };
+    this.windowReopenEvent = { pulseSamples: 0, gateSamples: 0, totalSamples: 0 };
     this.pitchModWheelSignal = { mod: 0, pitch: 0 };
     this.midiKeyboardGatePulseSamples = 0;
     this.midiKeyboardSignal = null;
@@ -259,6 +263,23 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     if (message.type === "externalButtonEvent") {
       this.setExternalButtonEvent(message.name);
+      return;
+    }
+    if (message.type === "wireBreakEvent") {
+      this.setWireBreakEvent();
+      return;
+    }
+    if (message.type === "wireConnectEvent") {
+      this.setWireConnectEvent();
+      return;
+    }
+    if (message.type === "wireDisconnectEvent") {
+      this.setWireDisconnectEvent();
+      return;
+    }
+    if (message.type === "windowReopenEvent") {
+      this.setWindowReopenEvent();
+      return;
     }
   }
 
@@ -305,6 +326,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.meterSquareSum = 0;
     this.macroControls = new Array(10).fill(0);
     this.externalButtonEvents = new Map();
+    this.wireBreakEvent = { pulseSamples: 0, gateSamples: 0 };
+    this.wireConnectEvent = { pulseSamples: 0 };
+    this.wireDisconnectEvent = { pulseSamples: 0 };
+    this.windowReopenEvent = { pulseSamples: 0, gateSamples: 0, totalSamples: 0 };
     this.pitchModWheelSignal = { mod: 0, pitch: 0 };
     this.midiKeyboardGatePulseSamples = 0;
     this.midiKeyboardSignal = null;
@@ -991,6 +1016,106 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     this.externalButtonEvents.set(name, remaining - 1);
     return 1;
+  }
+
+  wireBreakGateSamples() {
+    return Math.max(1, Math.round(Math.max(1, this.engineSampleRate || sampleRate) * 0.52));
+  }
+
+  gameTriggerPulseSamples() {
+    return Math.max(1, Math.round(Math.max(1, this.engineSampleRate || sampleRate) * 0.02));
+  }
+
+  setWireBreakEvent() {
+    const event = this.wireBreakEvent && typeof this.wireBreakEvent === "object"
+      ? this.wireBreakEvent
+      : { pulseSamples: 0, gateSamples: 0 };
+    event.pulseSamples = Math.max(Number(event.pulseSamples) || 0, this.gameTriggerPulseSamples());
+    event.gateSamples = Math.max(Number(event.gateSamples) || 0, this.wireBreakGateSamples());
+    this.wireBreakEvent = event;
+  }
+
+  wireBreakEventSample() {
+    const event = this.wireBreakEvent && typeof this.wireBreakEvent === "object"
+      ? this.wireBreakEvent
+      : { pulseSamples: 0, gateSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    const gateSamples = Math.max(0, Number(event.gateSamples) || 0);
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    event.gateSamples = Math.max(0, gateSamples - 1);
+    this.wireBreakEvent = event;
+    return {
+      Pulse: pulseSamples > 0 ? 1 : 0,
+      Gate: gateSamples > 0 ? 1 : 0,
+    };
+  }
+
+  setWireConnectEvent() {
+    const event = this.wireConnectEvent && typeof this.wireConnectEvent === "object"
+      ? this.wireConnectEvent
+      : { pulseSamples: 0 };
+    event.pulseSamples = Math.max(Number(event.pulseSamples) || 0, this.gameTriggerPulseSamples());
+    this.wireConnectEvent = event;
+  }
+
+  wireConnectEventSample() {
+    const event = this.wireConnectEvent && typeof this.wireConnectEvent === "object"
+      ? this.wireConnectEvent
+      : { pulseSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    this.wireConnectEvent = event;
+    return { Pulse: pulseSamples > 0 ? 1 : 0 };
+  }
+
+  setWireDisconnectEvent() {
+    const event = this.wireDisconnectEvent && typeof this.wireDisconnectEvent === "object"
+      ? this.wireDisconnectEvent
+      : { pulseSamples: 0 };
+    event.pulseSamples = Math.max(Number(event.pulseSamples) || 0, this.gameTriggerPulseSamples());
+    this.wireDisconnectEvent = event;
+  }
+
+  wireDisconnectEventSample() {
+    const event = this.wireDisconnectEvent && typeof this.wireDisconnectEvent === "object"
+      ? this.wireDisconnectEvent
+      : { pulseSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    this.wireDisconnectEvent = event;
+    return { Pulse: pulseSamples > 0 ? 1 : 0 };
+  }
+
+  windowReopenGateSamples() {
+    return Math.max(1, Math.round(Math.max(1, this.engineSampleRate || sampleRate) * 1));
+  }
+
+  setWindowReopenEvent() {
+    const samples = this.windowReopenGateSamples();
+    this.windowReopenEvent = {
+      gateSamples: samples,
+      pulseSamples: this.gameTriggerPulseSamples(),
+      totalSamples: samples,
+    };
+  }
+
+  windowReopenEventSample() {
+    const event = this.windowReopenEvent && typeof this.windowReopenEvent === "object"
+      ? this.windowReopenEvent
+      : { pulseSamples: 0, gateSamples: 0, totalSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    const gateSamples = Math.max(0, Number(event.gateSamples) || 0);
+    const totalSamples = Math.max(1, Number(event.totalSamples) || gateSamples || 1);
+    const progress = gateSamples > 0 ? 1 - gateSamples / totalSamples : 1;
+    const sine = gateSamples > 0 ? Math.sin(Math.PI * Math.max(0, Math.min(1, progress))) : 0;
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    event.gateSamples = Math.max(0, gateSamples - 1);
+    this.windowReopenEvent = event;
+    return {
+      Pulse: pulseSamples > 0 ? 1 : 0,
+      Gate: gateSamples > 0 ? 1 : 0,
+      Sine: sine,
+    };
   }
 
   buildConnectionMap(items, ids, keyForItem) {
@@ -2838,6 +2963,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.macroControls = this.macroControls;
     runtime.pitchModWheelSignal = this.pitchModWheelSignal;
     runtime.externalButtonEvents = this.externalButtonEvents;
+    runtime.wireBreakEvent = this.wireBreakEvent;
+    runtime.wireConnectEvent = this.wireConnectEvent;
+    runtime.wireDisconnectEvent = this.wireDisconnectEvent;
+    runtime.windowReopenEvent = this.windowReopenEvent;
     runtime.midiKeyboardGatePulseSamples = 0;
     runtime.midiKeyboardSignal = null;
     runtime.moduleGroupRuntimes = new Map();
@@ -2985,6 +3114,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.macroControls = this.macroControls;
     runtime.pitchModWheelSignal = this.pitchModWheelSignal;
     runtime.externalButtonEvents = this.externalButtonEvents;
+    runtime.wireBreakEvent = this.wireBreakEvent;
+    runtime.wireConnectEvent = this.wireConnectEvent;
+    runtime.wireDisconnectEvent = this.wireDisconnectEvent;
+    runtime.windowReopenEvent = this.windowReopenEvent;
     runtime.externalGroupInputs = new Map(
       (node.moduleGroup?.inputs || []).map((input) => [input.nodeId, mixInput(node.id, input.name)]),
     );
@@ -5240,6 +5373,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           Enter: this.externalButtonEventPulse("enter"),
           Leave: this.externalButtonEventPulse("leave"),
         };
+      } else if (node?.type === "wireBreak") {
+        value = this.wireBreakEventSample();
+      } else if (node?.type === "wireConnect") {
+        value = this.wireConnectEventSample();
+      } else if (node?.type === "wireDisconnect") {
+        value = this.wireDisconnectEventSample();
+      } else if (node?.type === "windowReopen") {
+        value = this.windowReopenEventSample();
       } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
         const state = this.patchCommandStates.get(nodeId) || this.createPatchCommandState();
         this.patchCommandStates.set(nodeId, state);

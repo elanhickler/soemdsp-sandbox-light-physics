@@ -4201,7 +4201,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=0028'],
+            ['node-live-audio-worklet.js?v=game-trigger-pulses-0128'],
         ),
     ]:
         for snippet in snippets:
@@ -7207,7 +7207,7 @@ def require_node_graph_mvp_contract() -> None:
                 "for (const type of Object.keys(nodeGraphModuleDefinitions || {}))",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=0028',
+                'node-live-audio-worklet.js?v=game-trigger-pulses-0128',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
@@ -8039,10 +8039,16 @@ def require_node_graph_mvp_contract() -> None:
         "return \"Y\";",
         "return \"Right\";",
         "wire connected +${autoConnected}",
+        "triggerNodeGraphWireConnectEvent(\"signal\")",
         "function connectNodeGraphModulation(",
+        "triggerNodeGraphWireConnectEvent(\"modulation\")",
+        "triggerNodeGraphWireConnectEvent(\"graph\")",
         "function nodeGraphConnectionOptionsWithSelfTrace(sourceNode, destinationNode, options = {})",
         "sourceNode !== destinationNode || options.wireType || options.tracePoints?.length",
         "function disconnectNodeGraphConnection(index, kind = \"signal\")",
+        "let removed = false;",
+        "triggerNodeGraphWireDisconnectEvent(kind)",
+        "triggerNodeGraphWindowReopenEvent(element.id || element.dataset?.windowKey || \"floating-window\")",
         "selection.index > index",
         "setNodeGraphSelection({ ...selection, index: selection.index - 1 })",
         "Render current patch sample",
@@ -9209,6 +9215,12 @@ def require_node_graph_mvp_contract() -> None:
         "\"clockDivider\"",
         "\"delayedTrigger\"",
         "\"buttonEvents\"",
+        "\"wireBreak\"",
+        "\"wireConnect\"",
+        "\"wireDisconnect\"",
+        "\"windowReopen\"",
+        "\"shootingStarTail\"",
+        "\"shootingStarExplosion\"",
         "\"nextPatch\"",
         "\"previousPatch\"",
         "\"randomClock\"",
@@ -9262,6 +9274,21 @@ def require_node_graph_mvp_contract() -> None:
         "External page button event source.",
         "buttonEvents: \"Button Events\"",
         'outputs: ["Click", "Hover", "Down", "Up", "Enter", "Leave"]',
+        "wireBreak: \"Wire Break\"",
+        'outputs: ["Pulse", "Gate"]',
+        'category: "Game Triggers"',
+        "Universe-physics wire break event source.",
+        "wireConnect: \"Wire Connect\"",
+        "Wire connect event source.",
+        "wireDisconnect: \"Wire Disconnect\"",
+        "Wire disconnect event source.",
+        "windowReopen: \"Window Reopen\"",
+        'outputs: ["Pulse", "Gate", "Sine"]',
+        "Window attention event source.",
+        "shootingStarTail: \"Shooting Star Tail\"",
+        "shootingStarExplosion: \"Shooting Star Explosion\"",
+        "Placeholder trigger for a shooting star tail event.",
+        "Placeholder trigger for a shooting star explosion event.",
         "Patch command receiver.",
         "nextPatch: \"Next Patch\"",
         "previousPatch: \"Previous Patch\"",
@@ -9311,10 +9338,39 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphExternalButtonEventPulse(runtime, name)",
         'node?.type === "buttonEvents"',
         'Click: nodeGraphExternalButtonEventPulse(runtime, "click")',
+        "function nodeGraphWireBreakEventSample(runtime)",
+        'node?.type === "wireBreak"',
+        "nodeGraphWireBreakEventSample(runtime)",
+        "function nodeGraphWireDisconnectEventSample(runtime)",
+        "function nodeGraphWireConnectEventSample(runtime)",
+        'node?.type === "wireConnect"',
+        "nodeGraphWireConnectEventSample(runtime)",
+        'node?.type === "wireDisconnect"',
+        "nodeGraphWireDisconnectEventSample(runtime)",
+        "function nodeGraphWindowReopenEventSample(runtime)",
+        'node?.type === "windowReopen"',
+        "nodeGraphWindowReopenEventSample(runtime)",
+        "Math.sin(Math.PI",
         "externalButtonEvents: new Map()",
+        "wireBreakEvent: { pulseSamples: 0, gateSamples: 0 }",
+        "wireConnectEvent: { pulseSamples: 0 }",
+        "wireDisconnectEvent: { pulseSamples: 0 }",
+        "windowReopenEvent: { pulseSamples: 0, gateSamples: 0, totalSamples: 0 }",
+        "function triggerNodeGraphWireBreakEvent(reason = \"\")",
+        "function triggerNodeGraphWireConnectEvent(reason = \"\")",
+        "function triggerNodeGraphWireDisconnectEvent(reason = \"\")",
+        "function triggerNodeGraphWindowReopenEvent(reason = \"\")",
         "window.soemdspSandboxTriggerButtonEvent = triggerNodeGraphExternalButtonEvent",
+        "window.soemdspSandboxTriggerWireBreakEvent = triggerNodeGraphWireBreakEvent",
+        "window.soemdspSandboxTriggerWireConnectEvent = triggerNodeGraphWireConnectEvent",
+        "window.soemdspSandboxTriggerWireDisconnectEvent = triggerNodeGraphWireDisconnectEvent",
+        "window.soemdspSandboxTriggerWindowReopenEvent = triggerNodeGraphWindowReopenEvent",
         'message.type !== "soemdsp-sandbox-button-event"',
         'type: "externalButtonEvent"',
+        'type: "wireBreakEvent"',
+        'type: "wireConnectEvent"',
+        'type: "wireDisconnectEvent"',
+        'type: "windowReopenEvent"',
         "function nodeGraphBuildLivePlanForPatch(patch)",
         "moduleGroupPlan",
         "node?.type === \"groupInput\"",
@@ -12560,7 +12616,34 @@ def require_node_graph_mvp_contract() -> None:
     require("const workingCount = entries.filter((entry) => entry.visible && entry.implemented).length" in module_store_source, "module browser counts should include only working modules")
     require('if (value === "Sequencer")' in module_store_source and 'return "Sequence";' in module_store_source, "old Sequencer state should normalize to Sequence")
     require('"Oscilloscope",' in module_store_source, "Module Browser should expose an Oscilloscope category")
-    require('departments: Object.freeze(["Controllers", "Portals", "Oscilloscope", "Visual", "Debug"])' in module_store_source, "Oscilloscope category should live under Interact")
+    require('departments: Object.freeze(["Controllers", "Game Triggers", "Portals", "Oscilloscope", "Visual", "Debug"])' in module_store_source, "Oscilloscope and Game Triggers categories should live under Interact")
+    require('"Game Triggers",' in module_store_source and '"wireBreak"' in module_store_source and '"wireConnect"' in module_store_source and '"wireDisconnect"' in module_store_source and '"windowReopen"' in module_store_source and '"shootingStarTail"' in module_store_source and '"shootingStarExplosion"' in module_store_source, "Game Triggers should expose wire, window, and shooting star trigger modules")
+    wire_connect_definition = module_definitions_source[
+        module_definitions_source.index("wireConnect: {"):
+        module_definitions_source.index("wireDisconnect: {")
+    ]
+    require(
+        'outputs: ["Pulse"]' in wire_connect_definition
+        and '"Gate"' not in wire_connect_definition,
+        "Wire Connect should expose only a one-sample Pulse output",
+    )
+    wire_disconnect_definition = module_definitions_source[
+        module_definitions_source.index("wireDisconnect: {"):
+        module_definitions_source.index("windowReopen: {")
+    ]
+    require(
+        'outputs: ["Pulse"]' in wire_disconnect_definition
+        and '"Gate"' not in wire_disconnect_definition,
+        "Wire Disconnect should expose only a one-sample Pulse output",
+    )
+    window_reopen_definition = module_definitions_source[
+        module_definitions_source.index("windowReopen: {"):
+        module_definitions_source.index("nextPatch: {")
+    ]
+    require(
+        'outputs: ["Pulse", "Gate", "Sine"]' in window_reopen_definition,
+        "Window Reopen should expose Pulse, Gate, and Sine outputs",
+    )
     require('canvas: {\n    category: "Oscilloscope"' in module_store_source, "Canvas should live in Oscilloscope")
     require('traceDisplay: {\n    category: "Oscilloscope"' in module_store_source, "Trace Display should live in Oscilloscope")
     require('"dotOscilloscope"' in module_store_source and 'label: "0D Burn"' in module_store_source, "0D Burn oscilloscope should exist")
@@ -12569,7 +12652,7 @@ def require_node_graph_mvp_contract() -> None:
     require('"scope2d"' in module_store_source and 'label: "2D Burn"' in module_store_source, "2D Burn oscilloscope should exist")
     require('"scope2dTrace"' in module_store_source and 'label: "2D Trace"' in module_store_source, "2D Trace oscilloscope should exist")
     require('"dotOscilloscope",\n  "valueOscilloscope",\n  "lineBurnOscilloscope",\n  "scope2d",\n  "scope2dTrace"' in module_store_source, "Oscilloscope modules should be listed together")
-    require('nodeGraphModuleStoreUnderConstructionTypes = Object.freeze(new Set([\n  "groupInput",\n  "groupOutput",\n]));' in module_store_source, "Only group portals should remain under construction in the store set")
+    require('nodeGraphModuleStoreUnderConstructionTypes = Object.freeze(new Set([\n  "groupInput",\n  "groupOutput",\n  "shootingStarTail",\n  "shootingStarExplosion",\n]));' in module_store_source, "Only group portals and shooting star trigger placeholders should remain under construction in the store set")
     for oscilloscope_type in ["dotOscilloscope", "valueOscilloscope", "lineBurnOscilloscope", "scope2d", "scope2dTrace"]:
         require(f"{oscilloscope_type}: {{" in module_definitions_source, f"{oscilloscope_type} should have a spawnable module definition")
     require('displayType: "dot"' in module_definitions_source, "0D Burn oscilloscope should declare dot display type")
@@ -12919,14 +13002,14 @@ def require_node_graph_mvp_contract() -> None:
         and "return Number.isFinite(sample) ? sample : null;" in scope2d_helper_source
         and "function nodeGraphScope2dInterpolationSpacingPx()" in scope2d_helper_source
         and "return 0.5;" in scope2d_helper_source
-        and "if (!Number.isFinite(x) || !Number.isFinite(y)) {\n    return null;\n  }" in scope2d_helper_source
+        and "if (sampleX === null || sampleY === null) {\n    return null;\n  }" in scope2d_helper_source
         and "skippedCenterSamples" not in scope2d_helper_source
         and "function nodeGraphScope2dDrawStartIndex(state, buffer, count)" in node_graph_source
         and "state?._nodeGraphScope2dLastDrawnFrame" in node_graph_source
         and "function copyNodeGraphScope2dBurnSurface(renderer, sourceSurface, targetSurface, width, height)" in node_graph_source
         and "const previousReadSurface = renderer.readSurface" in scope2d_resize_source
         and "copyNodeGraphScope2dBurnSurface(renderer, previousReadSurface, nextReadSurface, safeWidth, safeHeight)" in scope2d_resize_source
-        and "renderer.lastPoint = null;" not in scope2d_resize_source
+        and "renderer.lastPoint = null;" in scope2d_resize_source
         and "renderer.lastFrame = NaN;" not in scope2d_resize_source
         and "renderer._nodeGraphScope2dLastDrawnFrame = endFrame;" in scope2d_burn_source
         and "canvas._nodeGraphScope2dLastDrawnFrame = endFrame;" in scope2d_burn_source
@@ -12936,16 +13019,17 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphScope2dApplyPointBudget" not in scope2d_helper_source
         and "const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints)" not in scope2d_helper_source
         and "function drawNodeGraphScope2dRetainedBurn(item, pixelRatio, square, buffer, settings)" in scope2d_burn_source
-        and "buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, drawStartIndex, { interpolate: true })" in scope2d_burn_source
+        and "const canvasSquare = nodeGraphScope2dTraceCanvasSquare(item, pixelRatio, square);" in scope2d_burn_source
+        and "buildNodeGraphScope2dPathPoints(canvasSquare, buffer, drawStartIndex, { interpolate: true, settings })" in scope2d_burn_source
         and "drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings" in scope2d_burn_source
         and "function drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings, options = {})" in scope2d_burn_source
-        and "buildNodeGraphScope2dBurnVertices(renderer, points, maxBridgeDistance)" in scope2d_burn_source
+        and "buildNodeGraphScope2dBurnVertices(points)" in scope2d_burn_source
         and "gl.blendFunc(gl.ONE, gl.ONE)" in scope2d_burn_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
         and "if (sampleX === null || sampleY === null) {\n    return false;\n  }" in scope2d_helper_source
         and "function nodeGraphScope2dSampleIsFinite(x, y)" in scope2d_helper_source
         and "if (!nodeGraphScope2dSampleIsFinite(buffer.x[index], buffer.y[index]))" in scope2d_helper_source
-        and "function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, startIndex = 0, options = {})" in scope2d_helper_source
+        and "function buildNodeGraphScope2dPathPoints(square, buffer, startIndex = 0, options = {})" in scope2d_helper_source
         and "function nodeGraphScope2dCenterRunMask" not in scope2d_helper_source
         and "centerRunMask" not in scope2d_helper_source
         and "function breakNodeGraphScope2dPath(points)" in scope2d_helper_source
@@ -13284,6 +13368,17 @@ def require_node_graph_mvp_contract() -> None:
         "x * cosZ - y * sinZ",
         'this.setExternalButtonEvent(message.name)',
         'Click: this.externalButtonEventPulse("click")',
+        'this.setWireBreakEvent()',
+        'value = this.wireBreakEventSample();',
+        'wireBreakGateSamples()',
+        'event.gateSamples = Math.max(Number(event.gateSamples) || 0, this.wireBreakGateSamples())',
+        'this.setWireConnectEvent()',
+        'value = this.wireConnectEventSample();',
+        'this.setWireDisconnectEvent()',
+        'value = this.wireDisconnectEventSample();',
+        'this.setWindowReopenEvent()',
+        'value = this.windowReopenEventSample();',
+        'windowReopenGateSamples()',
     ]:
         require(snippet in worklet_source, f"worklet source missing {snippet}")
 
@@ -13611,10 +13706,11 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphTraceDisplaySensitiveControlField(key)" in node_graph_source
         and "[\"dot1Size\", \"dot2Size\", \"capSize\"].includes(key)" in node_graph_source
         and "[\"dot1Brightness\", \"dot2Brightness\"].includes(key)" in node_graph_source
+        and "const nodeGraphTraceDisplaySensitiveControlExponent = 3;" in node_graph_source
         and "function nodeGraphTraceDisplaySizeToControlValue(value)" in node_graph_source
-        and "return Math.sqrt(clampNodeSliderValue(Number(value) || 0, 0, 1));" in node_graph_source
+        and "1 / nodeGraphTraceDisplaySensitiveControlExponent" in node_graph_source
         and "function nodeGraphTraceDisplayControlToSizeValue(value)" in node_graph_source
-        and "return control * control;" in node_graph_source
+        and "return Math.pow(control, nodeGraphTraceDisplaySensitiveControlExponent);" in node_graph_source
         and "if (!nodeGraphTraceDisplaySensitiveControlField(key))" in node_graph_source
         and "adjustNodeGraphTraceDisplaySettingByControlDelta(drag.key, startValue, controlDelta)" in node_graph_source
         and "adjustNodeGraphTraceDisplaySettingByControlDelta(key, baseValue, direction * quantum)" in node_graph_source

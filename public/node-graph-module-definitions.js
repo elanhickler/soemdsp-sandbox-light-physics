@@ -19,6 +19,12 @@ const nodeGraphNodeLabels = Object.freeze({
   clockDivider: "Clock Divider",
   delayedTrigger: "Delayed Trigger",
   buttonEvents: "Button Events",
+  wireBreak: "Wire Break",
+  wireConnect: "Wire Connect",
+  wireDisconnect: "Wire Disconnect",
+  windowReopen: "Window Reopen",
+  shootingStarTail: "Shooting Star Tail",
+  shootingStarExplosion: "Shooting Star Explosion",
   randomClock: "Random Clock",
   triggerCounter: "Trigger Counter",
   triggerDivider: "Trigger Divider",
@@ -884,6 +890,36 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   buttonEvents: {
     outputs: ["Click", "Hover", "Down", "Up", "Enter", "Leave"],
+    parameters: [],
+  },
+  wireBreak: {
+    inputs: [],
+    outputs: ["Pulse", "Gate"],
+    parameters: [],
+  },
+  wireConnect: {
+    inputs: [],
+    outputs: ["Pulse"],
+    parameters: [],
+  },
+  wireDisconnect: {
+    inputs: [],
+    outputs: ["Pulse"],
+    parameters: [],
+  },
+  windowReopen: {
+    inputs: [],
+    outputs: ["Pulse", "Gate", "Sine"],
+    parameters: [],
+  },
+  shootingStarTail: {
+    inputs: [],
+    outputs: ["Pulse"],
+    parameters: [],
+  },
+  shootingStarExplosion: {
+    inputs: [],
+    outputs: ["Pulse"],
     parameters: [],
   },
   nextPatch: {

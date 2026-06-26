@@ -503,6 +503,10 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       type !== "codeblock" &&
       type !== "delayedTrigger" &&
       type !== "transport" &&
+      type !== "wireBreak" &&
+      type !== "wireConnect" &&
+      type !== "wireDisconnect" &&
+      type !== "windowReopen" &&
       !nodeGraphModuleIsRealtimeOscillatorType(type) &&
       type !== "fractalBrownianNoise" &&
       type !== "flowerChildEnvelopeFollower" &&
@@ -551,6 +555,10 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       type === "audioPlayer" ||
       type === "clock" ||
       type === "transport" ||
+      type === "wireBreak" ||
+      type === "wireConnect" ||
+      type === "wireDisconnect" ||
+      type === "windowReopen" ||
       nodeGraphModuleIsRealtimeOscillatorType(type) ||
       type === "fractalBrownianNoise" ||
       type === "keyboardController" ||

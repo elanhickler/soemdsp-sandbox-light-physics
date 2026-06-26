@@ -47,6 +47,9 @@ function pulseNodeGraphFloatingWindowAttention(element) {
   if (!element) {
     return false;
   }
+  if (typeof triggerNodeGraphWindowReopenEvent === "function") {
+    triggerNodeGraphWindowReopenEvent(element.id || element.dataset?.windowKey || "floating-window");
+  }
   element.classList.remove("node-floating-window-attention");
   void element.offsetWidth;
   element.classList.add("node-floating-window-attention");

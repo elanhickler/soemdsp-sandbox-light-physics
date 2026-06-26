@@ -57,18 +57,19 @@ function setSelectedNodeGraphWireType(wireType) {
 
 function disconnectNodeGraphConnection(index, kind = "signal") {
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  let removed = false;
   if (kind === "graph") {
-    patch.graphConnections = patch.graphConnections.filter(
-      (_connection, connectionIndex) => connectionIndex !== index,
-    );
+    removed = index >= 0 && index < patch.graphConnections.length;
+    patch.graphConnections = patch.graphConnections.filter((_connection, connectionIndex) => connectionIndex !== index);
   } else if (kind === "modulation") {
-    patch.modulations = patch.modulations.filter(
-      (_modulation, modulationIndex) => modulationIndex !== index,
-    );
+    removed = index >= 0 && index < patch.modulations.length;
+    patch.modulations = patch.modulations.filter((_modulation, modulationIndex) => modulationIndex !== index);
   } else {
-    patch.connections = patch.connections.filter(
-      (_connection, connectionIndex) => connectionIndex !== index,
-    );
+    removed = index >= 0 && index < patch.connections.length;
+    patch.connections = patch.connections.filter((_connection, connectionIndex) => connectionIndex !== index);
+  }
+  if (!removed) {
+    return;
   }
   const selection = nodeGraphMvp.selected;
   if (sameNodeGraphSelection(selection, { type: "wire", kind, index })) {
@@ -77,6 +78,9 @@ function disconnectNodeGraphConnection(index, kind = "signal") {
     setNodeGraphSelection({ ...selection, index: selection.index - 1 });
   }
   commitNodeGraphPatch(patch, { status: "wire disconnected" });
+  if (typeof triggerNodeGraphWireDisconnectEvent === "function") {
+    triggerNodeGraphWireDisconnectEvent(kind);
+  }
 }
 
 function connectNodeGraphGraphInput(sourceNode, sourcePort, destinationNode, destinationGraphInput, options = {}) {
@@ -135,6 +139,9 @@ function connectNodeGraphGraphInput(sourceNode, sourcePort, destinationNode, des
     ...nextWireData,
   });
   commitNodeGraphPatch(patch, { status: "graph connected" });
+  if (typeof triggerNodeGraphWireConnectEvent === "function") {
+    triggerNodeGraphWireConnectEvent("graph");
+  }
   return true;
 }
 
@@ -257,6 +264,9 @@ function connectNodeGraphPorts(sourceNode, sourcePort, destinationNode, destinat
       nextWireData,
     );
   commitNodeGraphPatch(patch, { status: autoConnected ? `wire connected +${autoConnected}` : "wire connected" });
+  if (typeof triggerNodeGraphWireConnectEvent === "function") {
+    triggerNodeGraphWireConnectEvent("signal");
+  }
   return true;
 }
 
@@ -305,6 +315,9 @@ function connectNodeGraphModulation(sourceNode, sourcePort, destinationNode, des
     ...nextWireData,
   });
   commitNodeGraphPatch(patch, { status: "modulation connected" });
+  if (typeof triggerNodeGraphWireConnectEvent === "function") {
+    triggerNodeGraphWireConnectEvent("modulation");
+  }
   return true;
 }
 

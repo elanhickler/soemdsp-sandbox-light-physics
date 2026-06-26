@@ -411,6 +411,10 @@ function createNodeGraphLiveRuntime(plan) {
     modulationConnections,
     macroControls: Array.isArray(nodeGraphMvp?.macroControls) ? [...nodeGraphMvp.macroControls] : new Array(10).fill(0),
     externalButtonEvents: new Map(),
+    wireBreakEvent: { pulseSamples: 0, gateSamples: 0 },
+    wireConnectEvent: { pulseSamples: 0 },
+    wireDisconnectEvent: { pulseSamples: 0 },
+    windowReopenEvent: { pulseSamples: 0, gateSamples: 0, totalSamples: 0 },
     moduleGroupRuntimes,
     pitchModWheelSignal: {
       mod: Math.max(0, Math.min(1, Number(nodeGraphMvp?.modWheelSignal) || 0)),

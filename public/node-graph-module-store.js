@@ -17,6 +17,12 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "clockDivider",
   "delayedTrigger",
   "buttonEvents",
+  "wireBreak",
+  "wireConnect",
+  "wireDisconnect",
+  "windowReopen",
+  "shootingStarTail",
+  "shootingStarExplosion",
   "nextPatch",
   "previousPatch",
   "randomClock",
@@ -117,6 +123,8 @@ let nodeGraphNativeModuleCatalogLoadStarted = false;
 const nodeGraphModuleStoreUnderConstructionTypes = Object.freeze(new Set([
   "groupInput",
   "groupOutput",
+  "shootingStarTail",
+  "shootingStarExplosion",
 ]));
 
 const nodeGraphModuleGroupStorageKey = "soemdsp-sandbox.moduleGroups.v1";
@@ -138,6 +146,7 @@ const nodeGraphModuleStoreDepartments = Object.freeze([
   "Visual",
   "Oscilloscope",
   "Controllers",
+  "Game Triggers",
   "Portals",
   "Loops",
   "Samples",
@@ -155,7 +164,7 @@ const nodeGraphModuleStoreVisualGroups = Object.freeze([
   },
   {
     label: "Interact",
-    departments: Object.freeze(["Controllers", "Portals", "Oscilloscope", "Visual", "Debug"]),
+    departments: Object.freeze(["Controllers", "Game Triggers", "Portals", "Oscilloscope", "Visual", "Debug"]),
   },
   {
     label: "Memory",
@@ -581,6 +590,42 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "External page button event source. Emits short pulses for explicit click, hover, down, up, enter, and leave events sent into sandbox.",
     label: "Button Events",
     notes: ["external UI", "button triggers", "music page bridge"],
+  },
+  wireBreak: {
+    category: "Game Triggers",
+    description: "Universe-physics wire break event source. Emits a one-sample pulse and an animation-length gate when a wire breaks.",
+    label: "Wire Break",
+    notes: ["game trigger", "wire break", "physics violation"],
+  },
+  wireConnect: {
+    category: "Game Triggers",
+    description: "Wire connect event source. Emits a one-sample pulse when a new wire connection happens.",
+    label: "Wire Connect",
+    notes: ["game trigger", "wire connect", "patch editing"],
+  },
+  wireDisconnect: {
+    category: "Game Triggers",
+    description: "Wire disconnect event source. Emits a one-sample pulse when a normal wire disconnect happens.",
+    label: "Wire Disconnect",
+    notes: ["game trigger", "wire disconnect", "patch editing"],
+  },
+  windowReopen: {
+    category: "Game Triggers",
+    description: "Window attention event source. Emits a pulse, animation gate, and glow-shaped sine when an already-open window is requested again.",
+    label: "Window Reopen",
+    notes: ["game trigger", "window attention", "green glow"],
+  },
+  shootingStarTail: {
+    category: "Game Triggers",
+    description: "Placeholder trigger for a shooting star tail event.",
+    label: "Shooting Star Tail",
+    notes: ["placeholder", "game trigger", "shooting star"],
+  },
+  shootingStarExplosion: {
+    category: "Game Triggers",
+    description: "Placeholder trigger for a shooting star explosion event.",
+    label: "Shooting Star Explosion",
+    notes: ["placeholder", "game trigger", "shooting star"],
   },
   nextPatch: {
     category: "Controllers",

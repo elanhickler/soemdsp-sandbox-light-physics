@@ -2434,6 +2434,7 @@ const nodeGraphScope2dSettingsDefaults = Object.freeze({
   dot2Size: 0.24,
   dot2LineThickness: 0.48,
   lineThickness: 0.2,
+  scale: 1,
 });
 
 const nodeGraphScope2dTraceSettingsDefaults = Object.freeze({
@@ -3229,6 +3230,7 @@ const nodeGraphTraceDisplayActiveControlsByType = Object.freeze({
     fields: Object.freeze([
       "burn",
       "decay",
+      "scale",
       "dot1Size",
       "dot1Brightness",
       "dot2Size",
@@ -3913,13 +3915,18 @@ function nodeGraphTraceDisplaySensitiveControlField(key) {
     ["dot1Brightness", "dot2Brightness"].includes(key);
 }
 
+const nodeGraphTraceDisplaySensitiveControlExponent = 3;
+
 function nodeGraphTraceDisplaySizeToControlValue(value) {
-  return Math.sqrt(clampNodeSliderValue(Number(value) || 0, 0, 1));
+  return Math.pow(
+    clampNodeSliderValue(Number(value) || 0, 0, 1),
+    1 / nodeGraphTraceDisplaySensitiveControlExponent,
+  );
 }
 
 function nodeGraphTraceDisplayControlToSizeValue(value) {
   const control = clampNodeSliderValue(Number(value) || 0, 0, 1);
-  return control * control;
+  return Math.pow(control, nodeGraphTraceDisplaySensitiveControlExponent);
 }
 
 function adjustNodeGraphTraceDisplaySettingByControlDelta(key, startValue, delta) {
@@ -8789,7 +8796,6 @@ function createNodeGraphScope2dBurnRenderer(canvas) {
     }
   `, `
     precision highp float;
-    const float SQRT2 = 1.41421356237;
     uniform vec3 uColor;
     uniform float uBrightness;
     uniform float uBlur;
@@ -8797,35 +8803,17 @@ function createNodeGraphScope2dBurnRenderer(canvas) {
     varying vec2 vStart;
     varying vec2 vEnd;
     varying vec2 vPosition;
-    float nodeGraphScopeErf(float x) {
-      float s = sign(x);
-      float a = abs(x);
-      float r = 1.0 + (0.278393 + (0.230389 + 0.078108 * a * a) * a) * a;
-      r *= r;
-      return s - s / (r * r);
-    }
     void main() {
       vec2 segment = vEnd - vStart;
       float blur = clamp(uBlur, 0.0, 1.0);
-      float sigma = max(uRadius * mix(0.28, 0.72, blur), 0.35);
-      float segmentLength = length(segment);
-      float profile = 0.0;
-      if (segmentLength < 0.0001) {
-        float pointDistance = length(vPosition - vStart);
-        profile = exp(-(pointDistance * pointDistance) / (2.0 * sigma * sigma));
-      } else {
-        vec2 tangent = segment / segmentLength;
-        vec2 normal = vec2(-tangent.y, tangent.x);
-        vec2 local = vPosition - vStart;
-        float x = dot(local, tangent);
-        float y = dot(local, normal);
-        float longitudinal = 0.5 * (
-          nodeGraphScopeErf(x / (SQRT2 * sigma)) -
-          nodeGraphScopeErf((x - segmentLength) / (SQRT2 * sigma))
-        );
-        float transverse = exp(-(y * y) / (2.0 * sigma * sigma));
-        profile = max(longitudinal * transverse, 0.0);
-      }
+      float sigma = max(uRadius * mix(0.34, 1.0, blur), 0.35);
+      float segmentLengthSquared = dot(segment, segment);
+      float t = segmentLengthSquared > 0.000001
+        ? clamp(dot(vPosition - vStart, segment) / segmentLengthSquared, 0.0, 1.0)
+        : 0.0;
+      vec2 closest = vStart + segment * t;
+      float distanceToBeam = length(vPosition - closest);
+      float profile = exp(-(distanceToBeam * distanceToBeam) / (2.0 * sigma * sigma));
       float energy = profile * uBrightness;
       gl_FragColor = vec4(uColor * energy, energy);
     }
@@ -8928,6 +8916,7 @@ function resizeNodeGraphScope2dBurnRenderer(renderer, width, height) {
   renderer.writeSurface = nextWriteSurface;
   renderer.width = safeWidth;
   renderer.height = safeHeight;
+  renderer.lastPoint = null;
   for (const surface of [
     copiedRead ? null : renderer.readSurface,
     copiedWrite ? null : renderer.writeSurface,
@@ -9038,17 +9027,9 @@ function appendNodeGraphScope2dBurnSegment(vertices, from, to) {
   }
 }
 
-function buildNodeGraphScope2dBurnVertices(renderer, pathPoints, maxBridgeDistancePx) {
+function buildNodeGraphScope2dBurnVertices(pathPoints) {
   const points = Array.isArray(pathPoints) ? pathPoints : [];
   const vertices = [];
-  const firstPoint = firstNodeGraphScope2dPathPoint(points);
-  if (
-    renderer?.lastPoint &&
-    firstPoint &&
-    nodeGraphScope2dPointDistance(renderer.lastPoint, firstPoint) <= maxBridgeDistancePx
-  ) {
-    appendNodeGraphScope2dBurnSegment(vertices, renderer.lastPoint, firstPoint);
-  }
   let previousPoint = null;
   for (const point of points) {
     if (!point) {
@@ -9130,6 +9111,10 @@ function drawNodeGraphScope2dRetainedBurn(item, pixelRatio, square, buffer, sett
     return;
   }
   resizeNodeGraphScope2dBurnRenderer(renderer, canvas.width, canvas.height);
+  const canvasSquare = nodeGraphScope2dTraceCanvasSquare(item, pixelRatio, square);
+  if (!canvasSquare) {
+    return;
+  }
   if (nodeGraphModuleScopePaused()) {
     drawNodeGraphRetainedBurnPath(item, pixelRatio, [], settings);
     return;
@@ -9137,7 +9122,7 @@ function drawNodeGraphScope2dRetainedBurn(item, pixelRatio, square, buffer, sett
   const count = Math.min(buffer?.x?.length || 0, buffer?.y?.length || 0);
   const drawStartIndex = nodeGraphScope2dDrawStartIndex(renderer, buffer, count);
   const pathPoints = drawStartIndex < count
-    ? buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, drawStartIndex, { interpolate: true })
+    ? buildNodeGraphScope2dPathPoints(canvasSquare, buffer, drawStartIndex, { interpolate: true, settings })
     : [];
   drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings, {
     endFrame: Number(buffer.nodeGraphScopeAbsoluteFrame),
@@ -9171,13 +9156,7 @@ function drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings, o
     compositeNodeGraphScope2dBurn(renderer, settings);
     return;
   }
-  const maxLayerRadius = Math.max(1, ...layers.map((layer) => layer.radius));
-  const maxBridgeDistance = Math.max(maxLayerRadius * 3.5, dotSpace * 0.42);
-  const vertices = buildNodeGraphScope2dBurnVertices(renderer, points, maxBridgeDistance);
-  const lastPathPoint = lastNodeGraphScope2dPathPoint(points);
-  if (lastPathPoint) {
-    renderer.lastPoint = lastPathPoint;
-  }
+  const vertices = buildNodeGraphScope2dBurnVertices(points);
   const endFrame = Number(options.endFrame);
   if (Number.isFinite(endFrame)) {
     renderer.lastFrame = endFrame;
@@ -9240,15 +9219,16 @@ function nodeGraphScope2dFiniteSample(value) {
   return Number.isFinite(sample) ? sample : null;
 }
 
-function nodeGraphScope2dPointFromSamples(square, x, y) {
+function nodeGraphScope2dPointFromSamples(square, x, y, settings = {}) {
   const sampleX = nodeGraphScope2dFiniteSample(x);
   const sampleY = nodeGraphScope2dFiniteSample(y);
   if (sampleX === null || sampleY === null) {
     return null;
   }
+  const scale = Math.max(0, Number(settings?.scale) || 1);
   return {
-    x: square.left + square.width * 0.5 + clampNodeSliderValue(sampleX, -1, 1) * square.width * 0.44,
-    y: square.top + square.height * 0.5 - clampNodeSliderValue(sampleY, -1, 1) * square.height * 0.44,
+    x: square.left + square.width * 0.5 + sampleX * scale * square.width * 0.5,
+    y: square.top + square.height * 0.5 - sampleY * scale * square.height * 0.5,
   };
 }
 
@@ -9496,22 +9476,6 @@ function drawNodeGraphTraceDisplayCanvasItem(item, pixelRatio) {
   return true;
 }
 
-function nodeGraphScope2dPointToCanvas(item, pixelRatio, point) {
-  const screenRect = item?.screenRect;
-  if (!screenRect || !point) {
-    return null;
-  }
-  const x = (point.x - screenRect.left) * pixelRatio;
-  const y = (point.y - screenRect.top) * pixelRatio;
-  if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    return null;
-  }
-  return {
-    x,
-    y,
-  };
-}
-
 function appendNodeGraphScope2dInterpolatedPoint(points, point, spacingPx = 0.5) {
   if (!point) {
     return;
@@ -9649,7 +9613,7 @@ function nodeGraphScope2dDrawStartIndex(state, buffer, count) {
   return Math.min(Math.max(0, Math.floor(Number(count) || 0) - 1), frameOffset);
 }
 
-function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, startIndex = 0, options = {}) {
+function buildNodeGraphScope2dPathPoints(square, buffer, startIndex = 0, options = {}) {
   const count = Math.min(buffer?.x?.length || 0, buffer?.y?.length || 0);
   if (!count) {
     return [];
@@ -9668,11 +9632,7 @@ function buildNodeGraphScope2dPathPoints(item, pixelRatio, square, buffer, start
     if (!previousPoint && !nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index], pathStartOffsetPx)) {
       continue;
     }
-    const point = nodeGraphScope2dPointToCanvas(
-      item,
-      pixelRatio,
-      nodeGraphScope2dPointFromSamples(square, buffer.x[index], buffer.y[index]),
-    );
+    const point = nodeGraphScope2dPointFromSamples(square, buffer.x[index], buffer.y[index], options.settings);
     if (!point) {
       breakNodeGraphScope2dPath(pathPoints);
       previousPoint = null;
