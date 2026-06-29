@@ -295,6 +295,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   handleMessage(message) {
     if (message.type === "stop") {
+      if (message.sessionId !== this.sessionId || message.planSerial !== this.planSerial) {
+        return;
+      }
       this.clearPlan();
       return;
     }

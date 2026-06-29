@@ -1189,7 +1189,7 @@ async function sendNodeGraphLivePlan() {
     nodeGraphClearGpuAdditivePrime();
     setNodeGraphLiveOutputMuted(true);
     nodeGraphMvp.live.runtime = null;
-    nodeGraphMvp.live.node?.port?.postMessage({ type: "stop" });
+    nodeGraphMvp.live.node?.port?.postMessage({ type: "stop", sessionId: nodeGraphMvp.live.sessionId, planSerial: nodeGraphMvp.live.planSerial });
     setNodeGraphLiveBlockedError("plan", error);
   }
 }
@@ -1548,7 +1548,7 @@ async function stopNodeGraphLiveAudio() {
   nodeGraphClearVisualControls();
 
   try {
-    liveNode?.port?.postMessage({ type: "stop" });
+    liveNode?.port?.postMessage({ type: "stop", sessionId: nodeGraphMvp.live.sessionId, planSerial: nodeGraphMvp.live.planSerial });
     liveNode?.disconnect();
     scriptNode?.disconnect();
   } catch (_error) {
