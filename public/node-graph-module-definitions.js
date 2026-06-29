@@ -2067,6 +2067,79 @@ function nodeGraphModuleIsRealtimeOscillatorType(type) {
   return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc" || type === "sineWavetable";
 }
 
+function nodeGraphModuleProducesOutputWithoutSignalInput(type) {
+  const definition = nodeGraphModuleDefinitions[type];
+  if (!definition) {
+    return false;
+  }
+  // Visual-only sinks don't need signal input to produce output.
+  if (definition.visualSink) {
+    return true;
+  }
+  // A module with no input ports is a signal source by nature.
+  if (!Array.isArray(definition.inputs) || definition.inputs.length === 0) {
+    return true;
+  }
+  // Specific module types that have input ports but can produce output
+  // without signal input (e.g. parameter-driven or script-driven output).
+  const inputCapableSources = new Set([
+    "audioInput",
+    "audioPlayer",
+    "bloomGlow",
+    "canvas",
+    "chromaColor",
+    "clapPlugin",
+    "clock",
+    "clockDivider",
+    "codeblock",
+    "delayedTrigger",
+    "transport",
+    "wireBreak",
+    "wireConnect",
+    "wireDisconnect",
+    "windowReopen",
+    "shootingStarExplosion",
+    "fbPolyBlepOsc",
+    "fractalBrownianNoise",
+    "flowerChildEnvelopeFollower",
+    "groupInput",
+    "groupOutput",
+    "keyboardController",
+    "led",
+    "linearEnvelope",
+    "lorenzAttractor",
+    "ellipsoid",
+    "macroKnob",
+    "macroControls",
+    "midiNotePitch",
+    "midiOut",
+    "moduleGroup",
+    "noiseGenerator",
+    "osc",
+    "pitchModWheel",
+    "bipolarKnob",
+    "additiveOsc",
+    "gpuAdditiveOsc",
+    "pluckEnvelope",
+    "polyBlep",
+    "randomWalk",
+    "rgbaHsla",
+    "sandboxVisuals",
+    "screenSpaceShader",
+    "sineWavetable",
+    "stepSequencer",
+    "triggerCounter",
+    "triggerDivider",
+    "vactrolEnvelope",
+    "visualOscilloscope",
+    "spiral",
+    "stereoNoise",
+    "noise",
+    "output",
+  ]);
+  return inputCapableSources.has(type);
+}
+
 function nodeGraphCanonicalInputPort(type, port) {
   const value = String(port || "").trim();
   return nodeGraphModuleDefinitions[type]?.inputAliases?.[value] || value;

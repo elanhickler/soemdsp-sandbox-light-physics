@@ -505,59 +505,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       if (!clockCount && nodeGraphNodeSignalOutputRequired(graph, nodeId)) {
         issues.push(`missing ${nodeGraphNodeDisplayName(nodeId)} clock`);
       }
-    } else if (
-      !nodeGraphModuleDefinitions[type]?.visualSink &&
-      type !== "audioInput" &&
-      type !== "audioPlayer" &&
-      type !== "bloomGlow" &&
-      type !== "canvas" &&
-      type !== "chromaColor" &&
-      type !== "clapPlugin" &&
-      type !== "clock" &&
-      type !== "clockDivider" &&
-      type !== "codeblock" &&
-      type !== "delayedTrigger" &&
-      type !== "transport" &&
-      type !== "wireBreak" &&
-      type !== "wireConnect" &&
-      type !== "wireDisconnect" &&
-      type !== "windowReopen" &&
-      type !== "shootingStarExplosion" &&
-      !nodeGraphModuleIsRealtimeOscillatorType(type) &&
-      type !== "fractalBrownianNoise" &&
-      type !== "flowerChildEnvelopeFollower" &&
-      type !== "groupInput" &&
-      type !== "groupOutput" &&
-      type !== "keyboardController" &&
-      type !== "led" &&
-      type !== "linearEnvelope" &&
-      type !== "lorenzAttractor" &&
-      type !== "ellipsoid" &&
-      type !== "macroKnob" &&
-      type !== "macroControls" &&
-      type !== "midiNotePitch" &&
-      type !== "midiOut" &&
-      type !== "moduleGroup" &&
-      type !== "noiseGenerator" &&
-      type !== "pitchModWheel" &&
-      type !== "bipolarKnob" &&
-      type !== "additiveOsc" &&
-      type !== "gpuAdditiveOsc" &&
-      type !== "pluckEnvelope" &&
-      type !== "randomWalk" &&
-      type !== "rgbaHsla" &&
-      type !== "sandboxVisuals" &&
-      type !== "screenSpaceShader" &&
-      type !== "stepSequencer" &&
-      type !== "triggerCounter" &&
-      type !== "triggerDivider" &&
-      type !== "vactrolEnvelope" &&
-      type !== "visualOscilloscope" &&
-      type !== "spiral" &&
-      type !== "stereoNoise" &&
-      type !== "noise" &&
-      type !== "output"
-    ) {
+    } else if (!nodeGraphModuleProducesOutputWithoutSignalInput(type)) {
       issues.push(`unsupported source ${nodeId}`);
     }
   }

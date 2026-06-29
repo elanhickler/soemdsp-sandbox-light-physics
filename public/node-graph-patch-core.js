@@ -37,6 +37,8 @@ function normalizeNodeGraphPatchParameter(type, key, value, metadata = null) {
     : clampNodeSliderValue(candidate, min, max);
 }
 
+const nodeGraphRetiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"]);
+
 function validateNodeGraphPatch(patch) {
   if (!patch || typeof patch !== "object") {
     throw new Error("patch must be an object");
@@ -64,7 +66,7 @@ function validateNodeGraphPatch(patch) {
     throw new Error("nodes must be an array");
   }
 
-  const retiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"]);
+  const retiredNodeTypes = nodeGraphRetiredNodeTypes;
   const retiredNodeIds = new Set(
     patch.nodes
       .filter((node) => retiredNodeTypes.has(String(node.type || "").trim()))
@@ -316,7 +318,7 @@ function validateNodeGraphPatch(patch) {
     });
 
   const graphConnectionKeys = new Set();
-  const graphConnections = Array.isArray(patch.graphConnections) ? patch.graphConnections.map((connection) => {
+  const graphConnections = Array.isArray(patch.graphConnections) ? patch.graphConnections.flatMap((connection) => {
     const sourceNode = String(connection.sourceNode || "").trim();
     let sourcePort = String(connection.sourcePort || "").trim();
     const destinationNode = String(connection.destinationNode || "").trim();
@@ -340,10 +342,10 @@ function validateNodeGraphPatch(patch) {
     }
     const key = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationGraphInput}`;
     if (graphConnectionKeys.has(key)) {
-      throw new Error(`duplicate graph connection ${key}`);
+      return [];
     }
     graphConnectionKeys.add(key);
-    return {
+    return [{
       destinationGraphInput,
       destinationNode,
       sourceNode,
@@ -354,7 +356,7 @@ function validateNodeGraphPatch(patch) {
       ...(normalizeNodeGraphTracePoints(connection.tracePoints).length
         ? { tracePoints: normalizeNodeGraphTracePoints(connection.tracePoints) }
         : {}),
-    };
+    }];
   }) : [];
 
   const view = normalizeNodeGraphPatchView(patch.view);

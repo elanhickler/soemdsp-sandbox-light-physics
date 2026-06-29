@@ -3501,16 +3501,17 @@ def require_node_graph_mvp_contract() -> None:
         and "nodeGraphModuleIsRealtimeOscillatorType(node.type) || node.type === \"noise\"" in live_plan_runtime_source,
         "polyBlep should share live-plan oscillator state initialization with osc and F/B PolyBLEP",
     )
-    unsupported_source_start = execution_plan_source.index('!nodeGraphModuleDefinitions[type]?.visualSink')
+    node_graph_module_definitions_source = script_sources["./public/node-graph-module-definitions.js"]
+    unsupported_source_start = execution_plan_source.index('nodeGraphModuleProducesOutputWithoutSignalInput(type)')
     source_nodes_start = execution_plan_source.index("const sourceNodes = order.filter")
     source_nodes_end = execution_plan_source.index("const inactiveNodes", source_nodes_start)
     require(
-        "!nodeGraphModuleIsRealtimeOscillatorType(type)" in execution_plan_source[unsupported_source_start:source_nodes_start],
-        "polyBlep oscillator types should be supported by the execution-plan source gate",
+        "nodeGraphModuleProducesOutputWithoutSignalInput(type)" in execution_plan_source[unsupported_source_start:source_nodes_start],
+        "execution-plan source gate should use the module capability helper",
     )
     require(
-        'type !== "ellipsoid"' in execution_plan_source[unsupported_source_start:source_nodes_start],
-        "ellipsoid should be supported by the execution-plan source gate",
+        "nodeGraphModuleDefinitions" in node_graph_module_definitions_source,
+        "module capability helper should reference module definitions",
     )
     require(
         "nodeGraphModuleIsRealtimeOscillatorType(type) ||" in execution_plan_source[source_nodes_start:source_nodes_end],
@@ -4278,7 +4279,7 @@ def require_node_graph_mvp_contract() -> None:
             "execution plan",
             clap_contract_sources["execution plan"],
             [
-                'type !== "clapPlugin"',
+                "nodeGraphModuleProducesOutputWithoutSignalInput(type)",
                 "nodeGraphPatchNodeOutputPorts(source)",
                 "nodeGraphPatchNodeInputPorts(destination)",
                 "nodeGraphPatchNodeParameterDefinitions(destination)",
@@ -7240,7 +7241,6 @@ def require_node_graph_mvp_contract() -> None:
                 audio_player_contract_sources["state"],
             ]),
             [
-                'type !== "audioPlayer"',
                 'type === "audioPlayer"',
                 "plan.samples = typeof nodeGraphLiveSamplesForPlan === \"function\"",
                 "runtime.samples = new Map",
@@ -7448,8 +7448,8 @@ def require_node_graph_mvp_contract() -> None:
         "workspace.origin",
         "nodeGraphApplyTooltip(marker, \"workspace.origin\")",
         "World origin: X 0, Y 0",
-        'node?.type === "moduleHome" || node?.type === "moduleShop"',
-        'const retiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"])',
+        'nodeGraphRetiredNodeTypes.has(node?.type)',
+        'const nodeGraphRetiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"])',
         "timing: {",
         "tempoBpm: 120",
         "timeSignatureDenominator: 4",
@@ -9708,13 +9708,13 @@ def require_node_graph_mvp_contract() -> None:
         "hasParameters: (nodeGraphModuleDefinitions[node.type]?.parameters || []).length > 0",
         "connections: (graph.inputConnections.get(nodeGraphInputKey(node.id, input.port)) || [])",
         "function nodeGraphValidateRuntimeRoute(issues, options = {})",
-        "type !== \"visualOscilloscope\"",
+        '"visualOscilloscope"',
         "const hasActiveVisualSink = nodeGraphActiveVisualSinkExists(visualSinks)",
         "nodeGraphValidateRuntimeRoute(issues, {",
-        'type !== "canvas"',
+        '"canvas"',
         "function nodeGraphModuleIsRealtimeOscillatorType(type)",
         'return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc" || type === "sineWavetable"',
-        "!nodeGraphModuleIsRealtimeOscillatorType(type)",
+        "nodeGraphModuleIsRealtimeOscillatorType(type)",
         "nodeGraphModuleIsRealtimeOscillatorType(type) ||",
         "const nodeGraphMidiKeyboardMinOctave = -4",
         "const nodeGraphMidiKeyboardMaxOctave = 4",
@@ -9731,16 +9731,16 @@ def require_node_graph_mvp_contract() -> None:
         "function changeNodeGraphMidiKeyboardOctave(delta)",
         "rawMidi",
         "octave",
-        'type !== "bloomGlow"',
-        'type !== "chromaColor"',
-        'type !== "keyboardController"',
-        'type !== "led"',
-        'type !== "macroKnob"',
-        'type !== "bipolarKnob"',
-        'type !== "midiNotePitch"',
-        'type !== "midiOut"',
-        'type !== "rgbaHsla"',
-        'type !== "sandboxVisuals"',
+        '"bloomGlow"',
+        '"chromaColor"',
+        '"keyboardController"',
+        '"led"',
+        '"macroKnob"',
+        '"bipolarKnob"',
+        '"midiNotePitch"',
+        '"midiOut"',
+        '"rgbaHsla"',
+        '"sandboxVisuals"',
         'type === "keyboardController"',
         'type === "macroKnob"',
         'type === "bipolarKnob"',
@@ -10101,7 +10101,7 @@ def require_node_graph_mvp_contract() -> None:
         "ScopeOff: scopeTracesOff",
         'node?.type === "noiseGenerator"',
         'node?.type === "stereoNoise"',
-        'type !== "stereoNoise"',
+        '"stereoNoise"',
         'type === "stereoNoise"',
         'node?.type === "randomWalk"',
         'node?.type === "fractalBrownianNoise"',
@@ -10251,7 +10251,7 @@ def require_node_graph_mvp_contract() -> None:
         "feedbackGraphConnections: (compiled.feedbackGraphConnections || []).map",
         "feedbackModulations: compiled.feedbackModulations.map",
         "order: [...compiled.order]",
-        'type !== "additiveOsc"',
+        '"additiveOsc"',
         'type === "additiveOsc"',
         "function createNodeGraphLiveRuntime(plan)",
         "function nodeGraphConnectionMapFromList(items = [], keyForItem)",
@@ -11136,7 +11136,7 @@ def require_node_graph_mvp_contract() -> None:
         "const nodeUiDevDefaultSettingsUrl = \"./public/presets/useruisettings.json\"",
         "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v12\"",
         "function sanitizeNodeUiDevWorkingPatchForStartup(patch)",
-        'node?.type === "moduleHome" || node?.type === "moduleShop"',
+        'nodeGraphRetiredNodeTypes.has(node?.type)',
         "nodeGraphMissingSampleAssets(patch).length",
         "moduleOscilloscopesVisible: false",
         "soemdsp-sandbox-user-ui-settings",
@@ -13280,7 +13280,7 @@ def require_node_graph_mvp_contract() -> None:
         and "settings?.decay" in node_graph_source,
         "burn displays should own local burn/decay behavior instead of using global burn settings",
     )
-    require('type !== "transport"' in execution_plan_source and 'type === "transport"' in execution_plan_source, "execution plan should treat Transport as a supported source")
+    require('"transport"' in execution_plan_source and 'type === "transport"' in execution_plan_source, "execution plan should treat Transport as a supported source")
     require('"softClipper"' in execution_plan_source, "execution plan should treat Soft Clipper as a supported passthrough processor")
     require("timing: normalizeNodeGraphPatchTiming(patch.timing)" in execution_plan_source, "compiled live plan should carry patch timing")
     require("function nodeGraphTransportSample" in live_frame_source and 'node?.type === "transport"' in live_frame_source, "browser fallback should evaluate Transport")
@@ -15085,7 +15085,7 @@ def require_node_graph_mvp_contract() -> None:
         "control surface visibility should exist globally and per module with height-aware hiding",
     )
     require(
-        'retiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"])' in script_sources["./public/node-graph-patch-core.js"]
+        'nodeGraphRetiredNodeTypes = new Set(["formulaVisual", "moduleHome", "moduleShop"])' in script_sources["./public/node-graph-patch-core.js"]
         and "formulaVisual" not in script_sources["./public/node-graph-module-definitions.js"]
         and "formulaVisual" not in script_sources["./public/node-graph-module-store.js"]
         and "formulaVisual" not in script_sources["./public/node-graph-module-factories.js"]
