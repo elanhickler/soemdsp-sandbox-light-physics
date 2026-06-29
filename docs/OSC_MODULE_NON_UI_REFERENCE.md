@@ -24,10 +24,9 @@ Define these:
 
 ## Anchors
 
-- `public/app.js`
-  - `nodeGraphModuleDefinitions`
-  - `createNodeGraphPatchNode(...)`
-  - `nodeGraphOscillatorWaveformSample(...)`
+- `public/node-graph-module-definitions.js` — `nodeGraphModuleDefinitions`
+- `public/node-graph-oscillator-runtime.js` — `nodeGraphOscillatorWaveformSample(runtime, nodeId, phase, phaseIncrement, waveform)`
+- `public/node-graph-default-patch.js` — `createNodeGraphPatchNode(...)`
 - `public/node-live-audio-worklet.js`
   - `NodeLiveAudioProcessor.evaluateFrame(...)`
 

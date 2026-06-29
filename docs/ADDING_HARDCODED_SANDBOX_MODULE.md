@@ -14,7 +14,7 @@ This guide does not describe the final C++ API.
 
 Use the existing modules as the template: `osc`, `noise`, `gain`, and `bias`.
 
-1. Define the module type in `public/app.js`.
+1. Define the module type in `public/node-graph-module-definitions.js`.
 
    Main anchor: `nodeGraphModuleDefinitions`.
 
@@ -22,7 +22,7 @@ Use the existing modules as the template: `osc`, `noise`, `gain`, and `bias`.
    `outputs`. A processor usually has `inputs` and `outputs`. The `output`
    module is special and should not be used as a template for ordinary modules.
 
-2. Add a user-visible label in `public/app.js`.
+2. Add a user-visible label in `public/node-graph-module-definitions.js`.
 
    Main anchor: `nodeGraphNodeLabels`.
 
@@ -43,7 +43,7 @@ Use the existing modules as the template: `osc`, `noise`, `gain`, and `bias`.
 4. Add offline Render Sample behavior if the module produces or transforms
    audio.
 
-   File: `public/app.js`.
+   File: `public/node-graph-live-frame-evaluator.js`.
 
    Main anchor: `evaluateNodeGraphPlanFrame(...)`.
 
