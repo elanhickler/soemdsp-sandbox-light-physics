@@ -34,10 +34,11 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 
 ## Active TODO
 
-- [ ] **Push branch** — `git push origin void/sandbox-bugfixes` so Codex can merge.
-- [ ] **Merge with Codex** — Coordinate merge of `void/sandbox-bugfixes` into `codex/restore-before-formula-visual` (or master). Resolve any conflicts.
-- [ ] **E audit (deferred)** — Full render-tail/latency audit for CLAP latency compensation. The buffer padding fix prevents trailing silence but a proper audit of the render pipeline is still needed.
-- [ ] **L (deferred)** — Double normalization on `commitNodeGraphPatch` (known/intentional per Codex). Revisit if profiling shows cost.
+- [x] **Push branch** — `git push origin void/sandbox-bugfixes` so Codex can merge.
+
+- [ ] **E audit** — Full render-tail/latency audit for CLAP latency compensation. Finding: buffer padding fix prevents writes beyond bounds but trailing `latencyFrames` of output are still zero. `durationSeconds` includes this silence. Proper fix: pre-query latency from host before render, add to engineFrames, trim output. Do this during CLAP host re-enablement.
+
+- [ ] **L** — Double normalization on `commitNodeGraphPatch` (known/intentional per Codex). Revisit if profiling shows cost.
 
 ## Backlog Ideas
 
@@ -47,4 +48,4 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 - [ ] **Instance handle pattern** — Create a general native module instance handle pattern so future C++→wasm modules don't repeat the globals pattern.
 
 ## Blocked
-- None.
+- **Merge with Codex** — Waiting on Architect's signal to merge `void/sandbox-bugfixes` into `codex/restore-before-formula-visual`.
