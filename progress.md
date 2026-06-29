@@ -50,9 +50,16 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 - [x] **Instance handle pattern** — Wrote `docs/INSTANCE_HANDLE_PATTERN.md` proposing the general native module handle pattern: create/destroy/reset/set_params/process exports, state pool layout, browser-side integration, migration path. Forward-looking design doc, not yet implemented.
 
 ## Blocked
+
+BLOCKED. All autonomous work complete. Awaiting external input:
+
 - **Merge with Codex** — Mailbox message sent to Codex
   (`CODEGUIDE/agents/CODEX/inbox/20260628-204407-void-to-codex-branch-ready-sabrina-checklist.md`).
-  Waiting on merge signal + Sabrina checklist response.
-- **Module pattern documentation** — Blocked on Sabrina completion
-  checklist from Codex. Cannot document the canonical native module
-  pattern until the export shape is final.
+  No reply yet. Waiting on merge signal + smoke anchor conflict review.
+- **Sabrina completion checklist** — Same mailbox message. Cannot finalize
+  native module handle migration or document the canonical Sabrina pattern
+  until Codex confirms the export shape.
+- **D (denied)** — Codex confirmed ellipsoid call pattern is safe as-is.
+  No action.
+- **E proper fix** — Pre-query latency from host before render. Deferred to
+  CLAP host re-enablement (Architect decision).
