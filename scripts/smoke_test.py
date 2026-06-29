@@ -9562,7 +9562,7 @@ def require_node_graph_mvp_contract() -> None:
         "ChordSequencer",
         "Arpeggiator",
         "Delay",
-        "ReverbEffect",
+        "SabrinaReverb",
         "DistortionEffect",
         "DigitalCurveEnvelope",
         "ExponentialEnvelope",
@@ -9696,7 +9696,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphModuleOutputPorts(type)",
         "function nodeGraphParameterOutputPort(typeOrNode, port)",
         "function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch)",
-        "const passthroughTypes = new Set([\"badvalMonitor\", \"bandpass\", \"bias\", \"cookbookFilter\", \"gain\", \"highpass\", \"ladderFilter\", \"lowpass\", \"sampleHold\", \"slewLimiter\", \"softClipper\", \"speakerProtection\"])",
+        "const passthroughTypes = new Set([\"badvalMonitor\", \"bandpass\", \"bias\", \"cookbookFilter\", \"gain\", \"highpass\", \"ladderFilter\", \"lowpass\", \"reverbEffect\", \"sampleHold\", \"slewLimiter\", \"softClipper\", \"speakerProtection\"])",
         "nodeGraphModuleDefinitions[node?.type]?.visualSink",
         "function nodeGraphVisualSinkActiveInPlan(node, options = {})",
         "return true;",
@@ -12694,6 +12694,31 @@ def require_node_graph_mvp_contract() -> None:
         and "SOEMDSP tanh soft clipper" in module_store_source,
         "Soft Clipper should be an implemented Dynamics module from the SOEMDSP tanh shaper",
     )
+    require('"reverbEffect"' in module_store_source, "Sabrina Reverb should be listed in the module browser type registry")
+    require('reverbEffect: "Sabrina Reverb"' in module_definitions_source, "Sabrina Reverb label should be registered")
+    reverb_definition = module_definitions_source[
+        module_definitions_source.index("reverbEffect: {"):
+        module_definitions_source.index("slewLimiter: {")
+    ]
+    require(
+        'inputs: ["Left", "Right"]' in reverb_definition
+        and 'outputs: ["Left", "Right", "Wet"]' in reverb_definition
+        and 'key: "mix"' in reverb_definition
+        and 'key: "diffusionSize"' in reverb_definition
+        and 'key: "diffusionAmount"' in reverb_definition
+        and 'key: "delaySize"' in reverb_definition
+        and 'key: "recycle"' in reverb_definition
+        and 'key: "lfoAmplitude"' in reverb_definition
+        and 'key: "lfoBaseSpeed"' in reverb_definition
+        and 'key: "lfoVariation"' in reverb_definition,
+        "Sabrina Reverb should expose stereo I/O and raw Sabrina controls",
+    )
+    require(
+        'reverbEffect: {\n    category: "Delay"' in module_store_source
+        and 'label: "Sabrina Reverb"' in module_store_source
+        and "serial diffusion stages with cross-feedback delay" in module_store_source,
+        "Sabrina Reverb should be an implemented raw Sabrina port",
+    )
     require('category: "Sequence"' in module_store_source, "Transport and timing modules should live in Sequence")
     require('category: "Sequencer"' not in module_store_source, "module browser catalog should not use Sequencer category")
     require('"Sequencer",' not in module_store_source and '"Time",' not in module_store_source, "module browser department list should not show Sequencer or Time")
@@ -13276,6 +13301,19 @@ def require_node_graph_mvp_contract() -> None:
         and 'node?.type === "softClipper"' in worklet_source
         and "this.softClipperSample(" in worklet_source,
         "AudioWorklet should evaluate Soft Clipper with the SOEMDSP tanh transfer math",
+    )
+    require('"reverbEffect"' in execution_plan_source, "execution plan should treat Sabrina Reverb as a supported passthrough processor")
+    require(
+        "nodeGraphSabrinaReverbSample(" in live_frame_source
+        and "createNodeGraphSabrinaReverbState()" in live_frame_source
+        and 'node?.type === "reverbEffect"' in live_frame_source,
+        "browser fallback should evaluate Sabrina Reverb through the raw stateful DSP port",
+    )
+    require(
+        "sabrinaReverbSample(state, leftInput, rightInput, params" in worklet_source
+        and 'node?.type === "reverbEffect"' in worklet_source
+        and "this.sabrinaReverbSample(" in worklet_source,
+        "AudioWorklet should evaluate Sabrina Reverb through the raw stateful DSP port",
     )
     require('id="nodeSceneTimingControls"' in index_source, "Command Center should host timing controls")
     require("function createNodeGraphCommandCenterTimingWidgets" in header_rendering_source, "Command Center timing widgets should reuse header timing inputs")
@@ -16891,6 +16929,8 @@ def require_native_module_contract(base_url: str) -> None:
     worklet_source = (PUBLIC / "node-live-audio-worklet.js").read_text(encoding="utf-8")
     ellipsoid_source_path = ROOT / "native_modules" / "ellipsoid" / "ellipsoid.cpp"
     ellipsoid_wasm_path = ROOT / "native_modules" / "ellipsoid" / "ellipsoid.wasm"
+    sabrina_source_path = ROOT / "native_modules" / "sabrina_reverb" / "sabrina_reverb.cpp"
+    sabrina_wasm_path = ROOT / "native_modules" / "sabrina_reverb" / "sabrina_reverb.wasm"
     require(ellipsoid_source_path.exists(), "native ellipsoid source should exist")
     ellipsoid_source = ellipsoid_source_path.read_text(encoding="utf-8")
     require("// soemdsp-native-module: ellipsoid" in ellipsoid_source, "native ellipsoid source metadata missing")
@@ -16898,6 +16938,14 @@ def require_native_module_contract(base_url: str) -> None:
     require("extern \"C\" void soemdsp_ellipsoid_vector_sample" in ellipsoid_source, "native ellipsoid vector export missing")
     require(ellipsoid_wasm_path.exists(), "native ellipsoid wasm should exist")
     require(ellipsoid_wasm_path.read_bytes().startswith(b"\0asm"), "native ellipsoid wasm magic bytes missing")
+    require(sabrina_source_path.exists(), "native Sabrina Reverb source should exist")
+    sabrina_source = sabrina_source_path.read_text(encoding="utf-8")
+    require("// soemdsp-native-module: sabrina_reverb" in sabrina_source, "native Sabrina source metadata missing")
+    require("extern \"C\" int soemdsp_sabrina_reverb_create" in sabrina_source, "native Sabrina create export missing")
+    require("extern \"C\" void soemdsp_sabrina_reverb_process" in sabrina_source, "native Sabrina process export missing")
+    require("extern \"C\" double soemdsp_sabrina_reverb_left" in sabrina_source, "native Sabrina output export missing")
+    require(sabrina_wasm_path.exists(), "native Sabrina wasm should exist")
+    require(sabrina_wasm_path.read_bytes().startswith(b"\0asm"), "native Sabrina wasm magic bytes missing")
     require("NATIVE_MODULES = ROOT / \"native_modules\"" in server_source, "native modules folder constant missing")
     require("\"/api/native-modules\"" in server_source, "native modules API route missing")
     require("\".wasm\": \"application/wasm\"" in server_source, "wasm MIME mapping missing")
@@ -16928,11 +16976,18 @@ def require_native_module_contract(base_url: str) -> None:
     ellipsoid = next((item for item in modules if item.get("targetType") == "ellipsoid"), None)
     require(ellipsoid is not None, "native modules API should include ellipsoid")
     require(ellipsoid.get("wasmAvailable") is True, "native ellipsoid wasm should be available")
+    sabrina = next((item for item in modules if item.get("targetType") == "reverbEffect"), None)
+    require(sabrina is not None, "native modules API should include Sabrina Reverb")
+    require(sabrina.get("wasmAvailable") is True, "native Sabrina wasm should be available")
 
     wasm_response = request(f"{base_url}/native_modules/ellipsoid/ellipsoid.wasm")
     require(wasm_response.status == 200, "native ellipsoid wasm should be served")
     require_content_type(wasm_response, "application/wasm", "native ellipsoid wasm")
     require(wasm_response.body.startswith(b"\0asm"), "served native ellipsoid wasm magic bytes missing")
+    sabrina_wasm_response = request(f"{base_url}/native_modules/sabrina_reverb/sabrina_reverb.wasm")
+    require(sabrina_wasm_response.status == 200, "native Sabrina wasm should be served")
+    require_content_type(sabrina_wasm_response, "application/wasm", "native Sabrina wasm")
+    require(sabrina_wasm_response.body.startswith(b"\0asm"), "served native Sabrina wasm magic bytes missing")
 
 
 def wait_for_server(base_url: str, process: subprocess.Popen[bytes]) -> None:

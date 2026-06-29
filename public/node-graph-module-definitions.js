@@ -50,6 +50,7 @@ const nodeGraphNodeLabels = Object.freeze({
   cookbookFilter: "Multi Stage Filter",
   ladderFilter: "Ladder Filter",
   delayEffect: "Delay",
+  reverbEffect: "Sabrina Reverb",
   slewLimiter: "Up/Down Slew",
   sampleHold: "Sample & Hold",
   midiOut: "Midi Out",
@@ -1378,6 +1379,20 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { defaultValue: "0.1", key: "modRate", kind: "frequency", label: "Mod Rate", max: "90", maxDigits: 5, mid: "0.1", min: "0", step: "any", unit: "Hz" },
       { defaultValue: "0", key: "modVariation", label: "Variation", max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "any" },
       { choices: ["Delay", "Diffuse"], defaultValue: "0", displayChoices: true, divideChoicesVisibly: true, key: "mode", label: "Mode", linearSmoothing: false, max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "1" },
+    ],
+  },
+  reverbEffect: {
+    inputs: ["Left", "Right"],
+    outputs: ["Left", "Right", "Wet"],
+    parameters: [
+      { defaultValue: "0.43", key: "mix", label: "Mix", max: "1", mid: "0.43", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.35", key: "diffusionSize", label: "Diff Size", max: "1", mid: "0.35", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.70", key: "diffusionAmount", label: "Diff Amt", max: "0.98", mid: "0.70", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.02", key: "delaySize", label: "Delay Size", max: "1", mid: "0.02", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.70", key: "recycle", label: "Recycle", max: "0.98", mid: "0.70", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.07", key: "lfoAmplitude", label: "LFO Amp", max: "1", mid: "0.07", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.83", key: "lfoBaseSpeed", label: "LFO Speed", max: "1", mid: "0.83", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.001", key: "lfoVariation", label: "LFO Var", max: "1", mid: "0.001", min: "0", nonlinearSlider: false, step: "any" },
     ],
   },
   slewLimiter: {

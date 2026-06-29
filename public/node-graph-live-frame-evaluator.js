@@ -185,6 +185,166 @@ function createNodeGraphDelayEffectState() {
   };
 }
 
+function nodeGraphSabrinaParabol(value) {
+  const wrapped = (((Number(value) || 0) % 1) + 1) % 1;
+  const fit = wrapped * 2 - 1;
+  return 4 * fit * (1 - Math.abs(fit));
+}
+
+function nodeGraphSabrinaCreateDelay(seed = 0) {
+  return {
+    buffer: new Float32Array(1),
+    bufferSize: 1,
+    diffSeed: 0,
+    driver: 0,
+    feedback: 0,
+    lfoPercent: 0,
+    modInc: 0,
+    modSpeed: 0,
+    offset: 1,
+    rndAcc: 0,
+    rndNext: Math.abs(Math.round(Number(seed) || 0)) % 123094,
+  };
+}
+
+function nodeGraphSabrinaRnd(delay) {
+  delay.rndNext = (delay.rndNext + 109) % 123094;
+  delay.rndAcc = nodeGraphSabrinaParabol(
+    nodeGraphSabrinaParabol((delay.rndNext + delay.rndAcc + 10) * 134987.489798 + 1987.19687) * 1987.4987 + 98497.19879,
+  );
+  return delay.rndAcc * 0.5 + 0.5;
+}
+
+function nodeGraphSabrinaSetOffsetSize(delay, size, maxDelaySize) {
+  delay.offset = (maxDelaySize * nodeGraphSabrinaRnd(delay) * ((Number(size) || 0) * 0.1 + 0.0000001)) + 1;
+}
+
+function nodeGraphSabrinaInitializeMod(delay, lfoSeconds, lfoVariation, sampleRate) {
+  const seconds = Math.max(0.000001, (Number(lfoSeconds) || 0) + (nodeGraphSabrinaRnd(delay) * (Number(lfoVariation) || 0)));
+  delay.modSpeed = (1 / seconds) / Math.max(1, Number(sampleRate) || 44100);
+}
+
+function nodeGraphSabrinaInitializeDelay(delay, maxDelaySize, sampleRate, seed = 0) {
+  delay.driver = 0;
+  delay.feedback = 0;
+  delay.rndNext = Math.abs(Math.round(Number(seed) || 0)) % 123094;
+  delay.rndAcc = 0;
+  nodeGraphSabrinaRnd(delay);
+  nodeGraphSabrinaRnd(delay);
+  nodeGraphSabrinaRnd(delay);
+  nodeGraphSabrinaSetOffsetSize(delay, 0.06, maxDelaySize);
+  delay.modInc = Math.abs(nodeGraphSabrinaRnd(delay));
+  delay.diffSeed = Number(delay.diffSeed) || 0;
+  delay.modInc = delay.diffSeed;
+  nodeGraphSabrinaInitializeMod(delay, 1, 0.001, sampleRate);
+  delay.lfoPercent = 0;
+}
+
+function createNodeGraphSabrinaReverbState() {
+  return {
+    ch0: 0,
+    ch1: 0,
+    delays: [],
+    maxDelaySize: 0,
+    paramKey: "",
+    sampleRate: 0,
+  };
+}
+
+function nodeGraphSabrinaDelayRead(delay, where) {
+  const length = delay.bufferSize || delay.buffer?.length || 0;
+  if (!length) {
+    return 0;
+  }
+  const wrapped = ((where % length) + length) % length;
+  const before = Math.floor(wrapped) % length;
+  const after = (before + 1) % length;
+  const mix = wrapped - Math.floor(wrapped);
+  return delay.buffer[before] * (1 - mix) + delay.buffer[after] * mix;
+}
+
+function nodeGraphSabrinaDelaySample(delay, input, maxDelaySize) {
+  const safeInput = Number.isFinite(Number(input)) ? Number(input) : 0;
+  delay.modInc = (delay.modInc + delay.modSpeed) % 1;
+  const lfo = nodeGraphSabrinaParabol(delay.modInc) * 0.5 + 0.5;
+  const mod = (delay.offset - (delay.offset * (lfo * delay.lfoPercent))) + 1;
+  delay.driver = (delay.driver + 1) % maxDelaySize;
+  const readPosition = (delay.driver + (maxDelaySize - mod)) % maxDelaySize;
+  const delayed = nodeGraphSabrinaDelayRead(delay, readPosition);
+  delay.buffer[delay.driver] = safeInput;
+  return Number.isFinite(delayed) ? delayed : 0;
+}
+
+function nodeGraphSabrinaDiffuseSample(delay, input, maxDelaySize) {
+  const safeInput = Number.isFinite(Number(input)) ? Number(input) : 0;
+  delay.modInc = (delay.modInc + delay.modSpeed) % 1;
+  const lfo = nodeGraphSabrinaParabol(delay.modInc) * 0.5 + 0.5;
+  const mod = (delay.offset - (delay.offset * (lfo * delay.lfoPercent))) + 1;
+  delay.driver = (delay.driver + 1) % maxDelaySize;
+  const readPosition = (delay.driver + (maxDelaySize - mod)) % maxDelaySize;
+  const delayed = nodeGraphSabrinaDelayRead(delay, readPosition);
+  const write = (0 - safeInput) - delayed * delay.feedback;
+  delay.buffer[delay.driver] = Number.isFinite(write) ? Math.max(-16, Math.min(16, write)) : 0;
+  const output = safeInput * delay.feedback - delayed * (1 - delay.feedback * delay.feedback);
+  return Number.isFinite(output) ? output : 0;
+}
+
+function nodeGraphSabrinaEnsureState(state, sampleRate) {
+  const safeRate = Math.max(1, Number(sampleRate) || 44100);
+  const maxDelaySize = Math.max(2, Math.floor(safeRate * 4));
+  if (state.sampleRate === safeRate && state.maxDelaySize === maxDelaySize && state.delays.length === 14) {
+    return;
+  }
+  state.sampleRate = safeRate;
+  state.maxDelaySize = maxDelaySize;
+  state.ch0 = 0;
+  state.ch1 = 0;
+  state.paramKey = "";
+  state.delays = Array.from({ length: 14 }, (_, index) => {
+    const delay = nodeGraphSabrinaCreateDelay(index * 137 + 7);
+    delay.buffer = new Float32Array(maxDelaySize);
+    delay.bufferSize = maxDelaySize;
+    nodeGraphSabrinaInitializeDelay(delay, maxDelaySize, safeRate, index * 137 + 7);
+    return delay;
+  });
+}
+
+function nodeGraphSabrinaApplyParams(state, params) {
+  const key = [
+    params.diffusionAmount,
+    params.diffusionSize,
+    params.delaySize,
+    params.lfoAmplitude,
+    params.lfoBaseSpeed,
+    params.lfoVariation,
+    params.recycle,
+  ].map((value) => Number(value).toFixed(8)).join("|");
+  if (key === state.paramKey) {
+    return;
+  }
+  state.paramKey = key;
+  const maxDelaySize = state.maxDelaySize;
+  const diffusionSize = Math.max(0, Math.min(1, Number(params.diffusionSize) || 0));
+  const diffusionAmount = Math.max(0, Math.min(0.98, Number(params.diffusionAmount) || 0));
+  const delaySize = Math.max(0, Math.min(1, Number(params.delaySize) || 0));
+  const lfoPercent = Math.max(0, Math.min(1, Number(params.lfoAmplitude) || 0)) * 0.1;
+  const lfoSpeed = ((1 - Math.max(0, Math.min(1, Number(params.lfoBaseSpeed) || 0))) * 1.95 + 0.5) * 0.5;
+  const lfoVariation = (1 - Math.max(0, Math.min(1, Number(params.lfoVariation) || 0))) * 0.25;
+  const diffusionDelays = state.delays.slice(0, 12);
+  const lateDelays = state.delays.slice(12, 14);
+  for (const delay of diffusionDelays) {
+    nodeGraphSabrinaSetOffsetSize(delay, diffusionSize, maxDelaySize);
+    delay.feedback = diffusionAmount;
+  }
+  for (const delay of state.delays) {
+    delay.lfoPercent = lfoPercent;
+    nodeGraphSabrinaInitializeMod(delay, lfoSpeed, lfoVariation, state.sampleRate);
+  }
+  for (const delay of lateDelays) {
+    delay.offset = ((maxDelaySize - 2) * delaySize * 0.1) + 1;
+  }
+}
+
 function createNodeGraphSampleHoldState() {
   return {
     held: 0,
@@ -1079,6 +1239,40 @@ function nodeGraphDelayEffectSample(state, input, params, sampleRate, runtime = 
   return {
     Out: (dry * (1 - mix) + state.wet * mix) * level,
     Wet: state.wet * level,
+  };
+}
+
+function nodeGraphSabrinaReverbSample(state, leftInput, rightInput, params, sampleRate, runtime = null, nodeId = "") {
+  nodeGraphSabrinaEnsureState(state, sampleRate);
+  const safeParams = {
+    delaySize: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.delaySize, runtime, nodeId, null, "Sabrina delay size"))),
+    diffusionAmount: Math.max(0, Math.min(0.98, nodeGraphSafeFilterNumber(params.diffusionAmount, runtime, nodeId, null, "Sabrina diffusion amount"))),
+    diffusionSize: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.diffusionSize, runtime, nodeId, null, "Sabrina diffusion size"))),
+    lfoAmplitude: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.lfoAmplitude, runtime, nodeId, null, "Sabrina lfo amplitude"))),
+    lfoBaseSpeed: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.lfoBaseSpeed, runtime, nodeId, null, "Sabrina lfo speed"))),
+    lfoVariation: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.lfoVariation, runtime, nodeId, null, "Sabrina lfo variation"))),
+    mix: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.mix, runtime, nodeId, null, "Sabrina mix"))),
+    recycle: Math.max(0, Math.min(0.98, nodeGraphSafeFilterNumber(params.recycle, runtime, nodeId, null, "Sabrina recycle"))),
+  };
+  nodeGraphSabrinaApplyParams(state, safeParams);
+  const dryLeft = nodeGraphSafeFilterNumber(leftInput, runtime, nodeId, null, "Sabrina left input");
+  const dryRight = nodeGraphSafeFilterNumber(rightInput, runtime, nodeId, null, "Sabrina right input");
+  const delays = state.delays;
+  const maxDelaySize = state.maxDelaySize;
+  let left = dryLeft + nodeGraphSabrinaDelaySample(delays[12], state.ch1, maxDelaySize) * safeParams.recycle;
+  for (let index = 0; index < 6; index += 1) {
+    left = nodeGraphSabrinaDiffuseSample(delays[index * 2], left, maxDelaySize);
+  }
+  let right = dryRight + nodeGraphSabrinaDelaySample(delays[13], state.ch0, maxDelaySize) * safeParams.recycle;
+  for (let index = 0; index < 6; index += 1) {
+    right = nodeGraphSabrinaDiffuseSample(delays[index * 2 + 1], right, maxDelaySize);
+  }
+  state.ch0 = Number.isFinite(left) ? Math.max(-16, Math.min(16, left)) : 0;
+  state.ch1 = Number.isFinite(right) ? Math.max(-16, Math.min(16, right)) : 0;
+  return {
+    Left: state.ch0 * safeParams.mix + dryLeft * (1 - safeParams.mix),
+    Right: state.ch1 * safeParams.mix + dryRight * (1 - safeParams.mix),
+    Wet: (state.ch0 + state.ch1) * 0.5,
   };
 }
 
@@ -2924,6 +3118,30 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
           modRate: read("modRate", 0.1),
           modVariation: read("modVariation", 0),
           time: read("time", 0.18),
+        },
+        sampleRate,
+        runtime,
+        nodeId,
+      );
+    } else if (node?.type === "reverbEffect") {
+      const state = runtime.reverbEffectStates.get(nodeId) || createNodeGraphSabrinaReverbState();
+      runtime.reverbEffectStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      const leftInput = mixInput(nodeId, "Left");
+      const rightInput = hasInput(nodeId, "Right") ? mixInput(nodeId, "Right") : leftInput;
+      value = nodeGraphSabrinaReverbSample(
+        state,
+        leftInput,
+        rightInput,
+        {
+          delaySize: read("delaySize", 0.02),
+          diffusionAmount: read("diffusionAmount", 0.70),
+          diffusionSize: read("diffusionSize", 0.35),
+          lfoAmplitude: read("lfoAmplitude", 0.07),
+          lfoBaseSpeed: read("lfoBaseSpeed", 0.83),
+          lfoVariation: read("lfoVariation", 0.001),
+          mix: read("mix", 0.43),
+          recycle: read("recycle", 0.70),
         },
         sampleRate,
         runtime,

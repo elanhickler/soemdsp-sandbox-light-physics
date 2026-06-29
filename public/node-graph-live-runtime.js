@@ -66,7 +66,7 @@ async function sendNodeGraphLiveNativeModules(liveNode) {
   const catalog = await fetchNodeGraphLiveNativeModuleCatalog();
   const nativeModules = Array.isArray(catalog?.modules) ? catalog.modules : [];
   for (const entry of nativeModules) {
-    if (entry?.targetType !== "ellipsoid" || !entry?.wasmAvailable) {
+    if (!entry?.wasmAvailable) {
       continue;
     }
     const bytes = await fetchNodeGraphLiveNativeModuleBytes(entry);
@@ -75,7 +75,12 @@ async function sendNodeGraphLiveNativeModules(liveNode) {
     }
     const transferableBytes = bytes.slice(0);
     liveNode.port.postMessage(
-      { type: "setNativeModuleWasm", name: entry.name || "ellipsoid", bytes: transferableBytes },
+      {
+        type: "setNativeModuleWasm",
+        name: entry.name || entry.targetType || "",
+        targetType: entry.targetType || "",
+        bytes: transferableBytes,
+      },
       [transferableBytes],
     );
   }
@@ -1571,7 +1576,7 @@ async function createNodeGraphLiveWorkletNode(context) {
     throw new Error("AudioWorklet unavailable");
   }
   await nodeGraphLiveAwaitStartup(
-    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=shooting-star-event-0164"),
+    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=sabrina-reverb-0166"),
     "AudioWorklet startup timed out",
   );
   const workletNode = new AudioWorkletNode(

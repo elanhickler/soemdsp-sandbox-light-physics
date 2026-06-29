@@ -23,3 +23,23 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export-memory" `
   -o "$root\native_modules\ellipsoid\ellipsoid.wasm" `
   "$root\native_modules\ellipsoid\ellipsoid.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_sabrina_reverb_create" `
+  "-Wl,--export=soemdsp_sabrina_reverb_destroy" `
+  "-Wl,--export=soemdsp_sabrina_reverb_reset" `
+  "-Wl,--export=soemdsp_sabrina_reverb_set_params" `
+  "-Wl,--export=soemdsp_sabrina_reverb_process" `
+  "-Wl,--export=soemdsp_sabrina_reverb_left" `
+  "-Wl,--export=soemdsp_sabrina_reverb_right" `
+  "-Wl,--export=soemdsp_sabrina_reverb_wet" `
+  "-Wl,--export=soemdsp_sabrina_reverb_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\sabrina_reverb\sabrina_reverb.wasm" `
+  "$root\native_modules\sabrina_reverb\sabrina_reverb.cpp"
