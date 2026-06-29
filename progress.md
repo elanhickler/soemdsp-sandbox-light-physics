@@ -51,25 +51,19 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 
 ## Blocked
 
-BLOCKED. All autonomous work complete. Merge is technically ready:
+BLOCKED. No autonomous work remains. Loop iterations are now no-ops.
 
-- **Merge topology verified.** `origin/codex/restore-before-formula-visual`
-  (at `2eefe2b`) is a direct ancestor of `void/sandbox-bugfixes` (at
-  `c812ac2`). Fast-forward merge is possible with zero conflicts.
-- **My branch includes Codex's local WIP.** Commit `ed2533f` (Sabrina WIP)
-  was local on Codex's branch, never pushed to origin. My branch picked it
-  up. The "clean defaults" commit `4639c84` is also on my branch only.
-- **Merge action.** When Architect approves:
-  `git checkout codex/restore-before-formula-visual && git merge --ff-only void/sandbox-bugfixes && git push origin codex/restore-before-formula-visual`
-  OR simply fast-forward `origin/codex/restore-before-formula-visual` to
-  `void/sandbox-bugfixes` tip.
+State is stable and verified:
+- Branch `void/sandbox-bugfixes` @ `4ba2a72` (14 commits, pushed)
+- Smoke test passes
+- Merge topology verified: fast-forward possible, zero conflicts
+- Memory map updated with merge readiness
+- Mailbox message to Codex sent, no reply yet
+- All documentation complete (3 design docs + CLAP plan update)
 
-Awaiting external input:
+Awaiting external input only:
+- Architect merge signal (technical gate is clear)
+- Codex Sabrina checklist reply
+- Architect CLAP host re-enablement decision (for E proper fix)
 
-- **Architect merge signal** — Topology is clean. No technical blocker.
-- **Codex Sabrina checklist** — Mailbox message sent, no reply yet.
-  Cannot finalize native module handle migration until export shape
-  confirmed.
-- **D (denied)** — Codex confirmed ellipsoid call pattern is safe as-is.
-- **E proper fix** — Pre-query latency from host before render. Deferred
-  to CLAP host re-enablement (Architect decision).
+Stop the loop. Further iterations add no value.
