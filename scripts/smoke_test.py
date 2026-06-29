@@ -4114,7 +4114,7 @@ def require_node_graph_mvp_contract() -> None:
                 "deleteSelectedNodeGraphItem()",
                 "function nodeGraphCanvasScriptSourceWithGridUnits(source, widthGu, heightGu)",
                 "function resizeNodeGraphCanvasModuleOnGrid(patchNode, delta)",
-                'patchNode.type === "canvas"',
+                'nodeGraphModuleSizingCapabilities(patchNode?.type).moduleHeight !== "canvasScript"',
                 "delete patchNode.widthGu;",
                 "delete patchNode.heightGu;",
             ],
@@ -4201,7 +4201,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=sine-wavetable-0147'],
+            ['node-live-audio-worklet.js?v=sabrina-reverb-0166'],
         ),
     ]:
         for snippet in snippets:
@@ -7248,7 +7248,7 @@ def require_node_graph_mvp_contract() -> None:
                 "for (const type of Object.keys(nodeGraphModuleDefinitions || {}))",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=sine-wavetable-0147',
+                'node-live-audio-worklet.js?v=sabrina-reverb-0166',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
@@ -11799,7 +11799,7 @@ def require_node_graph_mvp_contract() -> None:
         "float roomFalloff = smoothstep(0.08, 0.82, length(roomUv));",
         "float screenBloom = 0.0;",
         "softLight(screenBloom)",
-        "vec3 cyanGlow = vec3(0.12, 0.62, 0.68) * softLight(screenBloom);",
+        "vec3 cyanGlow = vec3(0.12, 0.62, 0.68) * softLight(screenBloom) * NODE_SHADER_GLOW_AMOUNT;",
         "function createNodeGraphShaderProgram(gl, fragmentSource)",
         "function nodeGraphShaderScriptRects(canvas)",
         'workspace.querySelectorAll(".node-module-scope-window, .node-led-face")',
