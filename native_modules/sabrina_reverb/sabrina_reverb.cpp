@@ -98,7 +98,6 @@ void initializeDelay(SabrinaDelay& delay, int seed, double sampleRate) {
   rnd(delay);
   rnd(delay);
   setOffsetSize(delay, 0.06, sampleRate * 4.0);
-  delay.modInc = __builtin_fabs(rnd(delay));
   delay.modInc = 0.0;
   delay.lfopercent = 0.0;
   initializeMod(delay, 1.0, 0.001, sampleRate);
@@ -162,7 +161,7 @@ void applyParams(SabrinaState& state) {
 
 void resetState(SabrinaState& state, double sampleRate) {
   state.active = true;
-  state.sampleRate = clamp(sampleRate, 1.0, 48000.0);
+  state.sampleRate = clamp(sampleRate, 1.0, 192000.0);
   state.ch0 = 0.0;
   state.ch1 = 0.0;
   state.lastLeft = 0.0;
