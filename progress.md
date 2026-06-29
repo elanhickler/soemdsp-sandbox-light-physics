@@ -32,6 +32,7 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 - [x] **N** — Update stale doc file paths: `ADDING_HARDCODED_SANDBOX_MODULE.md` and `OSC_MODULE_NON_UI_REFERENCE.md` now reference correct files.
 - [x] Smoke test passes (all steps green).
 - [x] **Module pattern reference** — Wrote `docs/MODULE_PATTERN_REFERENCE.md` documenting the four edit points, definition shape, parameter shape, metadata kinds, runtime contract, native module pattern, and smoke test contract. Supports the DSP-to-module translation mission.
+- [x] **Module translation example** — Wrote `docs/MODULE_TRANSLATION_EXAMPLE.md` demonstrating the full DSP-to-module translation workflow with a one-pole lowpass filter: definition, menu button, frame evaluator branch, worklet branch, state reset, verification steps, smoke test anchors.
 
 ## Active TODO
 
