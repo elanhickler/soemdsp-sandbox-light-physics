@@ -1383,7 +1383,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   reverbEffect: {
     inputs: ["In", "Left", "Right"],
-    outputs: ["Left", "Right", "Wet"],
+    outputs: ["Out", "Mono", "Left", "Right", "Wet"],
     parameters: [
       { defaultValue: "0.43", key: "mix", label: "Mix", max: "1", mid: "0.43", min: "0", nonlinearSlider: false, step: "any" },
       { defaultValue: "0.35", key: "diffusionSize", label: "Diff Size", max: "1", mid: "0.35", min: "0", nonlinearSlider: false, step: "any" },

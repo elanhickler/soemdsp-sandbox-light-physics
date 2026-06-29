@@ -4281,11 +4281,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.safeFilterNumber(leftInput, null),
         this.safeFilterNumber(rightInput, null),
       );
-      return {
-        Left: this.safeFilterNumber(native.soemdsp_sabrina_reverb_left?.(state.nativeHandle), null),
-        Right: this.safeFilterNumber(native.soemdsp_sabrina_reverb_right?.(state.nativeHandle), null),
-        Wet: this.safeFilterNumber(native.soemdsp_sabrina_reverb_wet?.(state.nativeHandle), null),
-      };
+      const left = this.safeFilterNumber(native.soemdsp_sabrina_reverb_left?.(state.nativeHandle), null);
+      const right = this.safeFilterNumber(native.soemdsp_sabrina_reverb_right?.(state.nativeHandle), null);
+      const wet = this.safeFilterNumber(native.soemdsp_sabrina_reverb_wet?.(state.nativeHandle), null);
+      const mono = (left + right) * 0.5;
+      return { Left: left, Mono: mono, Out: mono, Right: right, Wet: wet };
     } catch (error) {
       this.nativeSabrinaReverbReady = false;
       if (state.nativeHandle && native.soemdsp_sabrina_reverb_destroy) {
@@ -4334,9 +4334,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     state.ch0 = Number.isFinite(left) ? this.clampValue(left, -16, 16) : 0;
     state.ch1 = Number.isFinite(right) ? this.clampValue(right, -16, 16) : 0;
+    const leftOutput = state.ch0 * safeParams.mix + dryLeft * (1 - safeParams.mix);
+    const rightOutput = state.ch1 * safeParams.mix + dryRight * (1 - safeParams.mix);
+    const monoOutput = (leftOutput + rightOutput) * 0.5;
     return {
-      Left: state.ch0 * safeParams.mix + dryLeft * (1 - safeParams.mix),
-      Right: state.ch1 * safeParams.mix + dryRight * (1 - safeParams.mix),
+      Left: leftOutput,
+      Mono: monoOutput,
+      Out: monoOutput,
+      Right: rightOutput,
       Wet: (state.ch0 + state.ch1) * 0.5,
     };
   }

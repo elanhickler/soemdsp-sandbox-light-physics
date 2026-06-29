@@ -1269,9 +1269,14 @@ function nodeGraphSabrinaReverbSample(state, leftInput, rightInput, params, samp
   }
   state.ch0 = Number.isFinite(left) ? Math.max(-16, Math.min(16, left)) : 0;
   state.ch1 = Number.isFinite(right) ? Math.max(-16, Math.min(16, right)) : 0;
+  const leftOutput = state.ch0 * safeParams.mix + dryLeft * (1 - safeParams.mix);
+  const rightOutput = state.ch1 * safeParams.mix + dryRight * (1 - safeParams.mix);
+  const monoOutput = (leftOutput + rightOutput) * 0.5;
   return {
-    Left: state.ch0 * safeParams.mix + dryLeft * (1 - safeParams.mix),
-    Right: state.ch1 * safeParams.mix + dryRight * (1 - safeParams.mix),
+    Left: leftOutput,
+    Mono: monoOutput,
+    Out: monoOutput,
+    Right: rightOutput,
     Wet: (state.ch0 + state.ch1) * 0.5,
   };
 }
