@@ -3127,7 +3127,8 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       const state = runtime.reverbEffectStates.get(nodeId) || createNodeGraphSabrinaReverbState();
       runtime.reverbEffectStates.set(nodeId, state);
       const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
-      const leftInput = mixInput(nodeId, "Left");
+      const monoInput = mixInput(nodeId, "In");
+      const leftInput = hasInput(nodeId, "Left") ? mixInput(nodeId, "Left") : monoInput;
       const rightInput = hasInput(nodeId, "Right") ? mixInput(nodeId, "Right") : leftInput;
       value = nodeGraphSabrinaReverbSample(
         state,

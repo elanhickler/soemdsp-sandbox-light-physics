@@ -12701,7 +12701,7 @@ def require_node_graph_mvp_contract() -> None:
         module_definitions_source.index("slewLimiter: {")
     ]
     require(
-        'inputs: ["Left", "Right"]' in reverb_definition
+        'inputs: ["In", "Left", "Right"]' in reverb_definition
         and 'outputs: ["Left", "Right", "Wet"]' in reverb_definition
         and 'key: "mix"' in reverb_definition
         and 'key: "diffusionSize"' in reverb_definition

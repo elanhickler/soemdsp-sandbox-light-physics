@@ -6009,7 +6009,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         const state = this.reverbEffectStates.get(nodeId) || this.createSabrinaReverbState();
         this.reverbEffectStates.set(nodeId, state);
         const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
-        const leftInput = mixInput(nodeId, "Left");
+        const monoInput = mixInput(nodeId, "In");
+        const leftInput = hasInput(nodeId, "Left") ? mixInput(nodeId, "Left") : monoInput;
         const rightInput = hasInput(nodeId, "Right") ? mixInput(nodeId, "Right") : leftInput;
         value = this.sabrinaReverbSample(
           state,
