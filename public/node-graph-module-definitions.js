@@ -51,6 +51,7 @@ const nodeGraphNodeLabels = Object.freeze({
   ladderFilter: "Ladder Filter",
   delayEffect: "Delay",
   reverbEffect: "Sabrina Reverb",
+  pll: "PLL",
   slewLimiter: "Up/Down Slew",
   sampleHold: "Sample & Hold",
   midiOut: "Midi Out",
@@ -1462,6 +1463,29 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { defaultValue: "0.07", key: "lfoAmplitude", label: "LFO Amp", max: "1", mid: "0.07", min: "0", nonlinearSlider: false, step: "any" },
       { defaultValue: "0.83", key: "lfoBaseSpeed", label: "LFO Speed", max: "1", mid: "0.83", min: "0", nonlinearSlider: false, step: "any" },
       { defaultValue: "0.001", key: "lfoVariation", label: "LFO Var", max: "1", mid: "0.001", min: "0", nonlinearSlider: false, step: "any" },
+    ],
+  },
+  pll: {
+    displaySignals: [
+      { key: "VCO Out", kind: "scalar" },
+      { key: "PC Out", kind: "scalar" },
+      { key: "LPF Out", kind: "scalar" },
+      { key: "VCO/PC", kind: "xy" },
+    ],
+    displayModes: [
+      { key: "vcoTrace", label: "VCO Trace", renderer: "trace", settingsSchema: "trace", source: { value: "VCO Out" } },
+      { key: "pcTrace", label: "PC Trace", renderer: "trace", settingsSchema: "trace", source: { value: "PC Out" } },
+      { key: "lpfTrace", label: "LPF Trace", renderer: "trace", settingsSchema: "trace", source: { value: "LPF Out" } },
+      { key: "vcoPcBurn", label: "VCO/PC Burn", renderer: "scope2d", settingsSchema: "scope2d", source: { x: "VCO Out", y: "PC Out" } },
+    ],
+    defaultDisplayMode: "vcoTrace",
+    inputs: ["Signal In", "VCO CV In"],
+    outputs: ["VCO Out", "PC Out", "LFP Out", "Locked"],
+    parameters: [
+      { choices: ["Low", "Mid", "High"], defaultValue: "1", displayChoices: true, divideChoicesVisibly: true, key: "range", label: "Range", linearSmoothing: false, max: "2", mid: "1", min: "0", nonlinearSlider: false, step: "1" },
+      { defaultValue: "5", key: "offset", label: "Offset", max: "10", mid: "5", min: "0", nonlinearSlider: false, step: "0.01" },
+      { choices: ["XOR", "RS Flip", "PFD"], defaultValue: "1", displayChoices: true, divideChoicesVisibly: true, key: "type", label: "PC Type", linearSmoothing: false, max: "2", mid: "1", min: "0", nonlinearSlider: false, step: "1" },
+      { defaultValue: "10", key: "frequ", kind: "frequency", label: "LPF Cutoff", max: "200", mid: "10", min: "0.1", step: "any", unit: "Hz" },
     ],
   },
   slewLimiter: {
