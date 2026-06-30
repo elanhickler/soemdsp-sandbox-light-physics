@@ -12,6 +12,66 @@
 
 namespace {
 
+static const char kMetadataJson[] =
+  "{"
+    "\"module\":\"tb303_filter\","
+    "\"label\":\"TB-303 Filter\","
+    "\"targetType\":\"tb303Filter\","
+    "\"kind\":\"filter\","
+    "\"inputs\":[\"In\"],"
+    "\"outputs\":[\"Out\"],"
+    "\"parameters\":["
+      "{"
+        "\"key\":\"mode\","
+        "\"label\":\"Mode\","
+        "\"defaultValue\":4,"
+        "\"min\":0,"
+        "\"mid\":4,"
+        "\"max\":14,"
+        "\"step\":1,"
+        "\"choices\":[\"Flat\",\"LP 6\",\"LP 12\",\"LP 18\",\"LP 24\","
+                      "\"HP 6\",\"HP 12\",\"HP 18\",\"HP 24\","
+                      "\"BP 12/12\",\"BP 6/18\",\"BP 18/6\",\"BP 6/12\",\"BP 12/6\",\"BP 6/6\"],"
+        "\"tooltip\":\"Selects the output tap and slope of the filter.\""
+      "},"
+      "{"
+        "\"key\":\"cutoff\","
+        "\"label\":\"Cutoff\","
+        "\"kind\":\"frequency\","
+        "\"defaultValue\":1000,"
+        "\"min\":200,"
+        "\"mid\":1000,"
+        "\"max\":20000,"
+        "\"step\":\"any\","
+        "\"unit\":\"Hz\","
+        "\"tooltip\":\"Sets the filter cutoff frequency. Minimum is 200 Hz, matching the original hardware.\""
+      "},"
+      "{"
+        "\"key\":\"resonance\","
+        "\"label\":\"Resonance\","
+        "\"defaultValue\":0,"
+        "\"min\":0,"
+        "\"mid\":50,"
+        "\"max\":100,"
+        "\"step\":\"any\","
+        "\"unit\":\"%\","
+        "\"tooltip\":\"Feedback amount. 100% reaches self-oscillation. Uses an exponential skewing curve for musical response.\""
+      "},"
+      "{"
+        "\"key\":\"drive\","
+        "\"label\":\"Drive\","
+        "\"kind\":\"decibels\","
+        "\"defaultValue\":0,"
+        "\"min\":0,"
+        "\"mid\":12,"
+        "\"max\":24,"
+        "\"step\":\"any\","
+        "\"unit\":\"dB\","
+        "\"tooltip\":\"Input gain before the filter. The filter internally scales by 0.125 so drive compensates and adds character.\""
+      "}"
+    "]"
+  "}";
+
 static const int    kMaxInstances = 64;
 static const double kPi           = 3.141592653589793238;
 static const double kTwoPi        = 6.283185307179586476;
@@ -182,4 +242,12 @@ extern "C" double soemdsp_tb303_filter_sample(
 
 extern "C" int soemdsp_tb303_filter_version() {
   return 1;
+}
+
+extern "C" const char* soemdsp_tb303_filter_metadata_json() {
+  return kMetadataJson;
+}
+
+extern "C" int soemdsp_tb303_filter_metadata_json_size() {
+  return sizeof(kMetadataJson) - 1;
 }

@@ -145,6 +145,8 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export=soemdsp_tb303_filter_destroy" `
   "-Wl,--export=soemdsp_tb303_filter_sample" `
   "-Wl,--export=soemdsp_tb303_filter_version" `
+  "-Wl,--export=soemdsp_tb303_filter_metadata_json" `
+  "-Wl,--export=soemdsp_tb303_filter_metadata_json_size" `
   "-Wl,--export-memory" `
   -o "$root\native_modules\tb303_filter\tb303_filter.wasm" `
   "$root\native_modules\tb303_filter\tb303_filter.cpp"
