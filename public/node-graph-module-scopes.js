@@ -9851,16 +9851,33 @@ function buildNodeGraphTraceDisplayCanvasPoints(buffer, canvas, slot) {
   const pointCount = Math.max(2, Math.min(width, Math.ceil(visibleSamples)));
   const midY = canvas.height * 0.5;
   const halfHeight = canvas.height * 0.42;
+  const samplesPerPoint = visibleSamples / Math.max(1, pointCount - 1);
+  const skipSamples = nodeGraphModuleScopeDiscontinuitySkipSamplesForSlot(slot, buffer);
   const points = [];
+  let previousRaw = null;
+  let skipThroughIndex = -1;
   for (let index = 0; index < pointCount; index += 1) {
     const progress = pointCount <= 1 ? 0 : index / (pointCount - 1);
     const samplePosition = view.start + progress * Math.max(0, visibleSamples - 1);
-    const raw = nodeGraphModuleScopeInterpolatedSample(buffer, samplePosition);
+    const sampleInfo = nodeGraphTraceDisplaySampleInfo(buffer, samplePosition, samplesPerPoint);
+    const raw = sampleInfo.value;
     const value = clampNodeSliderValue((raw * view.gain) + view.offset, -1, 1);
-    points.push({
-      x: progress * width,
-      y: midY - value * halfHeight,
-    });
+    if (skipSamples > 0 && previousRaw !== null) {
+      if (sampleInfo.discontinuity) {
+        skipThroughIndex = Math.max(skipThroughIndex, index + skipSamples);
+      }
+      if (Math.abs(raw - previousRaw) > nodeGraphModuleScopeDiscontinuityThreshold) {
+        skipThroughIndex = Math.max(skipThroughIndex, index + skipSamples - 1);
+      }
+    }
+    if (index <= skipThroughIndex) {
+      if (points.length > 0 && points[points.length - 1] !== null) {
+        points.push(null);
+      }
+    } else {
+      points.push({ x: progress * width, y: midY - value * halfHeight });
+    }
+    previousRaw = raw;
   }
   return points;
 }
