@@ -133,6 +133,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nativeNoiseGeneratorReady = false;
     this.nativeFbm = null;
     this.nativeFbmReady = false;
+    this.nativeLadderFilter = null;
+    this.nativeLadderFilterReady = false;
     this.nativeSoftClipper = null;
     this.nativeSoftClipperReady = false;
     this.pllStates = new Map();
@@ -470,6 +472,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "ladder_filter" || targetType === "ladderFilter") {
+        for (const state of this.ladderFilterStates.values()) {
+          this.destroyLadderFilterNativeState(state);
+        }
+        this.nativeLadderFilter = exports;
+        this.nativeLadderFilterReady = Boolean(
+          this.nativeLadderFilter?.soemdsp_ladder_filter_create &&
+          this.nativeLadderFilter?.soemdsp_ladder_filter_sample,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "ladder_filter",
+          status: this.nativeLadderFilterReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       this.port.postMessage({
         type: "nativeModuleStatus",
         name,
@@ -537,6 +555,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.gpuAdditiveUnderruns = 0;
     this.flowerChildEnvelopeFollowerStates = new Map();
     this.highpassStates = new Map();
+    for (const state of this.ladderFilterStates.values()) {
+      this.destroyLadderFilterNativeState(state);
+    }
     this.ladderFilterStates = new Map();
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
@@ -958,6 +979,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     for (const id of [...this.ladderFilterStates.keys()]) {
       if (!ids.has(id)) {
+        this.destroyLadderFilterNativeState(this.ladderFilterStates.get(id));
         this.ladderFilterStates.delete(id);
       }
     }
@@ -2708,9 +2730,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   createLadderFilterState() {
-    return {
-      y: [0, 0, 0, 0, 0],
-    };
+    return { y: [0, 0, 0, 0, 0], nativeHandle: 0 };
   }
 
   resetCookbookFilterState(state) {
@@ -2900,6 +2920,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   destroyFbmNativeState(state) {
     if (state.nativeHandle && this.nativeFbm?.soemdsp_fbm_destroy) {
       this.nativeFbm.soemdsp_fbm_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
+  destroyLadderFilterNativeState(state) {
+    if (state.nativeHandle && this.nativeLadderFilter?.soemdsp_ladder_filter_destroy) {
+      this.nativeLadderFilter.soemdsp_ladder_filter_destroy(state.nativeHandle);
       state.nativeHandle = 0;
     }
   }
@@ -3864,6 +3891,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   ladderFilterSample(state, input, params, rate = sampleRate) {
+    if (this.nativeLadderFilterReady) {
+      if (!state.nativeHandle) {
+        state.nativeHandle = this.nativeLadderFilter.soemdsp_ladder_filter_create();
+      }
+      if (state.nativeHandle) {
+        return this.nativeLadderFilter.soemdsp_ladder_filter_sample(
+          state.nativeHandle,
+          this.safeFilterNumber(input, state),
+          Math.max(0, this.safeFilterNumber(params.frequency, state)),
+          this.clampValue(this.safeFilterNumber(params.resonance, state), 0, 0.999),
+          Math.max(0, Math.min(3, Math.round(Number(params.mode) || 0))),
+          Math.max(1, Math.min(4, Math.round(Number(params.stages) || 4))),
+          Math.max(1, Number(rate) || sampleRate || 44100),
+        );
+      }
+    }
     const safeInput = this.safeFilterNumber(input, state);
     const coeff = this.ladderFilterCoefficients(
       params.frequency,
