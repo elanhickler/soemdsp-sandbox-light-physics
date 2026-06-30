@@ -234,7 +234,7 @@ function createNodeGraphLiveRuntime(plan) {
   const noiseSeeds = new Map();
   const oscResetStates = new Map();
   const graphLfoStates = new Map();
-  const bandpassStates = new Map();
+  const passiveFilterStates = new Map();
   const clockStates = new Map();
   const codeblockFunctions = new Map();
   const cookbookFilterStates = new Map();
@@ -244,12 +244,10 @@ function createNodeGraphLiveRuntime(plan) {
   const expAdsrStates = new Map();
   const fractalBrownianNoiseStates = new Map();
   const flowerChildEnvelopeFollowerStates = new Map();
-  const highpassStates = new Map();
   const ladderFilterStates = new Map();
   const tb303FilterStates = new Map();
   const linearEnvelopeStates = new Map();
   const lorenzAttractorStates = new Map();
-  const lowpassStates = new Map();
   const moduleGroupRuntimes = new Map();
   const noiseGeneratorStates = new Map();
   const oscillatorLastPhaseIncrements = new Map();
@@ -260,6 +258,7 @@ function createNodeGraphLiveRuntime(plan) {
   const randomWalkStates = new Map();
   const reverbEffectStates = new Map();
   const pllStates = new Map();
+  const helmholtzStates = new Map();
   const sampleHoldStates = new Map();
   const samplePlaybackStates = new Map();
   const samples = new Map((plan.samples || []).map((sample) => [sample.id, sample]));
@@ -287,14 +286,8 @@ function createNodeGraphLiveRuntime(plan) {
     if (node.type === "lorenzAttractor") {
       lorenzAttractorStates.set(node.id, createNodeGraphLorenzAttractorState());
     }
-    if (node.type === "highpass") {
-      highpassStates.set(node.id, createNodeGraphHighpassState());
-    }
-    if (node.type === "lowpass") {
-      lowpassStates.set(node.id, createNodeGraphLowpassState());
-    }
-    if (node.type === "bandpass") {
-      bandpassStates.set(node.id, createNodeGraphBandpassState());
+    if (node.type === "passiveFilter") {
+      passiveFilterStates.set(node.id, createNodeGraphPassiveFilterState());
     }
     if (node.type === "cookbookFilter") {
       cookbookFilterStates.set(node.id, createNodeGraphCookbookFilterState());
@@ -325,6 +318,9 @@ function createNodeGraphLiveRuntime(plan) {
     }
     if (node.type === "pll") {
       pllStates.set(node.id, createNodeGraphPllState());
+    }
+    if (node.type === "helmholtzPitch") {
+      helmholtzStates.set(node.id, createNodeGraphHelmholtzState());
     }
     if (node.type === "randomClock") {
       randomClockStates.set(node.id, createNodeGraphRandomClockState());
@@ -394,7 +390,7 @@ function createNodeGraphLiveRuntime(plan) {
     ),
     inputConnections,
     badNumberCount: 0,
-    bandpassStates,
+    passiveFilterStates,
     clockDividerStates,
     clockStates,
     codeblockFunctions,
@@ -439,10 +435,9 @@ function createNodeGraphLiveRuntime(plan) {
     noiseGeneratorStates,
     pluckEnvelopeStates,
     randomClockStates,
-    highpassStates,
-    lowpassStates,
     reverbEffectStates,
     pllStates,
+    helmholtzStates,
     order: [...(plan.order || [])],
     outputNode: plan.outputNode || "output",
     patchCommandStates,
@@ -518,11 +513,8 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   if (!runtime.spiralStates) {
     runtime.spiralStates = new Map();
   }
-  if (!runtime.highpassStates) {
-    runtime.highpassStates = new Map();
-  }
-  if (!runtime.lowpassStates) {
-    runtime.lowpassStates = new Map();
+  if (!runtime.passiveFilterStates) {
+    runtime.passiveFilterStates = new Map();
   }
   if (!runtime.moduleGroupRuntimes) {
     runtime.moduleGroupRuntimes = new Map();
@@ -538,9 +530,6 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   }
   if (!runtime.lorenzAttractorStates) {
     runtime.lorenzAttractorStates = new Map();
-  }
-  if (!runtime.bandpassStates) {
-    runtime.bandpassStates = new Map();
   }
   if (!runtime.clockStates) {
     runtime.clockStates = new Map();
@@ -565,6 +554,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   }
   if (!runtime.pllStates) {
     runtime.pllStates = new Map();
+  }
+  if (!runtime.helmholtzStates) {
+    runtime.helmholtzStates = new Map();
   }
   if (!runtime.sampleHoldStates) {
     runtime.sampleHoldStates = new Map();
@@ -637,14 +629,8 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     if (node.type === "lorenzAttractor" && !runtime.lorenzAttractorStates.has(node.id)) {
       runtime.lorenzAttractorStates.set(node.id, createNodeGraphLorenzAttractorState());
     }
-    if (node.type === "highpass" && !runtime.highpassStates.has(node.id)) {
-      runtime.highpassStates.set(node.id, createNodeGraphHighpassState());
-    }
-    if (node.type === "lowpass" && !runtime.lowpassStates.has(node.id)) {
-      runtime.lowpassStates.set(node.id, createNodeGraphLowpassState());
-    }
-    if (node.type === "bandpass" && !runtime.bandpassStates.has(node.id)) {
-      runtime.bandpassStates.set(node.id, createNodeGraphBandpassState());
+    if (node.type === "passiveFilter" && !runtime.passiveFilterStates.has(node.id)) {
+      runtime.passiveFilterStates.set(node.id, createNodeGraphPassiveFilterState());
     }
     if (node.type === "cookbookFilter" && !runtime.cookbookFilterStates.has(node.id)) {
       runtime.cookbookFilterStates.set(node.id, createNodeGraphCookbookFilterState());
@@ -672,6 +658,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     }
     if (node.type === "pll" && !runtime.pllStates.has(node.id)) {
       runtime.pllStates.set(node.id, createNodeGraphPllState());
+    }
+    if (node.type === "helmholtzPitch" && !runtime.helmholtzStates.has(node.id)) {
+      runtime.helmholtzStates.set(node.id, createNodeGraphHelmholtzState());
     }
     if (node.type === "randomClock" && !runtime.randomClockStates.has(node.id)) {
       runtime.randomClockStates.set(node.id, createNodeGraphRandomClockState());
@@ -803,14 +792,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
       runtime.lorenzAttractorStates.delete(id);
     }
   }
-  for (const id of [...runtime.highpassStates.keys()]) {
+  for (const id of [...runtime.passiveFilterStates.keys()]) {
     if (!nodeIds.has(id)) {
-      runtime.highpassStates.delete(id);
-    }
-  }
-  for (const id of [...runtime.lowpassStates.keys()]) {
-    if (!nodeIds.has(id)) {
-      runtime.lowpassStates.delete(id);
+      runtime.passiveFilterStates.delete(id);
     }
   }
   for (const id of [...runtime.moduleGroupRuntimes.keys()]) {
@@ -821,11 +805,6 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.linearEnvelopeStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.linearEnvelopeStates.delete(id);
-    }
-  }
-  for (const id of [...runtime.bandpassStates.keys()]) {
-    if (!nodeIds.has(id)) {
-      runtime.bandpassStates.delete(id);
     }
   }
   for (const id of [...runtime.clockStates.keys()]) {
@@ -876,6 +855,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...(runtime.pllStates?.keys() || [])]) {
     if (!nodeIds.has(id)) {
       runtime.pllStates.delete(id);
+    }
+  }
+  for (const id of [...(runtime.helmholtzStates?.keys() || [])]) {
+    if (!nodeIds.has(id)) {
+      runtime.helmholtzStates.delete(id);
     }
   }
   for (const id of [...runtime.sampleHoldStates.keys()]) {

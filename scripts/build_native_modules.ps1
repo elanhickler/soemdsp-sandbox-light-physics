@@ -74,6 +74,24 @@ if (!(Test-Path -LiteralPath $clang)) {
   -fno-exceptions `
   -fno-rtti `
   "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_helmholtz_version" `
+  "-Wl,--export=soemdsp_helmholtz_create" `
+  "-Wl,--export=soemdsp_helmholtz_destroy" `
+  "-Wl,--export=soemdsp_helmholtz_set_params" `
+  "-Wl,--export=soemdsp_helmholtz_process" `
+  "-Wl,--export=soemdsp_helmholtz_frequency" `
+  "-Wl,--export=soemdsp_helmholtz_fidelity" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\helmholtz\helmholtz.wasm" `
+  "$root\native_modules\helmholtz\helmholtz.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
   "-Wl,--export=soemdsp_noise_generator_create" `
   "-Wl,--export=soemdsp_noise_generator_destroy" `
   "-Wl,--export=soemdsp_noise_generator_sample" `
@@ -150,3 +168,20 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export-memory" `
   -o "$root\native_modules\tb303_filter\tb303_filter.wasm" `
   "$root\native_modules\tb303_filter\tb303_filter.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_passive_filter_create" `
+  "-Wl,--export=soemdsp_passive_filter_destroy" `
+  "-Wl,--export=soemdsp_passive_filter_sample" `
+  "-Wl,--export=soemdsp_passive_filter_version" `
+  "-Wl,--export=soemdsp_passive_filter_metadata_json" `
+  "-Wl,--export=soemdsp_passive_filter_metadata_json_size" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\passive_filter\passive_filter.wasm" `
+  "$root\native_modules\passive_filter\passive_filter.cpp"

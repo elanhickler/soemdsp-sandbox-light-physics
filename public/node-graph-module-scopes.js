@@ -2279,6 +2279,7 @@ const nodeGraphTraceDisplaySettingsDefaults = Object.freeze({
 
 const nodeGraphLineBurnSettingsDefaults = Object.freeze({
   burn: 0.82,
+  cycles: 2,
   decay: 0.12,
   dot1Brightness: 0.92,
   dot1Color: "#75ebff",
@@ -2391,6 +2392,7 @@ function normalizeNodeGraphLineBurnSettings(settings = {}) {
   const zoomSeconds = source.zoomSeconds ?? source.windowSeconds ?? legacyWindowMs;
   return {
     burn: normalizeNodeGraphTraceDisplayNumber(source.burn, defaults.burn, 0, 1),
+    cycles: normalizeNodeGraphTraceDisplayNumber(source.cycles, defaults.cycles, 1, 64, true),
     decay: normalizeNodeGraphTraceDisplayNumber(source.decay, defaults.decay, 0, 1),
     dot1Brightness: normalizeNodeGraphTraceDisplayNumber(
       source.dot1Brightness ?? source.brightness,
@@ -2415,7 +2417,7 @@ function normalizeNodeGraphZeroDBurnSettings(settings = {}) {
       source.dot1Brightness ?? source.brightness,
       defaults.dot1Brightness,
       0,
-      1,
+      2,
     ),
     dot1Color: normalizeNodeGraphTraceDisplayColor(source.dot1Color ?? source.color, defaults.dot1Color),
     dot1Enabled: source.dot1Enabled !== false,
@@ -2426,7 +2428,7 @@ function normalizeNodeGraphZeroDBurnSettings(settings = {}) {
       0,
       1,
     ),
-    dot2Brightness: normalizeNodeGraphTraceDisplayNumber(source.dot2Brightness, defaults.dot2Brightness, 0, 1),
+    dot2Brightness: normalizeNodeGraphTraceDisplayNumber(source.dot2Brightness, defaults.dot2Brightness, 0, 2),
     dot2Color: normalizeNodeGraphTraceDisplayColor(source.dot2Color, defaults.dot2Color),
     dot2Enabled: source.dot2Enabled !== false,
     dot2Size: normalizeNodeGraphTraceDisplayNumber(source.dot2Size, defaults.dot2Size, 0, 1),
@@ -3276,6 +3278,7 @@ const nodeGraphTraceDisplaySettingFields = Object.freeze([
   ["burn", "Burn"],
   ["decay", "Decay"],
   ["padding", "Amp"],
+  ["cycles", "Cycles"],
 
   ["dot1Size", "Dot 1 size"],
   ["lineThickness", "Dot 1 blur"],
@@ -3327,7 +3330,7 @@ const nodeGraphTraceDisplayActiveControlsByType = Object.freeze({
     fields: Object.freeze([
       "burn",
       "decay",
-      "zoomSeconds",
+      "cycles",
       "dot1Size",
       "lineThickness",
       "dot1Brightness",
@@ -3544,6 +3547,14 @@ function nodeGraphTraceDisplaySettingsElement() {
             <button type="button" data-trace-display-step-target="zoomSeconds" data-trace-display-step-direction="1">+</button>
           </span>
         </label>
+        <label class="node-trace-display-trace-thickness-row">
+          <span>Cycles</span>
+          <span class="metadata-stepper-control">
+            <button type="button" data-trace-display-step-target="cycles" data-trace-display-step-direction="-1">-</button>
+            <input id="nodeTraceDisplayCycles" type="text" inputmode="decimal" data-trace-display-field="cycles">
+            <button type="button" data-trace-display-step-target="cycles" data-trace-display-step-direction="1">+</button>
+          </span>
+        </label>
         <label class="node-trace-display-dot2-thickness-row">
           <span>Amp</span>
           <span class="metadata-stepper-control">
@@ -3582,11 +3593,11 @@ function nodeGraphTraceDisplaySettingsElement() {
           Bipolar
         </label>
         <label>
-          <span>Size</span>
+          <span>Brightness</span>
           <span class="metadata-stepper-control">
-            <button type="button" data-trace-display-step-target="dot1Size" data-trace-display-step-direction="-1">-</button>
-            <input id="nodeTraceDisplayDot1Size" type="text" inputmode="decimal" data-trace-display-field="dot1Size">
-            <button type="button" data-trace-display-step-target="dot1Size" data-trace-display-step-direction="1">+</button>
+            <button type="button" data-trace-display-step-target="dot1Brightness" data-trace-display-step-direction="-1">-</button>
+            <input id="nodeTraceDisplayBrightness" type="text" inputmode="decimal" data-trace-display-field="dot1Brightness">
+            <button type="button" data-trace-display-step-target="dot1Brightness" data-trace-display-step-direction="1">+</button>
           </span>
         </label>
         <label class="node-trace-display-trace-line-thickness-row">
@@ -3598,14 +3609,17 @@ function nodeGraphTraceDisplaySettingsElement() {
           </span>
         </label>
         <label>
-          <span class="metadata-icon-label" title="Light">&#128161;</span>
+          <span>Size</span>
           <span class="metadata-stepper-control">
-            <button type="button" data-trace-display-step-target="dot1Brightness" data-trace-display-step-direction="-1">-</button>
-            <input id="nodeTraceDisplayBrightness" type="text" inputmode="decimal" data-trace-display-field="dot1Brightness">
-            <button type="button" data-trace-display-step-target="dot1Brightness" data-trace-display-step-direction="1">+</button>
+            <button type="button" data-trace-display-step-target="dot1Size" data-trace-display-step-direction="-1">-</button>
+            <input id="nodeTraceDisplayDot1Size" type="text" inputmode="decimal" data-trace-display-field="dot1Size">
+            <button type="button" data-trace-display-step-target="dot1Size" data-trace-display-step-direction="1">+</button>
           </span>
         </label>
-        <label><input id="nodeTraceDisplayColor" type="color" data-trace-display-color="dot1Color" aria-label="Dot 1 color"></label>
+        <label>
+          <span>Color</span>
+          <input id="nodeTraceDisplayColor" type="color" data-trace-display-color="dot1Color" aria-label="Dot 1 color">
+        </label>
       </div>
       <div class="metadata-section-title node-trace-display-dot2-title">
         <span>Dot 2</span>
@@ -3617,11 +3631,11 @@ function nodeGraphTraceDisplaySettingsElement() {
       </div>
       <div class="metadata-field-section node-trace-display-dot2-section">
         <label>
-          <span>Size</span>
+          <span>Brightness</span>
           <span class="metadata-stepper-control">
-            <button type="button" data-trace-display-step-target="dot2Size" data-trace-display-step-direction="-1">-</button>
-            <input id="nodeTraceDisplayDot2Size" type="text" inputmode="decimal" data-trace-display-field="dot2Size">
-            <button type="button" data-trace-display-step-target="dot2Size" data-trace-display-step-direction="1">+</button>
+            <button type="button" data-trace-display-step-target="dot2Brightness" data-trace-display-step-direction="-1">-</button>
+            <input id="nodeTraceDisplayDot2Brightness" type="text" inputmode="decimal" data-trace-display-field="dot2Brightness">
+            <button type="button" data-trace-display-step-target="dot2Brightness" data-trace-display-step-direction="1">+</button>
           </span>
         </label>
         <label class="node-trace-display-dot2-line-thickness-row">
@@ -3633,14 +3647,17 @@ function nodeGraphTraceDisplaySettingsElement() {
           </span>
         </label>
         <label>
-          <span class="metadata-icon-label" title="Light">&#128161;</span>
+          <span>Size</span>
           <span class="metadata-stepper-control">
-            <button type="button" data-trace-display-step-target="dot2Brightness" data-trace-display-step-direction="-1">-</button>
-            <input id="nodeTraceDisplayDot2Brightness" type="text" inputmode="decimal" data-trace-display-field="dot2Brightness">
-            <button type="button" data-trace-display-step-target="dot2Brightness" data-trace-display-step-direction="1">+</button>
+            <button type="button" data-trace-display-step-target="dot2Size" data-trace-display-step-direction="-1">-</button>
+            <input id="nodeTraceDisplayDot2Size" type="text" inputmode="decimal" data-trace-display-field="dot2Size">
+            <button type="button" data-trace-display-step-target="dot2Size" data-trace-display-step-direction="1">+</button>
           </span>
         </label>
-        <label><input id="nodeTraceDisplayDot2Color" type="color" data-trace-display-color="dot2Color" aria-label="Dot 2 color"></label>
+        <label>
+          <span>Color</span>
+          <input id="nodeTraceDisplayDot2Color" type="color" data-trace-display-color="dot2Color" aria-label="Dot 2 color">
+        </label>
       </div>
       <div class="metadata-section-title node-trace-display-caps-title">Caps</div>
       <div class="metadata-field-section node-trace-display-caps-section">
@@ -4067,7 +4084,9 @@ function nodeGraphTraceDisplayStepperQuantum(input) {
   if (!input) {
     return 0.1;
   }
-
+  if (input.dataset?.traceDisplayField === "cycles") {
+    return 1;
+  }
   return 0.1;
 }
 
@@ -4083,24 +4102,30 @@ function nodeGraphTraceDisplaySensitiveControlField(key) {
 
 const nodeGraphTraceDisplaySensitiveControlExponent = 3;
 
-function nodeGraphTraceDisplaySizeToControlValue(value) {
+function nodeGraphTraceDisplaySensitiveControlMax(key) {
+  return ["dot1Brightness", "dot2Brightness"].includes(key) ? 2 : 1;
+}
+
+function nodeGraphTraceDisplaySizeToControlValue(value, max = 1) {
   return Math.pow(
-    clampNodeSliderValue(Number(value) || 0, 0, 1),
+    clampNodeSliderValue(Number(value) || 0, 0, max) / max,
     1 / nodeGraphTraceDisplaySensitiveControlExponent,
   );
 }
 
-function nodeGraphTraceDisplayControlToSizeValue(value) {
+function nodeGraphTraceDisplayControlToSizeValue(value, max = 1) {
   const control = clampNodeSliderValue(Number(value) || 0, 0, 1);
-  return Math.pow(control, nodeGraphTraceDisplaySensitiveControlExponent);
+  return Math.pow(control, nodeGraphTraceDisplaySensitiveControlExponent) * max;
 }
 
 function adjustNodeGraphTraceDisplaySettingByControlDelta(key, startValue, delta) {
   if (!nodeGraphTraceDisplaySensitiveControlField(key)) {
     return startValue + delta;
   }
+  const max = nodeGraphTraceDisplaySensitiveControlMax(key);
   return nodeGraphTraceDisplayControlToSizeValue(
-    nodeGraphTraceDisplaySizeToControlValue(startValue) + delta,
+    nodeGraphTraceDisplaySizeToControlValue(startValue, max) + delta,
+    max,
   );
 }
 
@@ -4119,7 +4144,7 @@ function normalizeNodeGraphTraceDisplaySettingValueForKey(key, value) {
   if (["burn", "decay", "dot1Size", "dot2Size", "lineLength", "capSize", "capLength"].includes(key)) {
     return clampNodeSliderValue(Number(value) || 0, 0, 1);
   }
-  if (formType === "dot" && ["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)) {
+  if (formType === "dot" && ["lineThickness", "dot2LineThickness"].includes(key)) {
     return clampNodeSliderValue(Number(value) || 0, 0, 1);
   }
   if (formType === "scope2d" && ["lineThickness", "dot2LineThickness"].includes(key)) {
@@ -4128,7 +4153,10 @@ function normalizeNodeGraphTraceDisplaySettingValueForKey(key, value) {
   if (formType === "scope2dTrace" && ["lineThickness", "dot2LineThickness"].includes(key)) {
     return clampNodeSliderValue(Number(value) || 0, 0, 1);
   }
-  if (["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)) {
+  if (["dot1Brightness", "dot2Brightness"].includes(key)) {
+    return clampNodeSliderValue(Number(value) || 0, 0, 2);
+  }
+  if (["lineThickness", "dot2LineThickness"].includes(key)) {
     return Math.max(0, Number(value) || 0);
   }
   if (key === "zoomSeconds" || key === "historySeconds") {
@@ -4136,6 +4164,9 @@ function normalizeNodeGraphTraceDisplaySettingValueForKey(key, value) {
   }
   if (key === "scale") {
     return Math.max(0, Number(value) || 0);
+  }
+  if (key === "cycles") {
+    return Math.max(1, Math.min(64, Math.round(Number(value) || 0)));
   }
   return value;
 }
@@ -4979,18 +5010,23 @@ function nodeGraphModuleScopeCapturedScope2dBuffer(slot, options = {}) {
     nodeGraphScopeAvailableSampleCount(yBuffer),
     length,
   );
+  const xTotal = Math.max(0, Math.floor(Number(xBuffer.nodeGraphScopeTotalSampleCount) || 0));
+  const yTotal = Math.max(0, Math.floor(Number(yBuffer.nodeGraphScopeTotalSampleCount) || 0));
+  const absoluteFrame = Math.min(xTotal, yTotal);
+  const canvas = nodeGraphScope2dBurnCanvasForSlot(slot);
+  const lastDrawnFrame = Number(canvas?._nodeGraphScope2dLastDrawnFrame);
+  const newSinceLastDraw = Number.isFinite(lastDrawnFrame) && absoluteFrame > lastDrawnFrame
+    ? absoluteFrame - lastDrawnFrame
+    : 0;
   const historySeconds = Number(options.historySeconds);
+  const minWindowFrames = nodeGraphScope2dSourceFrameCount(sampleRate, fps, validLength);
   const frames = Number.isFinite(historySeconds)
     ? Math.min(
       validLength,
       Math.max(1, Math.ceil(Math.max(0, historySeconds) * sampleRate)),
     )
-    : nodeGraphScope2dSourceFrameCount(sampleRate, fps, validLength);
+    : Math.min(validLength, Math.max(minWindowFrames, newSinceLastDraw));
   const start = Math.max(0, length - frames);
-  const absoluteFrame = Math.min(
-    Number(xBuffer.nodeGraphScopeAbsoluteFrame) || 0,
-    Number(yBuffer.nodeGraphScopeAbsoluteFrame) || 0,
-  );
   const startFrame = Math.max(0, absoluteFrame - frames);
   const x = new Float32Array(frames);
   const y = new Float32Array(frames);
@@ -5053,6 +5089,12 @@ function resizeNodeGraphLiveModuleScopeBuffer(buffer, frameCapacity) {
     copyCount,
     Math.max(0, Math.floor(Number(buffer.nodeGraphScopeRetainedSampleCount) || 0)),
   );
+  next.nodeGraphScopeTotalSampleCount = Math.max(0, Math.floor(Number(buffer.nodeGraphScopeTotalSampleCount) || 0));
+  next.nodeGraphScopeBurnSweepStart = buffer.nodeGraphScopeBurnSweepStart;
+  next.nodeGraphScopeBurnSweepLength = buffer.nodeGraphScopeBurnSweepLength;
+  next.nodeGraphScopeBurnCrossings = buffer.nodeGraphScopeBurnCrossings;
+  next.nodeGraphScopeBurnLastSample = buffer.nodeGraphScopeBurnLastSample;
+  next.nodeGraphScopeBurnArmed = buffer.nodeGraphScopeBurnArmed;
   if (Number.isFinite(Number(buffer.nodeGraphScopeSampleRate)) && Number(buffer.nodeGraphScopeSampleRate) > 0) {
     next.nodeGraphScopeSampleRate = Number(buffer.nodeGraphScopeSampleRate);
   }
@@ -5092,6 +5134,10 @@ function pushNodeGraphLiveModuleScopeSamples(nodeId, values, metadata = null) {
     buffer[buffer.length - count + index] = samples[start + index] || 0;
   }
   buffer.nodeGraphScopeRecentSampleCount = count;
+  buffer.nodeGraphScopeTotalSampleCount = Math.max(
+    0,
+    Math.floor(Number(buffer.nodeGraphScopeTotalSampleCount) || 0),
+  ) + count;
   buffer.nodeGraphScopeRetainedSampleCount = Math.min(
     buffer.length,
     Math.max(0, Math.floor(Number(buffer.nodeGraphScopeRetainedSampleCount) || 0)) + count,
@@ -8598,6 +8644,9 @@ function nodeGraphOneDimensionalBurnFadeTrail(context, canvas, settings) {
   }
   const burn = clampNodeSliderValue(Number(settings?.burn) || 0, 0, 1);
   const decay = clampNodeSliderValue(Number(settings?.decay) || 0, 0, 1);
+  if (decay <= 0) {
+    return;
+  }
   const fadeAlpha = clampNodeSliderValue(0.012 + decay * 0.3 - burn * 0.006, 0.002, 0.34);
   context.save();
   context.globalCompositeOperation = "destination-out";
@@ -8622,6 +8671,13 @@ function nodeGraphOneDimensionalBurnBufferFrameInfo(buffer, count) {
     return { startFrame, endFrame };
   }
   const safeCount = Math.max(0, Math.floor(Number(count) || 0));
+  const totalSamples = Number(buffer?.nodeGraphScopeTotalSampleCount);
+  if (Number.isFinite(totalSamples) && totalSamples > 0) {
+    return {
+      startFrame: Math.max(0, totalSamples - safeCount),
+      endFrame: totalSamples,
+    };
+  }
   const fallbackEndFrame = Number(buffer?.nodeGraphScopeVersion);
   const end = Number.isFinite(fallbackEndFrame)
     ? fallbackEndFrame
@@ -8653,10 +8709,23 @@ function nodeGraphOneDimensionalBurnDrawStartIndex(canvas, buffer, count) {
   return Math.min(Math.max(0, Math.floor(Number(count) || 0) - 1), frameOffset);
 }
 
-function nodeGraphOneDimensionalBurnFrameProgress(frame, settings, sampleRate) {
-  const zoomSeconds = Math.max(0.0001, Math.abs(Number(settings?.zoomSeconds) || nodeGraphLineBurnSettingsDefaults.zoomSeconds));
-  const framesPerSweep = Math.max(1, zoomSeconds * Math.max(1, Number(sampleRate) || 1));
-  return wrapNodeSliderValue((Number(frame) || 0) / framesPerSweep, 0, 1);
+const nodeGraphOneDimensionalBurnTriggerHigh = 0.02;
+const nodeGraphOneDimensionalBurnTriggerLow = -0.02;
+const nodeGraphOneDimensionalBurnMinSweepHz = 20000;
+
+function nodeGraphOneDimensionalBurnInitTriggerState(buffer, sampleRate) {
+  if (!Number.isFinite(buffer.nodeGraphScopeBurnSweepLength) || buffer.nodeGraphScopeBurnSweepLength <= 0) {
+    buffer.nodeGraphScopeBurnSweepLength = Math.max(1, Math.round(sampleRate * nodeGraphLineBurnSettingsDefaults.zoomSeconds));
+  }
+  if (!Number.isFinite(buffer.nodeGraphScopeBurnCrossings)) {
+    buffer.nodeGraphScopeBurnCrossings = 0;
+  }
+  if (!Number.isFinite(buffer.nodeGraphScopeBurnLastSample)) {
+    buffer.nodeGraphScopeBurnLastSample = 0;
+  }
+  if (!Number.isFinite(buffer.nodeGraphScopeBurnArmed)) {
+    buffer.nodeGraphScopeBurnArmed = 1;
+  }
 }
 
 function nodeGraphOneDimensionalBurnFramePoints(canvas, buffer, rect, settings) {
@@ -8674,20 +8743,50 @@ function nodeGraphOneDimensionalBurnFramePoints(canvas, buffer, rect, settings) 
   }
   const points = [];
   const frameInfo = nodeGraphOneDimensionalBurnBufferFrameInfo(buffer, count);
-  const sampleRate = Math.max(1, Number(nodeGraphModuleScopeState.sampleRate) || Number(nodeGraphMvp?.sampleRate) || 44100);
+  const sampleRate = nodeGraphScopeSampleRate(buffer);
+  const targetCycles = Math.max(1, Math.round(
+    Number(settings?.cycles) || nodeGraphLineBurnSettingsDefaults.cycles,
+  ));
+  nodeGraphOneDimensionalBurnInitTriggerState(buffer, sampleRate);
+  if (!Number.isFinite(buffer.nodeGraphScopeBurnSweepStart)) {
+    buffer.nodeGraphScopeBurnSweepStart = frameInfo.startFrame;
+  }
+  const minSweepLength = Math.max(1, Math.round(sampleRate / nodeGraphOneDimensionalBurnMinSweepHz));
   let previousProgress = null;
+  let prevSample = buffer.nodeGraphScopeBurnLastSample;
   for (let index = drawStartIndex; index < count; index += 1) {
     const frame = frameInfo.startFrame + index;
-    const progress = nodeGraphOneDimensionalBurnFrameProgress(frame, settings, sampleRate);
+    const sample = buffer[start + index];
+    if (buffer.nodeGraphScopeBurnArmed && sample > nodeGraphOneDimensionalBurnTriggerHigh) {
+      buffer.nodeGraphScopeBurnArmed = 0;
+      buffer.nodeGraphScopeBurnCrossings += 1;
+      if (buffer.nodeGraphScopeBurnCrossings >= targetCycles) {
+        const sweepLength = frame - buffer.nodeGraphScopeBurnSweepStart;
+        if (sweepLength >= minSweepLength) {
+          buffer.nodeGraphScopeBurnSweepLength = sweepLength;
+        }
+        buffer.nodeGraphScopeBurnSweepStart = frame;
+        buffer.nodeGraphScopeBurnCrossings = 0;
+      }
+    } else if (!buffer.nodeGraphScopeBurnArmed && sample < nodeGraphOneDimensionalBurnTriggerLow) {
+      buffer.nodeGraphScopeBurnArmed = 1;
+    }
+    prevSample = sample;
+    const progress = wrapNodeSliderValue(
+      (frame - buffer.nodeGraphScopeBurnSweepStart) / Math.max(1, buffer.nodeGraphScopeBurnSweepLength),
+      0,
+      1,
+    );
     if (previousProgress !== null && progress < previousProgress) {
       breakNodeGraphScope2dPath(points);
     }
     points.push({
       x: rect.left + rect.width * progress,
-      y: nodeGraphOneDimensionalBurnSampleToY(buffer[start + index], rect),
+      y: nodeGraphOneDimensionalBurnSampleToY(sample, rect),
     });
     previousProgress = progress;
   }
+  buffer.nodeGraphScopeBurnLastSample = prevSample;
   return points;
 }
 
@@ -9186,12 +9285,11 @@ function copyNodeGraphScope2dBurnSurface(renderer, sourceSurface, targetSurface,
 function nodeGraphScope2dBurnDecayValues(settings) {
   const burn = clampNodeSliderValue(Number(settings?.burn) || 0, 0, 1);
   const decay = clampNodeSliderValue(Number(settings?.decay) || 0, 0, 1);
-  const tail = 1 - decay;
   return {
-    decayFast: 0.62 + tail * 0.24,
-    decaySlow: 0.9 + tail * 0.09,
+    decayFast: decay > 0 ? 1 - decay * 0.38 : 1,
+    decaySlow: decay > 0 ? 1 - decay * 0.1 : 1,
     exposure: 1.35 + burn * 3.5,
-    floor: 0.0007 + decay * 0.0028,
+    floor: decay > 0 ? decay * 0.0035 : 0,
   };
 }
 

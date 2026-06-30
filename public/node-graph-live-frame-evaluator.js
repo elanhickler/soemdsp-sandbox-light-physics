@@ -108,11 +108,27 @@ function createNodeGraphLowpassState() {
   };
 }
 
-function createNodeGraphBandpassState() {
+function createNodeGraphPassiveFilterState() {
   return {
     highpass: createNodeGraphHighpassState(),
     lowpass: createNodeGraphLowpassState(),
   };
+}
+
+function nodeGraphPassiveFilterSample(state, input, mode, lowFrequency, highFrequency, sampleRate, runtime, nodeId) {
+  const safeMode = Math.round(Number(mode)) || 0;
+  if (safeMode === 1) {
+    const lowCut  = Math.max(0, Number(lowFrequency)  || 0);
+    const highCut = Math.max(0, Number(highFrequency) || 0);
+    const low  = Math.min(lowCut, highCut);
+    const high = Math.max(lowCut, highCut);
+    const hp = nodeGraphOnePoleHighpassSample(state.highpass, input, low, sampleRate, runtime, nodeId);
+    return nodeGraphOnePoleLowpassSample(state.lowpass, hp, high, sampleRate, runtime, nodeId);
+  }
+  if (safeMode === 2) {
+    return nodeGraphOnePoleHighpassSample(state.highpass, input, lowFrequency, sampleRate, runtime, nodeId);
+  }
+  return nodeGraphOnePoleLowpassSample(state.lowpass, input, highFrequency, sampleRate, runtime, nodeId);
 }
 
 function createNodeGraphLadderFilterState() {
@@ -194,6 +210,10 @@ function createNodeGraphSabrinaReverbState() {
 }
 
 function createNodeGraphPllState() {
+  return { nativeHandle: 0, nativeParamKey: "", nativeSampleRate: 0 };
+}
+
+function createNodeGraphHelmholtzState() {
   return { nativeHandle: 0, nativeParamKey: "", nativeSampleRate: 0 };
 }
 
@@ -713,14 +733,6 @@ function nodeGraphOnePoleLowpassSample(state, input, frequency, sampleRate, runt
   return state.outputBuffer;
 }
 
-function nodeGraphOnePoleBandpassSample(state, input, lowFrequency, highFrequency, sampleRate, runtime = null, nodeId = "") {
-  const lowCut = Math.max(0, nodeGraphSafeFilterNumber(lowFrequency, runtime, nodeId, state.highpass, "bandpass low frequency"));
-  const highCut = Math.max(0, nodeGraphSafeFilterNumber(highFrequency, runtime, nodeId, state.lowpass, "bandpass high frequency"));
-  const low = Math.min(lowCut, highCut);
-  const high = Math.max(lowCut, highCut);
-  const highpassed = nodeGraphOnePoleHighpassSample(state.highpass, input, low, sampleRate, runtime, nodeId);
-  return nodeGraphOnePoleLowpassSample(state.lowpass, highpassed, high, sampleRate, runtime, nodeId);
-}
 
 function nodeGraphLadderFilterStageCount(stages) {
   const value = Math.round(Number(stages));
@@ -1252,6 +1264,53 @@ function nodeGraphPllSample(state, signalIn, cvIn, cvConnected, params, sampleRa
   } catch {
     if (runtime) runtime.nativePllReady = false;
     if (state.nativeHandle && native.soemdsp_pll_destroy) native.soemdsp_pll_destroy(state.nativeHandle);
+    state.nativeHandle = 0;
+    return silent;
+  }
+}
+
+function nodeGraphHelmholtzPitchView(frequencyHz) {
+  if (!(frequencyHz > 0)) return -1;
+  const minHz = 80;
+  const octaves = 4;
+  const clampedHz = Math.max(minHz, Math.min(minHz * Math.pow(2, octaves), frequencyHz));
+  const norm = Math.log2(clampedHz / minHz) / octaves;
+  return norm * 2 - 1;
+}
+
+function nodeGraphHelmholtzSample(state, input, params, sampleRate, runtime = null, nodeId = "") {
+  const silent = { Frequency: 0, Fidelity: 0, "Pitch View": -1 };
+  const native = runtime?.nativeHelmholtzReady ? runtime?.nativeHelmholtz : null;
+  if (!native?.soemdsp_helmholtz_create || !native?.soemdsp_helmholtz_process) return silent;
+  try {
+    const safeRate = Math.max(1, Math.round(Number(sampleRate) || 44100));
+    if (!state.nativeHandle || state.nativeSampleRate !== safeRate) {
+      if (state.nativeHandle && native.soemdsp_helmholtz_destroy) {
+        native.soemdsp_helmholtz_destroy(state.nativeHandle);
+      }
+      state.nativeHandle = native.soemdsp_helmholtz_create(safeRate) || 0;
+      state.nativeSampleRate = safeRate;
+      state.nativeParamKey = "";
+    }
+    if (!state.nativeHandle) return silent;
+    const windowSize = Math.max(256, Math.min(2048, Math.round(Number(params.windowSize) || 1024)));
+    const threshold = Math.max(0.5, Math.min(0.999, Number(params.threshold) || 0.93));
+    const paramKey = `${windowSize}:${Math.round(threshold * 1000)}`;
+    if (paramKey !== state.nativeParamKey && native.soemdsp_helmholtz_set_params) {
+      state.nativeParamKey = paramKey;
+      native.soemdsp_helmholtz_set_params(state.nativeHandle, safeRate, windowSize, threshold);
+    }
+    const safeIn = nodeGraphSafeFilterNumber(input, runtime, nodeId, null, "pitch detector input");
+    native.soemdsp_helmholtz_process(state.nativeHandle, safeIn);
+    const frequency = nodeGraphSafeFilterNumber(native.soemdsp_helmholtz_frequency?.(state.nativeHandle), runtime, nodeId, null, "pitch detector frequency");
+    return {
+      Frequency: frequency,
+      Fidelity: nodeGraphSafeFilterNumber(native.soemdsp_helmholtz_fidelity?.(state.nativeHandle), runtime, nodeId, null, "pitch detector fidelity"),
+      "Pitch View": nodeGraphHelmholtzPitchView(frequency),
+    };
+  } catch {
+    if (runtime) runtime.nativeHelmholtzReady = false;
+    if (state.nativeHandle && native.soemdsp_helmholtz_destroy) native.soemdsp_helmholtz_destroy(state.nativeHandle);
     state.nativeHandle = 0;
     return silent;
   }
@@ -2965,52 +3024,15 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frameValues,
       );
       value = { Out: knobValue, value: knobValue };
-    } else if (node?.type === "highpass") {
-      const state = runtime.highpassStates.get(nodeId) || createNodeGraphHighpassState();
-      runtime.highpassStates.set(nodeId, state);
-      value = nodeGraphOnePoleHighpassSample(
+    } else if (node?.type === "passiveFilter") {
+      const state = runtime.passiveFilterStates.get(nodeId) || createNodeGraphPassiveFilterState();
+      runtime.passiveFilterStates.set(nodeId, state);
+      value = nodeGraphPassiveFilterSample(
         state,
         mixInput(nodeId),
-        readNodeGraphLiveEffectiveParam(
-          runtime,
-          node,
-          "frequency",
-          1000,
-          frame,
-          frames,
-          frameValues,
-        ),
-        sampleRate,
-        runtime,
-        nodeId,
-      );
-    } else if (node?.type === "lowpass") {
-      const state = runtime.lowpassStates.get(nodeId) || createNodeGraphLowpassState();
-      runtime.lowpassStates.set(nodeId, state);
-      value = nodeGraphOnePoleLowpassSample(
-        state,
-        mixInput(nodeId),
-        readNodeGraphLiveEffectiveParam(
-          runtime,
-          node,
-          "frequency",
-          1000,
-          frame,
-          frames,
-          frameValues,
-        ),
-        sampleRate,
-        runtime,
-        nodeId,
-      );
-    } else if (node?.type === "bandpass") {
-      const state = runtime.bandpassStates.get(nodeId) || createNodeGraphBandpassState();
-      runtime.bandpassStates.set(nodeId, state);
-      value = nodeGraphOnePoleBandpassSample(
-        state,
-        mixInput(nodeId),
+        readNodeGraphLiveEffectiveParam(runtime, node, "mode", 0, frame, frames, frameValues),
         readNodeGraphLiveEffectiveParam(runtime, node, "lowFrequency", 200, frame, frames, frameValues),
-        readNodeGraphLiveEffectiveParam(runtime, node, "highFrequency", 2000, frame, frames, frameValues),
+        readNodeGraphLiveEffectiveParam(runtime, node, "highFrequency", 1000, frame, frames, frameValues),
         sampleRate,
         runtime,
         nodeId,
@@ -3123,6 +3145,21 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
           offset: read("offset", 5),
           type:   read("type",   1),
           frequ:  read("frequ",  10),
+        },
+        sampleRate,
+        runtime,
+        nodeId,
+      );
+    } else if (node?.type === "helmholtzPitch") {
+      const state = runtime.helmholtzStates?.get(nodeId) || createNodeGraphHelmholtzState();
+      if (runtime.helmholtzStates) runtime.helmholtzStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      value = nodeGraphHelmholtzSample(
+        state,
+        mixInput(nodeId, "In"),
+        {
+          windowSize: read("windowSize", 1024),
+          threshold: read("threshold", 0.93),
         },
         sampleRate,
         runtime,

@@ -17089,6 +17089,7 @@ def require_server_error_contracts(base_url: str) -> None:
 def require_native_module_contract(base_url: str) -> None:
     index_html = (PUBLIC / "index.html").read_text(encoding="utf-8")
     server_source = (ROOT / "server.py").read_text(encoding="utf-8")
+    definitions_source = (PUBLIC / "node-graph-module-definitions.js").read_text(encoding="utf-8")
     module_store_source = (PUBLIC / "node-graph-module-store.js").read_text(encoding="utf-8")
     module_actions_source = (PUBLIC / "node-graph-module-actions.js").read_text(encoding="utf-8")
     context_menu_source = (PUBLIC / "node-graph-context-menu.js").read_text(encoding="utf-8")
@@ -17096,6 +17097,35 @@ def require_native_module_contract(base_url: str) -> None:
     live_runtime_source = (PUBLIC / "node-graph-live-runtime.js").read_text(encoding="utf-8")
     worklet_source = (PUBLIC / "node-live-audio-worklet.js").read_text(encoding="utf-8")
     native_build_source = (ROOT / "scripts" / "build_native_modules.ps1").read_text(encoding="utf-8")
+    native_sources = sorted((ROOT / "native_modules").glob("*/*.cpp"))
+    require(native_sources, "native modules folder should contain C++ sources")
+
+    expected_native_exports = {
+        "ellipsoid": ["soemdsp_ellipsoid_sample", "soemdsp_ellipsoid_vector_sample"],
+        "fractal_brownian_noise": ["soemdsp_fbm_create", "soemdsp_fbm_destroy", "soemdsp_fbm_sample"],
+        "ladder_filter": ["soemdsp_ladder_filter_create", "soemdsp_ladder_filter_destroy", "soemdsp_ladder_filter_sample"],
+        "noise_generator": ["soemdsp_noise_generator_create", "soemdsp_noise_generator_destroy", "soemdsp_noise_generator_sample"],
+        "pll": ["soemdsp_pll_create", "soemdsp_pll_destroy", "soemdsp_pll_process"],
+        "sabrina_reverb": ["soemdsp_sabrina_reverb_create", "soemdsp_sabrina_reverb_destroy", "soemdsp_sabrina_reverb_process"],
+        "soft_clipper": ["soemdsp_soft_clipper_sample"],
+    }
+    for source_path in native_sources:
+        source_text = source_path.read_text(encoding="utf-8")
+        module_name = source_path.parent.name
+        wasm_path = source_path.with_suffix(".wasm")
+        wasm_rel = str(wasm_path.relative_to(ROOT)).replace("/", "\\")
+        require(f"// soemdsp-native-module: {module_name}" in source_text, f"native {module_name} source metadata missing module header")
+        require("// soemdsp-native-label:" in source_text, f"native {module_name} source metadata missing label header")
+        require("// soemdsp-native-target:" in source_text, f"native {module_name} source metadata missing target header")
+        require("// soemdsp-native-kind:" in source_text, f"native {module_name} source metadata missing kind header")
+        require("soemdsp-native-tooltip" not in source_text, f"native {module_name} should not use comment tooltip metadata")
+        for export_name in expected_native_exports.get(module_name, []):
+            require(f'extern "C"' in source_text and export_name in source_text, f"native {module_name} export missing: {export_name}")
+            require(f"-Wl,--export={export_name}" in native_build_source, f"native {module_name} build export missing: {export_name}")
+        require(str(wasm_rel) in native_build_source, f"native {module_name} build output missing")
+        require(wasm_path.exists(), f"native {module_name} wasm should exist")
+        require(wasm_path.read_bytes().startswith(b"\0asm"), f"native {module_name} wasm magic bytes missing")
+
     ellipsoid_source_path = ROOT / "native_modules" / "ellipsoid" / "ellipsoid.cpp"
     ellipsoid_wasm_path = ROOT / "native_modules" / "ellipsoid" / "ellipsoid.wasm"
     sabrina_source_path = ROOT / "native_modules" / "sabrina_reverb" / "sabrina_reverb.cpp"
@@ -17121,14 +17151,22 @@ def require_native_module_contract(base_url: str) -> None:
     require(sabrina_wasm_path.read_bytes().startswith(b"\0asm"), "native Sabrina wasm magic bytes missing")
     require(soft_clipper_source_path.exists(), "native Soft Clipper source should exist")
     soft_clipper_source = soft_clipper_source_path.read_text(encoding="utf-8")
+    soft_clipper_metadata_text = soft_clipper_source.replace('\\"', '"')
     require("// soemdsp-native-module: soft_clipper" in soft_clipper_source, "native Soft Clipper source metadata missing")
     require("// soemdsp-native-target: softClipper" in soft_clipper_source, "native Soft Clipper target metadata missing")
     require("extern \"C\" double soemdsp_soft_clipper_sample" in soft_clipper_source, "native Soft Clipper sample export missing")
     require("extern \"C\" const char* soemdsp_soft_clipper_metadata_json()" in soft_clipper_source, "native Soft Clipper metadata export missing")
-    require("\"inputs\":[\"In\"]" in soft_clipper_source, "native Soft Clipper metadata should declare In input")
-    require("\"outputs\":[\"Out\"]" in soft_clipper_source, "native Soft Clipper metadata should declare Out output")
-    require("\"key\":\"center\"" in soft_clipper_source and "\"tooltip\":\"Moves the soft clipping curve" in soft_clipper_source, "native Soft Clipper center tooltip metadata missing")
-    require("\"key\":\"width\"" in soft_clipper_source and "\"tooltip\":\"Sets the width" in soft_clipper_source, "native Soft Clipper width tooltip metadata missing")
+    require('"inputs":["In"]' in soft_clipper_metadata_text, "native Soft Clipper metadata should declare In input")
+    require('"outputs":["Out"]' in soft_clipper_metadata_text, "native Soft Clipper metadata should declare Out output")
+    require('"key":"center"' in soft_clipper_metadata_text and '"tooltip":"Moves the soft clipping curve' in soft_clipper_metadata_text, "native Soft Clipper center tooltip metadata missing")
+    require('"key":"width"' in soft_clipper_metadata_text and '"tooltip":"Sets the width' in soft_clipper_metadata_text, "native Soft Clipper width tooltip metadata missing")
+    ladder_source_path = ROOT / "native_modules" / "ladder_filter" / "ladder_filter.cpp"
+    ladder_source = ladder_source_path.read_text(encoding="utf-8")
+    ladder_metadata_text = ladder_source.replace('\\"', '"')
+    require("extern \"C\" const char* soemdsp_ladder_filter_metadata_json()" in ladder_source, "native Ladder Filter metadata export missing")
+    require('"inputs":["In"]' in ladder_metadata_text, "native Ladder Filter metadata should declare In input")
+    require('"outputs":["Out"]' in ladder_metadata_text, "native Ladder Filter metadata should declare Out output")
+    require('"key":"frequency"' in ladder_metadata_text and '"tooltip":"Sets the ladder cutoff frequency.' in ladder_metadata_text, "native Ladder Filter frequency tooltip metadata missing")
     require(soft_clipper_wasm_path.exists(), "native Soft Clipper wasm should exist")
     require(soft_clipper_wasm_path.read_bytes().startswith(b"\0asm"), "native Soft Clipper wasm magic bytes missing")
     require("NATIVE_MODULES = ROOT / \"native_modules\"" in server_source, "native modules folder constant missing")
@@ -17154,7 +17192,7 @@ def require_native_module_contract(base_url: str) -> None:
     )
     require("sendNodeGraphLiveNativeModules" in live_runtime_source, "native worklet sender missing")
     require("\"setNativeModuleWasm\"" in live_runtime_source, "native worklet post message missing")
-    require("soft-clipper-native-only-20260630" in live_runtime_source, "Soft Clipper worklet cache bust key missing")
+    require("ladder-filter-wasm-20260630" in live_runtime_source, "native worklet cache bust key should include the latest native module update")
     require("async setNativeModuleWasm(message)" in worklet_source, "native worklet loader missing")
     require("nativeEllipsoidVectorSample(" in worklet_source, "native ellipsoid worklet path missing")
     require(
@@ -17168,6 +17206,14 @@ def require_native_module_contract(base_url: str) -> None:
         "-Wl,--export=soemdsp_soft_clipper_sample" in native_build_source
         and "native_modules\\soft_clipper\\soft_clipper.wasm" in native_build_source,
         "native Soft Clipper build exports should be registered",
+    )
+    require(
+        'name === "ladder_filter" || targetType === "ladderFilter"' in worklet_source
+        and "this.nativeLadderFilter?.soemdsp_ladder_filter_create" in worklet_source
+        and "this.nativeLadderFilter?.soemdsp_ladder_filter_sample" in worklet_source
+        and "native Ladder Filter failed" in worklet_source
+        and "this.safeFilterNumber(\n            this.nativeLadderFilter.soemdsp_ladder_filter_sample(" in worklet_source,
+        "native Ladder Filter should be worklet-backed and guarded against native failures",
     )
 
     response = request(f"{base_url}/api/native-modules")
@@ -17188,6 +17234,16 @@ def require_native_module_contract(base_url: str) -> None:
     require(soft_clipper.get("name") == "soft_clipper", "native Soft Clipper API name should be stable")
     require(soft_clipper.get("wasmAvailable") is True, "native Soft Clipper wasm should be available")
     require("tooltips" not in soft_clipper, "native Soft Clipper API should not expose comment-parsed tooltips")
+    for source_path in native_sources:
+        source_text = source_path.read_text(encoding="utf-8")
+        module_name = source_path.parent.name
+        target_line = next((line for line in source_text.splitlines() if line.startswith("// soemdsp-native-target:")), "")
+        target_type = target_line.split(":", 1)[1].strip() if ":" in target_line else module_name
+        entry = next((item for item in modules if item.get("targetType") == target_type), None)
+        require(entry is not None, f"native modules API should include {module_name}")
+        require(entry.get("name") == module_name, f"native modules API name should match {module_name}")
+        require(entry.get("wasmAvailable") is True, f"native modules API should mark {module_name} wasm available")
+        require("tooltips" not in entry, f"native modules API should not expose comment-parsed tooltips for {module_name}")
 
     wasm_response = request(f"{base_url}/native_modules/ellipsoid/ellipsoid.wasm")
     require(wasm_response.status == 200, "native ellipsoid wasm should be served")
@@ -17201,6 +17257,13 @@ def require_native_module_contract(base_url: str) -> None:
     require(soft_clipper_wasm_response.status == 200, "native Soft Clipper wasm should be served")
     require_content_type(soft_clipper_wasm_response, "application/wasm", "native Soft Clipper wasm")
     require(soft_clipper_wasm_response.body.startswith(b"\0asm"), "served native Soft Clipper wasm magic bytes missing")
+    for source_path in native_sources:
+        wasm_path = source_path.with_suffix(".wasm")
+        wasm_url = f"/{wasm_path.relative_to(ROOT).as_posix()}"
+        wasm_response = request(f"{base_url}{wasm_url}")
+        require(wasm_response.status == 200, f"native {source_path.parent.name} wasm should be served")
+        require_content_type(wasm_response, "application/wasm", f"native {source_path.parent.name} wasm")
+        require(wasm_response.body.startswith(b"\0asm"), f"served native {source_path.parent.name} wasm magic bytes missing")
 
 
 def wait_for_server(base_url: str, process: subprocess.Popen[bytes]) -> None:

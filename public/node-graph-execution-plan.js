@@ -403,7 +403,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   const outputNode = "output";
   const reachableNodes = new Set();
   const bypassedNodes = new Set(graph.bypassedNodes || []);
-  const passthroughTypes = new Set(["badvalMonitor", "bandpass", "bias", "cookbookFilter", "gain", "highpass", "ladderFilter", "lowpass", "pll", "reverbEffect", "sampleHold", "slewLimiter", "softClipper", "speakerProtection"]);
+  const passthroughTypes = new Set(["badvalMonitor", "bias", "cookbookFilter", "gain", "helmholtzPitch", "ladderFilter", "passiveFilter", "pll", "reverbEffect", "sampleHold", "slewLimiter", "softClipper", "speakerProtection"]);
 
   function markReachable(nodeId) {
     if (reachableNodes.has(nodeId) || !graph.nodeMap.has(nodeId)) {
@@ -573,6 +573,9 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     .map((node) => node.id);
 
   const uniqueIssues = [...new Set(issues)];
+  const blockingIssues = uniqueIssues.filter((issue) => (
+    issue !== "output node missing" && issue !== "missing Output speaker input"
+  ));
 
   return {
     connections: graph.connections,
@@ -598,7 +601,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     scopeCaptureNodeIds,
     sourceNodes,
     timing: normalizeNodeGraphPatchTiming(patch.timing),
-    valid: uniqueIssues.length === 0,
+    valid: blockingIssues.length === 0,
     visualSinks,
   };
 }

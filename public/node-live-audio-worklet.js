@@ -114,7 +114,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.raptEllipticDecimatorLeft = this.createRaptEllipticDecimatorState();
     this.raptEllipticDecimatorRight = this.createRaptEllipticDecimatorState();
     this.raptEllipticDecimatorRatio = 1;
-    this.bandpassStates = new Map();
+    this.passiveFilterStates = new Map();
     this.clockDividerStates = new Map();
     this.clockStates = new Map();
     this.codeblockFunctions = new Map();
@@ -129,6 +129,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nativeSabrinaReverbReady = false;
     this.nativePll = null;
     this.nativePllReady = false;
+    this.nativeHelmholtz = null;
+    this.nativeHelmholtzReady = false;
     this.nativeNoiseGenerator = null;
     this.nativeNoiseGeneratorReady = false;
     this.nativeFbm = null;
@@ -137,6 +139,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nativeLadderFilterReady = false;
     this.nativeTb303Filter = null;
     this.nativeTb303FilterReady = false;
+    this.nativePassiveFilter = null;
+    this.nativePassiveFilterReady = false;
     this.nativeSoftClipper = null;
     this.nativeSoftClipperReady = false;
     this.pllStates = new Map();
@@ -146,12 +150,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.gpuAdditiveStatusCounter = 0;
     this.gpuAdditiveUnderruns = 0;
     this.flowerChildEnvelopeFollowerStates = new Map();
-    this.highpassStates = new Map();
     this.ladderFilterStates = new Map();
     this.tb303FilterStates = new Map();
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
-    this.lowpassStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.oscResetStates = new Map();
     this.graphLfoStates = new Map();
@@ -408,6 +410,23 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "helmholtz" || targetType === "helmholtzPitch") {
+        for (const state of this.helmholtzStates.values()) {
+          this.destroyHelmholtzState(state);
+        }
+        this.nativeHelmholtz = exports;
+        this.nativeHelmholtzReady = Boolean(
+          this.nativeHelmholtz?.soemdsp_helmholtz_create &&
+          this.nativeHelmholtz?.soemdsp_helmholtz_process &&
+          this.nativeHelmholtz?.soemdsp_helmholtz_frequency,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "helmholtz",
+          status: this.nativeHelmholtzReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       if (name === "sabrina_reverb" || targetType === "reverbEffect") {
         for (const state of this.reverbEffectStates.values()) {
           this.destroySabrinaReverbState(state);
@@ -507,6 +526,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "passive_filter" || targetType === "passiveFilter") {
+        for (const state of this.passiveFilterStates.values()) {
+          this.destroyPassiveFilterNativeState(state);
+        }
+        this.nativePassiveFilter = exports;
+        this.nativePassiveFilterReady = Boolean(
+          this.nativePassiveFilter?.soemdsp_passive_filter_create &&
+          this.nativePassiveFilter?.soemdsp_passive_filter_sample,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "passive_filter",
+          status: this.nativePassiveFilterReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       this.port.postMessage({
         type: "nativeModuleStatus",
         name,
@@ -557,7 +592,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.engineSampleRate = sampleRate;
     this.hostSampleRate = sampleRate;
     this.oversamplingRatio = 1;
-    this.bandpassStates = new Map();
+    for (const state of this.passiveFilterStates.values()) {
+      this.destroyPassiveFilterNativeState(state);
+    }
+    this.passiveFilterStates = new Map();
     this.clockDividerStates = new Map();
     this.clockStates = new Map();
     this.codeblockFunctions = new Map();
@@ -573,7 +611,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.gpuAdditiveStatusCounter = 0;
     this.gpuAdditiveUnderruns = 0;
     this.flowerChildEnvelopeFollowerStates = new Map();
-    this.highpassStates = new Map();
     for (const state of this.ladderFilterStates.values()) {
       this.destroyLadderFilterNativeState(state);
     }
@@ -584,7 +621,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.tb303FilterStates = new Map();
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
-    this.lowpassStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.oscResetStates = new Map();
     this.graphLfoStates = new Map();
@@ -598,6 +634,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.destroyPllState(state);
     }
     this.pllStates = new Map();
+    for (const state of this.helmholtzStates.values()) {
+      this.destroyHelmholtzState(state);
+    }
+    this.helmholtzStates = new Map();
     this.randomWalkStates = new Map();
     this.sampleHoldStates = new Map();
     this.samplePlaybackStates = new Map();
@@ -805,14 +845,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "lorenzAttractor" && !this.lorenzAttractorStates.has(id)) {
         this.lorenzAttractorStates.set(id, this.createLorenzAttractorState());
       }
-      if (node?.type === "highpass" && !this.highpassStates.has(id)) {
-        this.highpassStates.set(id, this.createHighpassState());
-      }
-      if (node?.type === "lowpass" && !this.lowpassStates.has(id)) {
-        this.lowpassStates.set(id, this.createLowpassState());
-      }
-      if (node?.type === "bandpass" && !this.bandpassStates.has(id)) {
-        this.bandpassStates.set(id, this.createBandpassState());
+      if (node?.type === "passiveFilter" && !this.passiveFilterStates.has(id)) {
+        this.passiveFilterStates.set(id, this.createPassiveFilterState());
       }
       if (node?.type === "cookbookFilter" && !this.cookbookFilterStates.has(id)) {
         this.cookbookFilterStates.set(id, this.createCookbookFilterState());
@@ -843,6 +877,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       }
       if (node?.type === "pll" && !this.pllStates.has(id)) {
         this.pllStates.set(id, this.createPllState());
+      }
+      if (node?.type === "helmholtzPitch" && !this.helmholtzStates.has(id)) {
+        this.helmholtzStates.set(id, this.createHelmholtzState());
       }
       if (node?.type === "randomClock" && !this.randomClockStates.has(id)) {
         this.randomClockStates.set(id, this.createRandomClockState());
@@ -968,24 +1005,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.lorenzAttractorStates.delete(id);
       }
     }
-    for (const id of [...this.highpassStates.keys()]) {
+    for (const id of [...this.passiveFilterStates.keys()]) {
       if (!ids.has(id)) {
-        this.highpassStates.delete(id);
-      }
-    }
-    for (const id of [...this.lowpassStates.keys()]) {
-      if (!ids.has(id)) {
-        this.lowpassStates.delete(id);
+        this.destroyPassiveFilterNativeState(this.passiveFilterStates.get(id));
+        this.passiveFilterStates.delete(id);
       }
     }
     for (const id of [...this.linearEnvelopeStates.keys()]) {
       if (!ids.has(id)) {
         this.linearEnvelopeStates.delete(id);
-      }
-    }
-    for (const id of [...this.bandpassStates.keys()]) {
-      if (!ids.has(id)) {
-        this.bandpassStates.delete(id);
       }
     }
     for (const id of [...this.clockStates.keys()]) {
@@ -1040,6 +1068,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (!ids.has(id)) {
         this.destroyPllState(this.pllStates.get(id));
         this.pllStates.delete(id);
+      }
+    }
+    for (const id of [...this.helmholtzStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroyHelmholtzState(this.helmholtzStates.get(id));
+        this.helmholtzStates.delete(id);
       }
     }
     for (const id of [...this.sampleHoldStates.keys()]) {
@@ -2744,13 +2778,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     };
   }
 
-  createBandpassState() {
-    return {
-      highpass: this.createHighpassState(),
-      lowpass: this.createLowpassState(),
-    };
-  }
-
   createCookbookFilterState() {
     return {
       lastStages: 2,
@@ -2972,6 +2999,51 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   createTb303FilterState() {
     return { nativeHandle: 0 };
+  }
+
+  destroyPassiveFilterNativeState(state) {
+    if (state?.nativeHandle && this.nativePassiveFilter?.soemdsp_passive_filter_destroy) {
+      this.nativePassiveFilter.soemdsp_passive_filter_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
+  createPassiveFilterState() {
+    return {
+      highpass: this.createHighpassState(),
+      lowpass: this.createLowpassState(),
+      nativeHandle: 0,
+    };
+  }
+
+  passiveFilterSample(state, input, mode, lowFrequency, highFrequency, rate) {
+    if (this.nativePassiveFilterReady) {
+      if (!state.nativeHandle) {
+        state.nativeHandle = this.nativePassiveFilter.soemdsp_passive_filter_create();
+      }
+      if (state.nativeHandle) {
+        return this.nativePassiveFilter.soemdsp_passive_filter_sample(
+          state.nativeHandle,
+          input,
+          Math.round(Number(mode)) || 0,
+          Number(lowFrequency) || 0,
+          Number(highFrequency) || 0,
+          rate,
+        );
+      }
+    }
+    // JS fallback
+    const safeMode = Math.round(Number(mode)) || 0;
+    if (safeMode === 1) {
+      const lo = Math.max(0, Number(lowFrequency) || 0);
+      const hi = Math.max(0, Number(highFrequency) || 0);
+      const hp = this.onePoleHighpassSample(state.highpass, input, Math.min(lo, hi), rate);
+      return this.onePoleLowpassSample(state.lowpass, hp, Math.max(lo, hi), rate);
+    }
+    if (safeMode === 2) {
+      return this.onePoleHighpassSample(state.highpass, input, lowFrequency, rate);
+    }
+    return this.onePoleLowpassSample(state.lowpass, input, highFrequency, rate);
   }
 
   createRandomWalkState() {
@@ -3260,13 +3332,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.nativeSabrinaReverbReady = this.nativeSabrinaReverbReady;
     runtime.nativePll = this.nativePll;
     runtime.nativePllReady = this.nativePllReady;
+    runtime.nativeHelmholtz = this.nativeHelmholtz;
+    runtime.nativeHelmholtzReady = this.nativeHelmholtzReady;
     runtime.noiseSeedKeys = new Map();
     runtime.noiseSeeds = new Map();
     runtime.order = [];
     runtime.engineSampleRate = this.engineSampleRate;
     runtime.hostSampleRate = this.hostSampleRate;
     runtime.oversamplingRatio = this.oversamplingRatio;
-    runtime.bandpassStates = new Map();
+    runtime.passiveFilterStates = new Map();
     runtime.clockDividerStates = new Map();
     runtime.clockStates = new Map();
     runtime.codeblockFunctions = new Map();
@@ -3277,10 +3351,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.fractalBrownianNoiseStates = new Map();
     runtime.flowerChildEnvelopeFollowerStates = new Map();
     runtime.graphInputConnections = new Map();
-    runtime.highpassStates = new Map();
     runtime.ladderFilterStates = new Map();
     runtime.linearEnvelopeStates = new Map();
-    runtime.lowpassStates = new Map();
     runtime.noiseGeneratorStates = new Map();
     runtime.oscResetStates = new Map();
     runtime.graphLfoStates = new Map();
@@ -3344,9 +3416,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       }
       if (node?.type === "spiral") this.spiralStates.set(id, this.createSpiralState());
       if (node?.type === "lorenzAttractor") this.lorenzAttractorStates.set(id, this.createLorenzAttractorState());
-      if (node?.type === "highpass") this.highpassStates.set(id, this.createHighpassState());
-      if (node?.type === "lowpass") this.lowpassStates.set(id, this.createLowpassState());
-      if (node?.type === "bandpass") this.bandpassStates.set(id, this.createBandpassState());
+      if (node?.type === "passiveFilter") this.passiveFilterStates.set(id, this.createPassiveFilterState());
       if (node?.type === "cookbookFilter") this.cookbookFilterStates.set(id, this.createCookbookFilterState());
       if (node?.type === "ladderFilter") this.ladderFilterStates.set(id, this.createLadderFilterState());
       if (node?.type === "tb303Filter") this.tb303FilterStates.set(id, this.createTb303FilterState());
@@ -3357,6 +3427,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "delayEffect") this.delayEffectStates.set(id, this.createDelayEffectState());
       if (node?.type === "reverbEffect") this.reverbEffectStates.set(id, this.createSabrinaReverbState());
       if (node?.type === "pll") this.pllStates.set(id, this.createPllState());
+      if (node?.type === "helmholtzPitch") this.helmholtzStates.set(id, this.createHelmholtzState());
       if (node?.type === "randomClock") this.randomClockStates.set(id, this.createRandomClockState());
       if (node?.type === "sampleHold") this.sampleHoldStates.set(id, this.createSampleHoldState());
       if (node?.type === "samplePlayer" || node?.type === "sampleLooper" || node?.type === "audioPlayer") {
@@ -3755,15 +3826,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const b0 = 1 - a1;
     state.outputBuffer = this.safeFilterNumber(b0 * safeInput + a1 * state.outputBuffer, state);
     return state.outputBuffer;
-  }
-
-  onePoleBandpassSample(state, input, lowFrequency, highFrequency, rate = sampleRate) {
-    const lowCut = Math.max(0, this.safeFilterNumber(lowFrequency, state.highpass));
-    const highCut = Math.max(0, this.safeFilterNumber(highFrequency, state.lowpass));
-    const low = Math.min(lowCut, highCut);
-    const high = Math.max(lowCut, highCut);
-    const highpassed = this.onePoleHighpassSample(state.highpass, input, low, rate);
-    return this.onePoleLowpassSample(state.lowpass, highpassed, high, rate);
   }
 
   cookbookFilterStageCount(stages) {
@@ -4363,6 +4425,65 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.nativePllReady = false;
       this.destroyPllState(state);
       return { "VCO Out": 0, "PC Out": 0, "LPF Out": 0, Locked: 0 };
+    }
+  }
+
+  createHelmholtzState() {
+    return { nativeHandle: 0, nativeParamKey: "", nativeSampleRate: 0 };
+  }
+
+  helmholtzPitchView(frequencyHz) {
+    if (!(frequencyHz > 0)) return -1;
+    const minHz = 80;
+    const octaves = 4;
+    const clampedHz = Math.max(minHz, Math.min(minHz * Math.pow(2, octaves), frequencyHz));
+    const norm = Math.log2(clampedHz / minHz) / octaves;
+    return norm * 2 - 1;
+  }
+
+  destroyHelmholtzState(state) {
+    if (!state?.nativeHandle || !this.nativeHelmholtz?.soemdsp_helmholtz_destroy) return;
+    this.nativeHelmholtz.soemdsp_helmholtz_destroy(state.nativeHandle);
+    state.nativeHandle = 0;
+  }
+
+  helmholtzSample(state, input, params, rateHz = sampleRate) {
+    const native = this.nativeHelmholtz;
+    if (!this.nativeHelmholtzReady || !native?.soemdsp_helmholtz_create || !native?.soemdsp_helmholtz_process) {
+      return { Frequency: 0, Fidelity: 0, "Pitch View": -1 };
+    }
+    try {
+      const safeRate = Math.max(1, Number(rateHz) || sampleRate || 44100);
+      if (!state.nativeHandle || state.nativeSampleRate !== safeRate) {
+        if (state.nativeHandle && native.soemdsp_helmholtz_destroy) {
+          native.soemdsp_helmholtz_destroy(state.nativeHandle);
+        }
+        state.nativeHandle = native.soemdsp_helmholtz_create(safeRate) || 0;
+        state.nativeSampleRate = safeRate;
+        state.nativeParamKey = "";
+      }
+      if (!state.nativeHandle) {
+        return { Frequency: 0, Fidelity: 0, "Pitch View": -1 };
+      }
+      const windowSize = Math.max(256, Math.min(2048, Math.round(this.safeFilterNumber(params.windowSize, null) ?? 1024)));
+      const threshold = this.clampValue(this.safeFilterNumber(params.threshold, null) ?? 0.93, 0.5, 0.999);
+      const paramKey = `${windowSize}:${Math.round(threshold * 1000)}`;
+      if (paramKey !== state.nativeParamKey && native.soemdsp_helmholtz_set_params) {
+        state.nativeParamKey = paramKey;
+        native.soemdsp_helmholtz_set_params(state.nativeHandle, safeRate, windowSize, threshold);
+      }
+      const safeIn = this.safeFilterNumber(input, null) ?? 0;
+      native.soemdsp_helmholtz_process(state.nativeHandle, safeIn);
+      const frequency = this.safeFilterNumber(native.soemdsp_helmholtz_frequency?.(state.nativeHandle), null) ?? 0;
+      return {
+        Frequency: frequency,
+        Fidelity: this.safeFilterNumber(native.soemdsp_helmholtz_fidelity?.(state.nativeHandle), null) ?? 0,
+        "Pitch View": this.helmholtzPitchView(frequency),
+      };
+    } catch {
+      this.nativeHelmholtzReady = false;
+      this.destroyHelmholtzState(state);
+      return { Frequency: 0, Fidelity: 0, "Pitch View": -1 };
     }
   }
 
@@ -6101,32 +6222,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       } else if (node?.type === "macroKnob" || node?.type === "bipolarKnob") {
         const knobValue = this.readEffectiveParameter(node, "value", 0, frame, frames, frameValues);
         value = { Out: knobValue, value: knobValue };
-      } else if (node?.type === "highpass") {
-        const state = this.highpassStates.get(nodeId) || this.createHighpassState();
-        this.highpassStates.set(nodeId, state);
-        value = this.onePoleHighpassSample(
+      } else if (node?.type === "passiveFilter") {
+        const state = this.passiveFilterStates.get(nodeId) || this.createPassiveFilterState();
+        this.passiveFilterStates.set(nodeId, state);
+        value = this.passiveFilterSample(
           state,
           mixInput(nodeId),
-          this.readEffectiveParameter(node, "frequency", 1000, frame, frames, frameValues),
-          safeRate,
-        );
-      } else if (node?.type === "lowpass") {
-        const state = this.lowpassStates.get(nodeId) || this.createLowpassState();
-        this.lowpassStates.set(nodeId, state);
-        value = this.onePoleLowpassSample(
-          state,
-          mixInput(nodeId),
-          this.readEffectiveParameter(node, "frequency", 1000, frame, frames, frameValues),
-          safeRate,
-        );
-      } else if (node?.type === "bandpass") {
-        const state = this.bandpassStates.get(nodeId) || this.createBandpassState();
-        this.bandpassStates.set(nodeId, state);
-        value = this.onePoleBandpassSample(
-          state,
-          mixInput(nodeId),
+          this.readEffectiveParameter(node, "mode", 0, frame, frames, frameValues),
           this.readEffectiveParameter(node, "lowFrequency", 200, frame, frames, frameValues),
-          this.readEffectiveParameter(node, "highFrequency", 2000, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "highFrequency", 1000, frame, frames, frameValues),
           safeRate,
         );
       } else if (node?.type === "cookbookFilter") {
@@ -6230,6 +6334,19 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             offset: read("offset", 5),
             type: read("type", 1),
             frequ: read("frequ", 10),
+          },
+          safeRate,
+        );
+      } else if (node?.type === "helmholtzPitch") {
+        const state = this.helmholtzStates.get(nodeId) || this.createHelmholtzState();
+        this.helmholtzStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        value = this.helmholtzSample(
+          state,
+          mixInput(nodeId, "In"),
+          {
+            windowSize: read("windowSize", 1024),
+            threshold: read("threshold", 0.93),
           },
           safeRate,
         );

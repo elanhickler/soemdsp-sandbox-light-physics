@@ -67,9 +67,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "audioPlayer",
   "samplePlayer",
   "sampleLooper",
-  "highpass",
-  "lowpass",
-  "bandpass",
+  "passiveFilter",
   "cookbookFilter",
   "ladderFilter",
   "tb303Filter",
@@ -77,6 +75,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "delayEffect",
   "reverbEffect",
   "pll",
+  "helmholtzPitch",
   "distortionEffect",
   "sampleHold",
   "digitalCurveEnvelope",
@@ -674,20 +673,10 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     label: "Sample Looper",
     notes: ["sample playback", "loop", "audio source"],
   },
-  highpass: {
+  passiveFilter: {
     category: "Filter",
-    description: "Cuts low-frequency mass so bright signal can escape the hull.",
-    notes: ["cutoff frequency", "stateful filter", "bright motion"],
-  },
-  lowpass: {
-    category: "Filter",
-    description: "Cuts high-frequency sparks and leaves heavier warm signal behind.",
-    notes: ["cutoff frequency", "smoothing", "warm motion"],
-  },
-  bandpass: {
-    category: "Filter",
-    description: "Focuses a signal between low and high cut points using the one-pole filter pair.",
-    notes: ["low cut", "high cut", "focused band"],
+    description: "1-pole RC filter with LP, HP, and BP modes. Low Cut is the HP edge; High Cut is the LP edge. BP chains HP then LP.",
+    notes: ["lowpass", "highpass", "bandpass", "1-pole"],
   },
   cookbookFilter: {
     category: "Filter",
@@ -729,6 +718,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "Phase-locked loop based on the Doepfer A-196. VCO tracks an incoming signal via a phase comparator (XOR, RS flip-flop, or PFD) and one-pole loop filter. Outputs VCO, PC, LPF CV, and lock gate.",
     label: "PLL",
     notes: ["phase locked loop", "A-196", "vco", "frequency tracking"],
+  },
+  helmholtzPitch: {
+    category: "Modulation",
+    description: "Monophonic pitch detector using the McLeod Pitch Method (normalized square difference function with parabolic interpolation). Outputs detected frequency and a fidelity score; rejects noisy/non-periodic frames.",
+    label: "Pitch Detector",
+    notes: ["pitch tracking", "pitch detector", "mcleod", "autocorrelation", "frequency follower"],
   },
   distortionEffect: {
     category: "Delay",
