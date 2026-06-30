@@ -135,6 +135,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nativeFbmReady = false;
     this.nativeLadderFilter = null;
     this.nativeLadderFilterReady = false;
+    this.nativeTb303Filter = null;
+    this.nativeTb303FilterReady = false;
     this.nativeSoftClipper = null;
     this.nativeSoftClipperReady = false;
     this.pllStates = new Map();
@@ -146,6 +148,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.flowerChildEnvelopeFollowerStates = new Map();
     this.highpassStates = new Map();
     this.ladderFilterStates = new Map();
+    this.tb303FilterStates = new Map();
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
     this.lowpassStates = new Map();
@@ -488,6 +491,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "tb303_filter" || targetType === "tb303Filter") {
+        for (const state of this.tb303FilterStates.values()) {
+          this.destroyTb303FilterNativeState(state);
+        }
+        this.nativeTb303Filter = exports;
+        this.nativeTb303FilterReady = Boolean(
+          this.nativeTb303Filter?.soemdsp_tb303_filter_create &&
+          this.nativeTb303Filter?.soemdsp_tb303_filter_sample,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "tb303_filter",
+          status: this.nativeTb303FilterReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       this.port.postMessage({
         type: "nativeModuleStatus",
         name,
@@ -559,6 +578,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.destroyLadderFilterNativeState(state);
     }
     this.ladderFilterStates = new Map();
+    for (const state of this.tb303FilterStates.values()) {
+      this.destroyTb303FilterNativeState(state);
+    }
+    this.tb303FilterStates = new Map();
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
     this.lowpassStates = new Map();
@@ -797,6 +820,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "ladderFilter" && !this.ladderFilterStates.has(id)) {
         this.ladderFilterStates.set(id, this.createLadderFilterState());
       }
+      if (node?.type === "tb303Filter" && !this.tb303FilterStates.has(id)) {
+        this.tb303FilterStates.set(id, this.createTb303FilterState());
+      }
       if (node?.type === "clock" && !this.clockStates.has(id)) {
         this.clockStates.set(id, this.createClockState());
       }
@@ -981,6 +1007,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (!ids.has(id)) {
         this.destroyLadderFilterNativeState(this.ladderFilterStates.get(id));
         this.ladderFilterStates.delete(id);
+      }
+    }
+    for (const id of [...this.tb303FilterStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroyTb303FilterNativeState(this.tb303FilterStates.get(id));
+        this.tb303FilterStates.delete(id);
       }
     }
     for (const id of [...this.clockDividerStates.keys()]) {
@@ -2931,6 +2963,17 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
   }
 
+  destroyTb303FilterNativeState(state) {
+    if (state.nativeHandle && this.nativeTb303Filter?.soemdsp_tb303_filter_destroy) {
+      this.nativeTb303Filter.soemdsp_tb303_filter_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
+  createTb303FilterState() {
+    return { nativeHandle: 0 };
+  }
+
   createRandomWalkState() {
     return {
       lowpass: this.createLowpassState(),
@@ -3306,6 +3349,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "bandpass") this.bandpassStates.set(id, this.createBandpassState());
       if (node?.type === "cookbookFilter") this.cookbookFilterStates.set(id, this.createCookbookFilterState());
       if (node?.type === "ladderFilter") this.ladderFilterStates.set(id, this.createLadderFilterState());
+      if (node?.type === "tb303Filter") this.tb303FilterStates.set(id, this.createTb303FilterState());
       if (node?.type === "clock") this.clockStates.set(id, this.createClockState());
       if (node?.type === "graph" || node?.type === "graph2") this.graphLfoStates.set(id, this.createGraphLfoState());
       if (node?.type === "clockDivider") this.clockDividerStates.set(id, this.createTriggerDividerState());
@@ -3892,19 +3936,33 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   ladderFilterSample(state, input, params, rate = sampleRate) {
     if (this.nativeLadderFilterReady) {
-      if (!state.nativeHandle) {
-        state.nativeHandle = this.nativeLadderFilter.soemdsp_ladder_filter_create();
-      }
-      if (state.nativeHandle) {
-        return this.nativeLadderFilter.soemdsp_ladder_filter_sample(
-          state.nativeHandle,
-          this.safeFilterNumber(input, state),
-          Math.max(0, this.safeFilterNumber(params.frequency, state)),
-          this.clampValue(this.safeFilterNumber(params.resonance, state), 0, 0.999),
-          Math.max(0, Math.min(3, Math.round(Number(params.mode) || 0))),
-          Math.max(1, Math.min(4, Math.round(Number(params.stages) || 4))),
-          Math.max(1, Number(rate) || sampleRate || 44100),
-        );
+      try {
+        if (!state.nativeHandle) {
+          state.nativeHandle = this.nativeLadderFilter.soemdsp_ladder_filter_create();
+        }
+        if (state.nativeHandle) {
+          return this.safeFilterNumber(
+            this.nativeLadderFilter.soemdsp_ladder_filter_sample(
+              state.nativeHandle,
+              this.safeFilterNumber(input, state),
+              Math.max(0, this.safeFilterNumber(params.frequency, state)),
+              this.clampValue(this.safeFilterNumber(params.resonance, state), 0, 0.999),
+              Math.max(0, Math.min(3, Math.round(Number(params.mode) || 0))),
+              Math.max(1, Math.min(4, Math.round(Number(params.stages) || 4))),
+              Math.max(1, Number(rate) || sampleRate || 44100),
+            ),
+            state,
+          );
+        }
+      } catch (error) {
+        this.nativeLadderFilterReady = false;
+        state.nativeHandle = 0;
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "ladder_filter",
+          status: "disabled",
+          message: String(error?.message || error || "native Ladder Filter failed"),
+        });
       }
     }
     const safeInput = this.safeFilterNumber(input, state);
@@ -3929,6 +3987,63 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     const output = coeff.c[0] * y[0] + coeff.c[1] * y[1] + coeff.c[2] * y[2] + coeff.c[3] * y[3] + coeff.c[4] * y[4];
     return this.safeFilterNumber(output, state);
+  }
+
+  tb303FilterSample(state, input, params, rate = sampleRate) {
+    if (this.nativeTb303FilterReady) {
+      if (!state.nativeHandle) {
+        state.nativeHandle = this.nativeTb303Filter.soemdsp_tb303_filter_create();
+      }
+      if (state.nativeHandle) {
+        return this.nativeTb303Filter.soemdsp_tb303_filter_sample(
+          state.nativeHandle,
+          this.safeFilterNumber(input, state),
+          Math.max(200, this.safeFilterNumber(params.cutoff, state)),
+          Math.max(0, Math.min(100, this.safeFilterNumber(params.resonance, state))),
+          Math.max(0, Math.min(14, Math.round(Number(params.mode) || 4))),
+          Number(params.drive) || 0,
+          Math.max(1, Number(rate) || sampleRate || 44100),
+        );
+      }
+    }
+    // JS fallback — mirror of frame evaluator logic
+    const safeRate = Math.max(1, Number(rate) || sampleRate || 44100);
+    const safeCutoff = Math.max(200, Math.min(20000, Math.min(safeRate * 0.49, this.safeFilterNumber(params.cutoff, state))));
+    const resonanceRaw = Math.max(0, Math.min(1, (this.safeFilterNumber(params.resonance, state)) * 0.01));
+    const drive = this.safeFilterNumber(params.drive, state);
+    const driveFactor = Math.pow(10, Math.max(-24, Math.min(24, drive)) / 20);
+    const safeMode = Math.max(0, Math.min(14, Math.round(Number(params.mode) || 4)));
+    const r = (1 - Math.exp(-3 * resonanceRaw)) / (1 - Math.exp(-3));
+    const wc = Math.max(1e-9, Math.min(Math.PI * 0.98, 2 * Math.PI * safeCutoff / safeRate));
+    const sinWc = Math.sin(wc), cosWc = Math.cos(wc), tanWc = Math.tan(0.25 * (wc - Math.PI));
+    const denomA = sinWc - cosWc * tanWc;
+    const a1 = r * (Math.abs(denomA) < 1e-15 ? -1 : tanWc / denomA) + (1 - r) * (-Math.exp(-wc));
+    const b0 = 1 + a1;
+    const gsqD = Math.max(1e-12, 1 + a1 * a1 + 2 * a1 * cosWc);
+    const k = r / Math.max(1e-24, Math.pow(b0 * b0 / gsqD, 2));
+    if (!state.y) state.y = [0, 0, 0, 0];
+    if (!state.hpP || state.lastRate !== safeRate) {
+      state.hpP = Math.exp(-2 * Math.PI * 150 / safeRate);
+      state.hpB0 = (1 + state.hpP) * 0.5;
+      state.hpX = 0; state.hpY = 0;
+      state.lastRate = safeRate;
+    }
+    const fbIn = k * state.y[3];
+    const fbHp = this.safeFilterNumber(state.hpB0 * (fbIn - (state.hpX || 0)) + state.hpP * (state.hpY || 0), state);
+    state.hpX = fbIn; state.hpY = fbHp;
+    const y0 = this.safeFilterNumber(0.125 * driveFactor * this.safeFilterNumber(input, state) - fbHp, state);
+    const ny1 = this.safeFilterNumber(y0  + a1 * (y0  - state.y[0]), state);
+    const ny2 = this.safeFilterNumber(ny1 + a1 * (ny1 - state.y[1]), state);
+    const ny3 = this.safeFilterNumber(ny2 + a1 * (ny2 - state.y[2]), state);
+    const ny4 = this.safeFilterNumber(ny3 + a1 * (ny3 - state.y[3]), state);
+    state.y[0] = ny1; state.y[1] = ny2; state.y[2] = ny3; state.y[3] = ny4;
+    const modes = [
+      [1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1],
+      [1,-1,0,0,0],[1,-2,1,0,0],[1,-3,3,-1,0],[1,-4,6,-4,1],
+      [0,0,1,-2,1],[0,0,0,1,-1],[0,1,-3,3,-1],[0,0,1,-1,0],[0,1,-2,1,0],[0,1,-1,0,0],
+    ];
+    const c = modes[safeMode] || modes[4];
+    return this.safeFilterNumber(8 * (c[0]*y0 + c[1]*ny1 + c[2]*ny2 + c[3]*ny3 + c[4]*ny4), state);
   }
 
   slewLimiterSample(state, input, upTime, downTime, rate = sampleRate) {
@@ -6038,6 +6153,21 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             mode: this.readEffectiveParameter(node, "mode", 1, frame, frames, frameValues),
             resonance: this.readEffectiveParameter(node, "resonance", 0.2, frame, frames, frameValues),
             stages: this.readEffectiveParameter(node, "stages", 4, frame, frames, frameValues),
+          },
+          safeRate,
+        );
+      } else if (node?.type === "tb303Filter") {
+        const state = this.tb303FilterStates.get(nodeId) || this.createTb303FilterState();
+        this.tb303FilterStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        value = this.tb303FilterSample(
+          state,
+          mixInput(nodeId),
+          {
+            cutoff: read("cutoff", 1000),
+            drive: read("drive", 0),
+            mode: read("mode", 4),
+            resonance: read("resonance", 0),
           },
           safeRate,
         );

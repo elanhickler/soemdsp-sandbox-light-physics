@@ -47,6 +47,7 @@ const nodeGraphNodeLabels = Object.freeze({
   bandpass: "Bandpass",
   cookbookFilter: "Multi Stage Filter",
   ladderFilter: "Ladder Filter",
+  tb303Filter: "TB-303 Filter",
   delayEffect: "Delay",
   reverbEffect: "Sabrina Reverb",
   pll: "PLL",
@@ -87,6 +88,13 @@ const nodeGraphNodeLabels = Object.freeze({
 });
 
 const nodeGraphLadderFilterModes = Object.freeze(["Flat", "Lowpass", "Highpass", "Bandpass"]);
+
+const nodeGraphTb303FilterModes = Object.freeze([
+  "Flat",
+  "LP 6", "LP 12", "LP 18", "LP 24",
+  "HP 6", "HP 12", "HP 18", "HP 24",
+  "BP 12/12", "BP 6/18", "BP 18/6", "BP 6/12", "BP 12/6", "BP 6/6",
+]);
 
 const nodeGraphModuleDefinitions = Object.freeze({
   audioInput: {
@@ -1359,6 +1367,64 @@ const nodeGraphModuleDefinitions = Object.freeze({
         min: "1",
         nonlinearSlider: false,
         step: "1",
+      },
+    ],
+  },
+  tb303Filter: {
+    inputs: ["In"],
+    layout: "filterCurve",
+    outputs: ["Out"],
+    parameters: [
+      {
+        choices: nodeGraphTb303FilterModes,
+        defaultValue: "4",
+        displayChoices: true,
+        divideChoicesVisibly: true,
+        key: "mode",
+        label: "Mode",
+        linearSmoothing: false,
+        max: "14",
+        mid: "4",
+        min: "0",
+        nonlinearSlider: false,
+        step: "1",
+      },
+      {
+        defaultValue: "1000",
+        key: "cutoff",
+        kind: "frequency",
+        label: "Cutoff",
+        max: "20000",
+        maxDigits: 5,
+        mid: "1000",
+        min: "200",
+        step: "any",
+        unit: "Hz",
+      },
+      {
+        defaultValue: "0",
+        key: "resonance",
+        label: "Resonance",
+        max: "100",
+        maxDigits: 5,
+        mid: "50",
+        min: "0",
+        nonlinearSlider: false,
+        step: "any",
+        unit: "%",
+      },
+      {
+        defaultValue: "0",
+        key: "drive",
+        kind: "decibels",
+        label: "Drive",
+        max: "24",
+        maxDigits: 5,
+        mid: "0",
+        min: "0",
+        nonlinearSlider: false,
+        step: "any",
+        unit: "dB",
       },
     ],
   },

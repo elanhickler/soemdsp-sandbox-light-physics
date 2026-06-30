@@ -72,6 +72,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "bandpass",
   "cookbookFilter",
   "ladderFilter",
+  "tb303Filter",
   "slewLimiter",
   "delayEffect",
   "reverbEffect",
@@ -699,6 +700,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "RSMET ladder filter using the gain-compensated getSample path with frequency, resonance, stage depth, and mode controls.",
     label: "Ladder Filter",
     notes: ["RSMET ladder", "gain compensated", "resonant stages"],
+  },
+  tb303Filter: {
+    category: "Filter",
+    description: "TB-303 style ladder filter with feedback highpass, resonance skewing, and 15 output modes (LP/HP/BP at 6/12/18/24 dB per octave). Based on Robin Schmidt's TeeBeeFilter.",
+    label: "TB-303 Filter",
+    notes: ["feedback highpass", "resonance skewed", "15 modes"],
   },
   slewLimiter: {
     category: "Modulators",

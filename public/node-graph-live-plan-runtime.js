@@ -246,6 +246,7 @@ function createNodeGraphLiveRuntime(plan) {
   const flowerChildEnvelopeFollowerStates = new Map();
   const highpassStates = new Map();
   const ladderFilterStates = new Map();
+  const tb303FilterStates = new Map();
   const linearEnvelopeStates = new Map();
   const lorenzAttractorStates = new Map();
   const lowpassStates = new Map();
@@ -300,6 +301,9 @@ function createNodeGraphLiveRuntime(plan) {
     }
     if (node.type === "ladderFilter") {
       ladderFilterStates.set(node.id, createNodeGraphLadderFilterState());
+    }
+    if (node.type === "tb303Filter") {
+      tb303FilterStates.set(node.id, createNodeGraphTb303FilterState());
     }
     if (node.type === "clock") {
       clockStates.set(node.id, createNodeGraphClockState());
@@ -403,6 +407,7 @@ function createNodeGraphLiveRuntime(plan) {
     graphInputConnections,
     graphLfoStates,
     ladderFilterStates,
+    tb303FilterStates,
     linearEnvelopeStates,
     lorenzAttractorStates,
     meterCounter: 0,
@@ -524,6 +529,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   }
   if (!runtime.ladderFilterStates) {
     runtime.ladderFilterStates = new Map();
+  }
+  if (!runtime.tb303FilterStates) {
+    runtime.tb303FilterStates = new Map();
   }
   if (!runtime.linearEnvelopeStates) {
     runtime.linearEnvelopeStates = new Map();
@@ -838,6 +846,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.ladderFilterStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.ladderFilterStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.tb303FilterStates.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.tb303FilterStates.delete(id);
     }
   }
   for (const id of [...runtime.clockDividerStates.keys()]) {

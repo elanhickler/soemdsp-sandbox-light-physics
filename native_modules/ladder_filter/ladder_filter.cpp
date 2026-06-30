@@ -10,6 +10,61 @@ static const double kPi     = 3.141592653589793238;
 static const double kTwoPi  = 6.283185307179586476;
 static const double kHalfPi = 1.5707963267948966192;
 
+static const char kMetadataJson[] =
+  "{"
+    "\"module\":\"ladder_filter\","
+    "\"label\":\"Ladder Filter\","
+    "\"targetType\":\"ladderFilter\","
+    "\"kind\":\"filter\","
+    "\"inputs\":[\"In\"],"
+    "\"outputs\":[\"Out\"],"
+    "\"parameters\":["
+      "{"
+        "\"key\":\"mode\","
+        "\"label\":\"Mode\","
+        "\"defaultValue\":1,"
+        "\"min\":0,"
+        "\"mid\":1,"
+        "\"max\":3,"
+        "\"step\":1,"
+        "\"choices\":[\"Flat\",\"Lowpass\",\"Highpass\",\"Bandpass\"],"
+        "\"tooltip\":\"Selects the ladder output tap and filter response.\""
+      "},"
+      "{"
+        "\"key\":\"frequency\","
+        "\"label\":\"Frequency\","
+        "\"kind\":\"frequency\","
+        "\"defaultValue\":1000,"
+        "\"min\":0,"
+        "\"mid\":1000,"
+        "\"max\":20000,"
+        "\"step\":\"any\","
+        "\"unit\":\"Hz\","
+        "\"tooltip\":\"Sets the ladder cutoff frequency.\""
+      "},"
+      "{"
+        "\"key\":\"resonance\","
+        "\"label\":\"Resonance\","
+        "\"defaultValue\":0.2,"
+        "\"min\":0,"
+        "\"mid\":0.2,"
+        "\"max\":0.999,"
+        "\"step\":\"any\","
+        "\"tooltip\":\"Sets the feedback amount near the cutoff frequency.\""
+      "},"
+      "{"
+        "\"key\":\"stages\","
+        "\"label\":\"Stages\","
+        "\"defaultValue\":4,"
+        "\"min\":1,"
+        "\"mid\":4,"
+        "\"max\":4,"
+        "\"step\":1,"
+        "\"tooltip\":\"Chooses how many ladder stages are used.\""
+      "}"
+    "]"
+  "}";
+
 struct LadderState {
   double y[5];
   bool active;
@@ -144,7 +199,7 @@ extern "C" double soemdsp_ladder_filter_sample(
 
   const double safeIn = safe(input);
   double y0 = g * safeIn - k * s.y[4];
-  y0 = y0 / (1.0 + y0 * y0);
+  y0 = safe(y0 / (1.0 + y0 * y0));
   const double ny1 = safe(y0      + a * (y0      - s.y[1]));
   const double ny2 = safe(ny1     + a * (ny1     - s.y[2]));
   const double ny3 = safe(ny2     + a * (ny2     - s.y[3]));
@@ -162,4 +217,12 @@ extern "C" double soemdsp_ladder_filter_sample(
 
 extern "C" int soemdsp_ladder_filter_version() {
   return 1;
+}
+
+extern "C" const char* soemdsp_ladder_filter_metadata_json() {
+  return kMetadataJson;
+}
+
+extern "C" int soemdsp_ladder_filter_metadata_json_size() {
+  return sizeof(kMetadataJson) - 1;
 }
