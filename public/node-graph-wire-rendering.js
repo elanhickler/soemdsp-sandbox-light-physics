@@ -377,6 +377,17 @@ function drawNodeGraphWires() {
     }
   }
 
+  if (nodeGraphMvp.wireDragging?.active) {
+    const { endpoint, from, cursorPoint } = nodeGraphMvp.wireDragging;
+    nodeGraphDrawTemporaryWire(svg, {
+      className: "node-wire-path temp",
+      endpoint,
+      from,
+      gradientId: "node-wire-gradient-drag",
+      to: cursorPoint,
+    });
+  }
+
   renderNodeGraphSelection();
   scheduleNodeGraphModuleScopeDraw();
 }

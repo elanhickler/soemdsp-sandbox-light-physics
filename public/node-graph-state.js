@@ -44,6 +44,7 @@ var nodeGraphMvp = {
   historyLimit: 100,
   historySnapshots: [],
   portConnectionMode: null,
+  wireDragging: null,
   monitors: [],
   pan: { x: 0, y: 0 },
   gridVisible: false,

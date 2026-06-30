@@ -74,6 +74,9 @@ function bindNodeGraphWorkspaceInteractionEvents() {
   bindNodeGraphConstraintOverlayToggles();
 
   document.addEventListener("pointermove", nodeGraphWireInteractions.updateConnectionModeCursor);
+  document.addEventListener("pointermove", nodeGraphWireInteractions.handleWireDragMove);
+  document.addEventListener("pointerup", nodeGraphWireInteractions.handleWireDragEnd);
+  document.addEventListener("pointercancel", nodeGraphWireInteractions.handleWireDragEnd);
   document.addEventListener("pointermove", dragNodeGraphNode);
   document.addEventListener("pointerup", endNodeGraphNodeDrag);
   document.addEventListener("pointercancel", endNodeGraphNodeDrag);

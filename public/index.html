@@ -9,20 +9,20 @@
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
     <div class="node-boot-loading-panel">
-      <div class="node-boot-loading-center">
-        <span id="nodeBootLoadingLabel" class="node-boot-loading-label">loading</span>
-      </div>
+      <span id="nodeBootLoadingLabel" class="node-boot-loading-label">loading</span>
       <div
         class="node-boot-loading-bar"
         role="progressbar"
         aria-label="loading progress"
         aria-valuemin="0"
         aria-valuemax="100"
-        aria-valuenow="8">
-        <span id="nodeBootLoadingBarFill" style="width: 8%;"></span>
+        aria-valuenow="4">
+        <span id="nodeBootLoadingBarFill" style="width: 4%;"></span>
       </div>
-      <span class="node-boot-build-number">v0.1.0 &nbsp;·&nbsp; build {{BUILD_NUMBER}}</span>
-      <div id="nodeBootSysinfo" class="node-boot-sysinfo"></div>
+      <div class="node-boot-loading-meta">
+        <span class="node-boot-build-number">v0.1.0 &nbsp;·&nbsp; build {{BUILD_NUMBER}}</span>
+        <span id="nodeBootSysinfo" class="node-boot-sysinfo"></span>
+      </div>
       <div id="nodeBootLoadingMessages" class="node-boot-loading-messages" aria-live="polite"></div>
     </div>
   </div>
@@ -73,7 +73,7 @@
         onclick="dismissNodeGraphMissingSampleAssetsDialog()">Close</button>
     </div>
   </div>
-  <script src="./public/boot-loading.js?v=loading-watchdog-1"></script>
+  <script src="./public/boot-loading.js?v=loading-steps-1"></script>
   <main class="shell">
     <section class="status-strip" aria-label="Sandbox status">
       <div>
@@ -2941,7 +2941,7 @@
   <script src="./public/waveform-interactions.js?v=waveform-interactions-refactor-1780375200000"></script>
   <script src="./public/manifest-view.js?v=manifest-view-refactor-1780360800000"></script>
   <script src="./public/manifest-loader.js?v=manifest-loader-refactor-1780389600000"></script>
-  <script src="./public/node-graph-wires.js?v=mac-wire-start-0144"></script>
+  <script src="./public/node-graph-wires.js?v=dual-wire-mode-1"></script>
   <script src="./public/node-graph-floating-windows.js?v=floating-arrow-editable-1"></script>
   <script src="./public/node-graph-file-actions.js?v=floating-window-attention-1"></script>
   <script src="./public/node-graph-default-buttons.js?v=patch-save-refresh-1"></script>
@@ -2971,7 +2971,7 @@
   <script src="./public/node-graph-settings-text-fit.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-preset.js?v=startup-music-0160"></script>
   <script src="./public/node-graph-script-status.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-view-controls.js?v=startup-view-mode-1"></script>
+  <script src="./public/node-graph-view-controls.js?v=unified-window-pos-2"></script>
   <script src="./public/node-graph-workspace-geometry.js?v=0020"></script>
   <script src="./public/node-graph-workspace-zoom.js?v=0019"></script>
   <script src="./public/node-graph-workspace-view.js?v=mobile-pinch-zoom-1"></script>
@@ -2983,11 +2983,11 @@
   <script src="./public/node-graph-module-actions.js?v=0054"></script>
   <script src="./public/node-graph-code-screen.js?v=canvas-video-list-20260650"></script>
   <script src="./public/node-graph-module-scopes.js?v=display-mode-cleanup-20260650"></script>
-  <script src="./public/node-graph-shader-script.js?v=shader-prefs-0163"></script>
-  <script src="./public/node-graph-canvas-script.js?v=floating-window-drag-area-1"></script>
+  <script src="./public/node-graph-shader-script.js?v=unified-window-pos-1"></script>
+  <script src="./public/node-graph-canvas-script.js?v=unified-window-pos-1"></script>
   <script src="./public/node-graph-module-factories.js?v=0051"></script>
   <script src="./public/node-graph-module-header-rendering.js?v=0032"></script>
-  <script src="./public/node-graph-module-rendering.js?v=0049"></script>
+  <script src="./public/node-graph-module-rendering.js?v=dual-wire-mode-1"></script>
   <script src="./public/node-graph-history.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-visual-utils.js?v=text-light-registry-1780800000000"></script>
   <script src="./public/node-graph-patch-clone.js?v=display-mode-persistence-20260650"></script>
@@ -3012,7 +3012,7 @@
   <script src="./public/node-graph-execution-summary.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-wire-actions.js?v=wire-connect-1"></script>
   <script src="./public/node-graph-trace-router.js?v=no-self-burst-1780321400000"></script>
-  <script src="./public/node-graph-wire-rendering.js?v=wire-port-measured-zoom-1"></script>
+  <script src="./public/node-graph-wire-rendering.js?v=dual-wire-mode-1"></script>
   <script src="./public/node-graph-render-output.js?v=output-one-trip-1"></script>
   <script src="./public/node-graph-debug-copy.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-execution-debug-api.js?v=slider-unit-color-1780307400000"></script>
@@ -3023,7 +3023,7 @@
   <script src="./public/node-graph-ui-settings-definitions.js?v=shader-default-on-0161"></script>
   <script src="./public/node-graph-ui-settings-utils.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-user-ui-settings-controls.js?v=0083"></script>
-  <script src="./public/node-graph-ui-settings-panels.js?v=floating-window-attention-1"></script>
+  <script src="./public/node-graph-ui-settings-panels.js?v=unified-window-pos-2"></script>
   <script src="./public/node-graph-ui-settings-persistence.js?v=0075"></script>
   <script src="./public/node-graph-ui-settings-sync.js?v=floating-window-header-height-1"></script>
   <script src="./public/node-graph-keyboard-shortcuts.js?v=shift-height-resize-1"></script>
@@ -3034,7 +3034,7 @@
   <script src="./public/node-graph-live-evidence.js?v=live-plan-preserve-20260634"></script>
   <script src="./public/node-graph-live-control-rendering.js?v=stable-live-buttons-20260641"></script>
   <script src="./public/node-graph-default-patch.js?v=content-height-only-1"></script>
-  <script src="./public/node-graph-state.js?v=shooting-star-placeholders-1"></script>
+  <script src="./public/node-graph-state.js?v=dual-wire-mode-1"></script>
   <script src="./public/node-graph-external-ui-events.js?v=shooting-star-event-0164"></script>
   <script src="./public/node-graph-patch-core.js?v=display-mode-persistence-20260650"></script>
   <script src="./public/node-graph-live-plan-runtime.js?v=connection-update-20260642"></script>
@@ -3046,7 +3046,7 @@
   <script src="./public/node-graph-live-frame-evaluator.js?v=display-mode-sources-20260646"></script>
   <script src="./public/node-graph-live-runtime.js?v=display-mode-sources-20260646"></script>
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=wire-break-trigger-0129"></script>
-  <script src="./public/node-graph-workspace-event-bindings.js?v=mobile-pinch-zoom-1"></script>
+  <script src="./public/node-graph-workspace-event-bindings.js?v=dual-wire-mode-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=beta-polish-1"></script>
   <script src="./public/node-graph-header-event-bindings.js?v=settings-back-0145"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=remove-workspace-view-0002"></script>
@@ -3055,8 +3055,8 @@
   <script src="./public/node-graph-settings-event-bindings.js?v=metadata-popover-bind-1"></script>
   <script src="./public/node-graph-slider-event-bindings.js?v=node-graph-slider-event-bindings-refactor-1780369200000"></script>
   <script src="./public/node-graph-event-bindings.js?v=event-binding-isolation-1"></script>
-  <script src="./public/node-graph-bootstrap.js?v=share-link-1"></script>
+  <script src="./public/node-graph-bootstrap.js?v=loading-steps-1"></script>
   <script src="./public/app-event-bindings.js?v=app-event-bindings-refactor-1780361400000"></script>
-  <script src="./public/app.js?v=beta-clean-start-1"></script>
+  <script src="./public/app.js?v=loading-steps-1"></script>
 </body>
 </html>

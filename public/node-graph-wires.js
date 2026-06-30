@@ -633,10 +633,94 @@
     }
 
     function updateConnectionModeCursor(event) {
-      if (!state.portConnectionMode) {
+      let redraw = false;
+      if (state.portConnectionMode) {
+        state.portConnectionMode.cursorPoint = deps.clientPoint(event);
+        redraw = true;
+      }
+      if (state.wireDragging) {
+        state.wireDragging.cursorPoint = deps.clientPoint(event);
+        redraw = true;
+      }
+      if (redraw) {
+        deps.drawWires();
+      }
+    }
+
+    function handlePortPointerDown(event) {
+      if (event.button !== 0) {
         return;
       }
-      state.portConnectionMode.cursorPoint = deps.clientPoint(event);
+      const port = event.currentTarget instanceof Element ? event.currentTarget : null;
+      if (!port) {
+        return;
+      }
+      const hitboxElement = port.closest?.(".node-io-row") || port;
+      const endpoint = helpers.endpointFromElement(hitboxElement);
+      if (!endpoint) {
+        return;
+      }
+      const from = helpers.endpointPoint(endpoint, hitboxElement);
+      if (!from) {
+        return;
+      }
+      state.wireDragging = {
+        endpoint,
+        element: hitboxElement,
+        from,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        cursorPoint: deps.clientPoint(event),
+        active: false,
+        pointerId: event.pointerId ?? null,
+      };
+      event.stopPropagation();
+    }
+
+    function handleWireDragMove(event) {
+      const drag = state.wireDragging;
+      if (!drag) {
+        return;
+      }
+      if (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId) {
+        return;
+      }
+      const dx = event.clientX - drag.startClientX;
+      const dy = event.clientY - drag.startClientY;
+      if (!drag.active && Math.hypot(dx, dy) < 4) {
+        return;
+      }
+      drag.active = true;
+      drag.cursorPoint = deps.clientPoint(event);
+      deps.drawWires();
+    }
+
+    function handleWireDragEnd(event) {
+      const drag = state.wireDragging;
+      if (!drag) {
+        return;
+      }
+      if (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId) {
+        return;
+      }
+      state.wireDragging = null;
+      if (!drag.active) {
+        deps.drawWires();
+        return;
+      }
+      const target = helpers.patchPointTargetFromPoint(event.clientX, event.clientY);
+      const targetHitbox = target?.closest?.(".node-io-row") || target;
+      const targetEndpoint = targetHitbox ? helpers.endpointFromElement(targetHitbox) : null;
+      if (targetEndpoint) {
+        const connected = helpers.connectEndpoints(drag.endpoint, targetEndpoint);
+        if (!connected && helpers.endpointsShouldBurst(drag.endpoint, targetEndpoint)) {
+          const to = helpers.endpointPoint(targetEndpoint, targetHitbox);
+          animateDestroyedWire(drag.from, to);
+          deps.burstZap(drag.from);
+          deps.burstZap(to);
+          deps.triggerWireBreak?.("wire-drag");
+        }
+      }
       deps.drawWires();
     }
 
@@ -666,6 +750,9 @@
       clearHover,
       handlePatchPointHover,
       handlePortClick,
+      handlePortPointerDown,
+      handleWireDragEnd,
+      handleWireDragMove,
       handleWorkspaceClick,
       updateConnectionModeCursor,
     };
