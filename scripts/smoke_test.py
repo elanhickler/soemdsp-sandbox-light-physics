@@ -4202,7 +4202,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=sabrina-reverb-0170'],
+            ['node-live-audio-worklet.js?v=display-mode-sources-20260646'],
         ),
     ]:
         for snippet in snippets:
@@ -6006,9 +6006,10 @@ def require_node_graph_mvp_contract() -> None:
         ">Copy</button>",
         ">Paste</button>",
         "Save Patch",
-        "copyNodeGraphScriptButton",
-        "downloadNodeGraphScriptButton",
-        "pasteNodeGraphScriptButton",
+        "nodePatchCopyButton",
+        "nodePatchShareLinkButton",
+        "nodePatchPasteButton",
+        "copyNodeUiDevSettingsButton",
         "nodeScriptStatus",
         "nodePatchPresetName",
         "nodePatchPresetSelect",
@@ -6017,15 +6018,14 @@ def require_node_graph_mvp_contract() -> None:
         "nodePatchPresetDeleteButton",
         "nodePreviousSavedPatchButton",
         "nodeNextSavedPatchButton",
-        "nodeCurrentSavedPatchButton",
         "nodePatchInitButton",
         "nodePatchSaveButton",
         "nodePatchShareLinkButton",
         "nodeSceneOpenSavedPatches",
         "nodeSavedPatchesWindow",
         "nodeSavedPatchesWindowHeading",
-        "nodeSavedPatchesCopyPatch",
-        "nodeSavedPatchesPastePatch",
+        "nodePatchCopyButton",
+        "nodePatchPasteButton",
         "nodeSavedPatchesResizeHandle",
         "nodeSavedPatchesCloseButton",
         "nodeSavedPatchWindowList",
@@ -6439,9 +6439,8 @@ def require_node_graph_mvp_contract() -> None:
         "Close module actions",
         "&times;",
         "nodeDeleteButton",
-        "nodeRenderSecondsValue",
+        "nodeRenderButton",
         "Render Sample",
-        "Seconds",
         "toggleDebugButton",
         '<body class="debug-collapsed node-boot-loading">',
         '<script src="./public/boot-loading.js?v=loading-watchdog-1"></script>',
@@ -6785,8 +6784,8 @@ def require_node_graph_mvp_contract() -> None:
         "module actions should remember the last selected module and show common controls for multi-select",
     )
     patch_audio_panel_source = index_source[
-        index_source.index('<section class="audio-panel node-sample-panel"'):
-        index_source.index('<div class="node-graph-controls">')
+        index_source.index('id="nodeSavedPatchesWindow"'):
+        index_source.index('id="nodeScopeContextMenu"')
     ]
     graph_controls_source = index_source[
         index_source.index('<div class="node-graph-controls">'):
@@ -6822,14 +6821,13 @@ def require_node_graph_mvp_contract() -> None:
         "patch explorer should be patch-list only without edit/search/bank/rows controls",
     )
     patch_control_source = index_source[
-        index_source.index('class="node-sample-identity"'):
-        index_source.index('id="audioTitle"')
+        index_source.index('class="node-patch-header-fields"'):
+        index_source.index('class="scene-context-scope-fields"')
     ]
     require(
-        'class="node-patch-clipboard-controls node-saved-patches-clipboard-row"' in patch_explorer_source
-        and 'id="nodeSavedPatchesCopyPatch" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>' in patch_explorer_source
-        and 'id="nodeSavedPatchesPastePatch" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>' in patch_explorer_source,
-        "patch copy/paste controls should live in their own patch explorer button row",
+        'id="nodePatchCopyButton" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>' in index_source
+        and 'id="nodePatchPasteButton" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>' in index_source,
+        "patch copy/paste controls should live in the patch save controls row",
     )
     require(
         'data-patch-header-info-field="name"' in patch_control_source
@@ -7248,7 +7246,7 @@ def require_node_graph_mvp_contract() -> None:
                 "for (const type of Object.keys(nodeGraphModuleDefinitions || {}))",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=sabrina-reverb-0170',
+                'node-live-audio-worklet.js?v=display-mode-sources-20260646',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
@@ -7295,7 +7293,7 @@ def require_node_graph_mvp_contract() -> None:
                 "const nodeGraphScopeShaderAudioPlayerDefaultSource",
                 'moduleType === "audioPlayer"',
                 'audioPlayer: {\n    displayType: "trace"',
-                'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"',
+                'nodeGraphModuleDisplayRendererForSlot(slot) === "trace"',
                 "nodeGraphGlobalTraceSettings()",
             ],
         ),
@@ -7811,7 +7809,8 @@ def require_node_graph_mvp_contract() -> None:
         "drawNodeGraphTraceDisplayItem",
         'displayType: "trace"',
         "function nodeGraphModuleDisplayTypeForSlot(slot)",
-        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"',
+        "function nodeGraphModuleDisplayRendererForSlot(slot)",
+        'nodeGraphModuleDisplayRendererForSlot(slot) === "trace"',
         "nodeGraphTraceDisplaySettingsDefaults",
         "normalizeNodeGraphTraceDisplaySettings",
         "nodeGraphTraceDisplaySettingsForSlot",
@@ -7836,7 +7835,7 @@ def require_node_graph_mvp_contract() -> None:
         'if (displayType === "scope2d")',
         "traceDisplaySettings: normalizeNodeGraphScope2dSettings(node.traceDisplaySettings)",
         "...cloneNodeGraphTypedDisplaySettings(node)",
-        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace") {\n    buffer = prepareNodeGraphTraceDisplayBuffer(\n      capturedBuffer,\n      nodeGraphTraceDisplaySettingsForSlot(slot),\n    );',
+        'renderer === "trace") {\n    buffer = prepareNodeGraphTraceDisplayBuffer(\n      capturedBuffer,\n      nodeGraphTraceDisplaySettingsForSlot(slot),\n    );',
         '"traceDisplaySettings"',
         'traceDisplaySettings: "nodeTraceDisplaySettingsPopover"',
         "const nodeGraphSharedInspectorWindowKeys = Object.freeze([",
@@ -8594,7 +8593,7 @@ def require_node_graph_mvp_contract() -> None:
         "fetch(\"/api/patches\")",
         'fetch(`/api/patches/file?name=${encodeURIComponent(safeFilename)}`)',
         "async function loadAdjacentNodeGraphSavedPatch(direction)",
-        "document.getElementById(\"nodeCurrentSavedPatchButton\").addEventListener(\"click\", () => setNodeGraphSavedPatchesWindowVisible(true))",
+        "document.getElementById(\"nodePatchEditButton\").addEventListener(\"click\", () => setNodeGraphViewMode(\"settings\"))",
         "document.getElementById(\"nodePreviousSavedPatchButton\").addEventListener(\"click\", () => loadAdjacentNodeGraphSavedPatch(-1))",
         "document.getElementById(\"nodeNextSavedPatchButton\").addEventListener(\"click\", () => loadAdjacentNodeGraphSavedPatch(1))",
         "document.getElementById(\"nodePatchInitButton\").addEventListener(\"click\", confirmAndInitNodeGraphPatchFromDefault)",
@@ -8616,10 +8615,8 @@ def require_node_graph_mvp_contract() -> None:
         "document.getElementById(\"nodeSavedPatchesWindowHeading\").addEventListener(\"pointerdown\", beginNodeGraphSavedPatchesWindowDrag)",
         "document.getElementById(\"nodeSavedPatchesDragHandle\").addEventListener(\"pointerdown\", beginNodeGraphSavedPatchesWindowDrag)",
         "document.getElementById(\"nodeSavedPatchesResizeHandle\").addEventListener(\"pointerdown\", beginNodeGraphSavedPatchesWindowResize)",
-        "document.getElementById(\"nodeSavedPatchesCopyPatch\").textContent = \"Copy\"",
-        "document.getElementById(\"nodeSavedPatchesPastePatch\").textContent = \"Paste\"",
-        "document.getElementById(\"nodeSavedPatchesCopyPatch\").addEventListener(\"click\", copyNodeGraphScriptToClipboard)",
-        "document.getElementById(\"nodeSavedPatchesPastePatch\").addEventListener(\"click\", pasteNodeGraphScriptFromClipboard)",
+        "document.getElementById(\"nodePatchCopyButton\").addEventListener(\"click\", copyNodeGraphScriptToClipboard)",
+        "document.getElementById(\"nodePatchPasteButton\").addEventListener(\"click\", pasteNodeGraphScriptFromClipboard)",
         'document.getElementById("nodePatchShareLinkButton").addEventListener("click", copyNodeGraphShareLinkToClipboard)',
         "document.addEventListener(\"pointermove\", dragNodeGraphSavedPatchesWindowResize)",
         "document.addEventListener(\"pointerup\", endNodeGraphSavedPatchesWindowResize)",
@@ -10240,7 +10237,8 @@ def require_node_graph_mvp_contract() -> None:
         "function handleNodeGraphRenderSecondsInput(event)",
         "syncNodeGraphRenderSecondsFromInput({ normalize: true })",
         'document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio)',
-        'document.getElementById("nodeRenderSecondsValue").addEventListener("input", handleNodeGraphRenderSecondsInput)',
+        'createNodeGraphHeaderRenderRangeInput("node-header-render-start-input", "Start"',
+        'createNodeGraphHeaderRenderRangeInput("node-header-render-end-input", "End"',
         "function nodeGraphBuildLivePlan()",
         "const activeSignalConnections = nodeGraphActiveSignalConnections(compiled)",
         "const activeGraphConnections = nodeGraphActiveGraphConnections(compiled)",
@@ -10541,9 +10539,9 @@ def require_node_graph_mvp_contract() -> None:
         "oversamplingRatio: audio.oversamplingRatio",
         "error.issues = [...compiled.issues]",
         "const hadLivePlan = Boolean(",
-        "action: hadLivePlan ? \"preserved previous live plan\" : \"stopped empty live plan\"",
-        "if (!hadLivePlan) {",
-        "setNodeGraphLiveBlockedError(\"plan\", error, { preservePreviousPlan: hadLivePlan })",
+        "const canPreservePlan = hadLivePlan && nodeGraphShouldPreservePreviousLivePlanAfterError(error);",
+        "if (!canPreservePlan) {",
+        "setNodeGraphLiveBlockedError(\"plan\", error, { preservePreviousPlan: canPreservePlan })",
         "setNodeGraphLiveOutputMuted(false)",
         "setNodeGraphLiveOutputMuted(true)",
         "renderNodeGraphLiveControls(true)",
@@ -12104,9 +12102,9 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null)",
         'displayType: "scope2d"',
         'displayType: "scope2dTrace"',
-        'nodeGraphModuleDisplayTypeForSlot(slot) === "scope2dTrace"',
-        'nodeGraphModuleDisplayTypeForSlot(slot) === "scope2d"',
-        "nodeGraphModuleScopeCapturedScope2dBuffer(slot)",
+        'renderer === "scope2dTrace"',
+        'renderer === "scope2d"',
+        "nodeGraphModuleScopeCapturedScope2dBuffer(slot, source",
         "function nodeGraphModuleScopeCapturedBufferForSlot(slot)",
         "const selectedPort = nodeGraphModuleScopeShaderOutputPortForSlot(slot)",
         "nodeGraphModuleScopeState.buffers.get(`${nodeId}:${selectedPort}`)",
@@ -12708,7 +12706,7 @@ def require_node_graph_mvp_contract() -> None:
     ]
     require(
         'inputs: ["In", "Left", "Right"]' in reverb_definition
-        and 'outputs: ["Out", "Mono", "Left", "Right", "Wet"]' in reverb_definition
+        and 'outputs: ["Mono Dry", "Left Dry", "Right Dry", "Mono Mix", "Left Mix", "Right Mix"]' in reverb_definition
         and 'key: "mix"' in reverb_definition
         and 'key: "diffusionSize"' in reverb_definition
         and 'key: "diffusionAmount"' in reverb_definition
@@ -12778,6 +12776,120 @@ def require_node_graph_mvp_contract() -> None:
     require('displayType: "scope2d"' in module_definitions_source, "2D Burn should declare scope2d display type")
     require('displayType: "scope2dTrace"' in module_definitions_source, "2D Trace should declare scope2dTrace display type")
     require(
+        'if (nodeGraphModuleDefinitions?.[type]) {\n    return "trace";\n  }' in node_graph_source
+        and 'nodeGraphModuleDisplayRendererForNode(node) !== "legacy"' in script_sources["./public/node-graph-execution-plan.js"],
+        "Known modules without specialized displays should default to 1D Trace capture",
+    )
+    require(
+        "function nodeGraphModuleDisplaySignalsForType(type)" in node_graph_source
+        and "function nodeGraphModuleDisplayModesForType(type)" in node_graph_source
+        and "function nodeGraphModuleDefaultDisplayModeKeyForType(type)" in node_graph_source
+        and "function nodeGraphModuleSelectedDisplayMode(node)" in node_graph_source
+        and "function nodeGraphModuleDisplayRendererForNode(node)" in node_graph_source
+        and "function nodeGraphModuleDisplaySettingsSchemaForNode(node)" in node_graph_source,
+        "Display mode contract helpers should exist before renderer/buffer refactors",
+    )
+    require(
+        "function nodeGraphModuleDisplayRendererForSlot(slot)" in node_graph_source
+        and "function nodeGraphModuleDisplaySettingsSchemaForSlot(slot)" in node_graph_source
+        and "return nodeGraphModuleDisplayRendererForSlot(slot);" in node_graph_source
+        and "nodeGraphModuleDisplaySettingsSchemaForNode(node)" in node_graph_source,
+        "Renderer and settings selection should route through selected display modes",
+    )
+    require(
+        node_graph_source.count("nodeGraphModuleDisplayTypeForSlot(") == 1
+        and node_graph_source.count("nodeGraphModuleDisplayTypeForType(") == 3,
+        "Legacy display type helpers should remain compatibility wrappers, not active renderer decision points",
+    )
+    require(
+        "nodeGraphModuleImplicitDisplayModeForType(type)" in node_graph_source
+        and "nodeGraphModuleDeclaredDisplayTypeForType(type)" in node_graph_source
+        and "nodeGraphModuleOutputPortsForType(type)" in node_graph_source,
+        "Display modes should keep compatibility with existing displayType and outputs",
+    )
+    require(
+        "function nodeGraphModuleDisplaySourceForSlot(slot)" in node_graph_source
+        and 'const sourcePort = String(source?.value || "").trim();' in node_graph_source
+        and "nodeGraphModuleScopeCapturedScope2dBuffer(slot, source" in node_graph_source
+        and "const xPort = String(options.xPort || \"X\").trim() || \"X\";" in node_graph_source,
+        "Scope buffers should read scalar and XY sources from selected display modes",
+    )
+    require(
+        'id="nodeTraceDisplayModeSelect"' in node_graph_source
+        and "function syncNodeGraphTraceDisplayModeSelector(node = null)" in node_graph_source
+        and "nodeGraphModuleDisplayModesForType(node.type)" in node_graph_source
+        and "modes.length <= 1" in node_graph_source
+        and "function changeNodeGraphTraceDisplayMode(event)" in node_graph_source
+        and "assignNodeGraphDisplayModeKeyEverywhere(node, select.value)" in node_graph_source
+        and "setNodeGraphTraceDisplaySettingsFormType(node);" in node_graph_source,
+        "Display Settings should expose a compact Mode selector only for modules with multiple explicit modes",
+    )
+    require(
+        'displayModeKey: String(source.displayModeKey || "").trim()' in script_sources["./public/node-graph-patch-clone.js"]
+        and "function normalizeNodeGraphPatchNodeDisplayModeKey(type, value = \"\")" in script_sources["./public/node-graph-patch-clone.js"]
+        and "ui.displayModeKey = normalizeNodeGraphPatchNodeDisplayModeKey(node.type, ui.displayModeKey);" in script_sources["./public/node-graph-patch-clone.js"]
+        and "ui.displayModeKey = normalizeNodeGraphPatchNodeDisplayModeKey(type, ui.displayModeKey);" in script_sources["./public/node-graph-patch-core.js"]
+        and "ui.buttonsHidden || ui.displayModeKey || ui.ioHidden" in script_sources["./public/node-graph-patch-clone.js"]
+        and "modes.some((mode) => mode.key === key)" in script_sources["./public/node-graph-patch-clone.js"]
+        and "ui.buttonsHidden || ui.displayModeKey || ui.ioHidden" in script_sources["./public/node-graph-patch-core.js"],
+        "Display mode choices should persist through ui.displayModeKey and stale keys should normalize away cleanly",
+    )
+    require(
+        "function nodeGraphWirelessVideoCatalog(options = {})" in node_graph_source
+        and "function nodeGraphCanvasVideoApi()" in node_graph_source
+        and "window.nodeGraphCanvasVideoApi = nodeGraphCanvasVideoApi;" in node_graph_source
+        and "window.nodeGraphWirelessVideoCatalog = nodeGraphWirelessVideoCatalog;" in node_graph_source
+        and "modes: modes.map((mode) => ({" in node_graph_source
+        and "signals: signals.map((signal) => ({" in node_graph_source
+        and "renderer: mode.renderer" in node_graph_source
+        and "settingsSchema: mode.settingsSchema" in node_graph_source,
+        "Canvas wireless video catalog should expose read-only node/mode/signal discovery",
+    )
+    require(
+        "const video = Object.freeze({" in script_sources["./public/node-graph-code-screen.js"]
+        and 'signature: "canvas.video.list()"' in script_sources["./public/node-graph-code-screen.js"]
+        and "nodeGraphCanvasVideoApi().list(options)" in script_sources["./public/node-graph-code-screen.js"]
+        and "video," in script_sources["./public/node-graph-code-screen.js"],
+        "Code Screen canvas API should expose canvas.video.list() for wireless video discovery",
+    )
+    wireless_video_source = node_graph_source[
+        node_graph_source.index("function nodeGraphWirelessVideoCatalogNode"):
+        node_graph_source.index("function nodeGraphModuleDisplayTypeHasLocalSettings")
+    ]
+    require(
+        "commitNodeGraphPatch" not in wireless_video_source
+        and "scheduleNodeGraphLivePlanSync" not in wireless_video_source
+        and "connections" not in wireless_video_source
+        and "modulations" not in wireless_video_source
+        and ".buffer" not in wireless_video_source
+        and ".value" not in wireless_video_source,
+        "Wireless video discovery should not read values, create routes, or mutate audio/patch state",
+    )
+    require(
+        'fractalBrownianNoise: {\n    displaySignals:' in module_definitions_source
+        and 'key: "xyBurn", label: "X/Y Burn", renderer: "scope2d", settingsSchema: "scope2d", source: { x: "Out X", y: "Out Y" }' in module_definitions_source
+        and 'key: "xyTrace", label: "X/Y Trace", renderer: "scope2dTrace", settingsSchema: "scope2dTrace", source: { x: "Out X", y: "Out Y" }' in module_definitions_source
+        and 'key: "zTrace", label: "Z Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Z" }' in module_definitions_source,
+        "Fractal Brownian Noise should declare explicit display modes for Out X/Y/Z",
+    )
+    require(
+        'noise: {\n    displaySignals:' in module_definitions_source
+        and 'key: "rawTrace", label: "Raw Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Raw" }' in module_definitions_source
+        and 'key: "postLevelTrace", label: "Post-Level Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out" }' in module_definitions_source
+        and "Raw: raw" in script_sources["./public/node-graph-live-frame-evaluator.js"]
+        and "Raw: raw" in worklet_source,
+        "Noise should expose raw and post-level display streams without visible ports",
+    )
+    require(
+        'stereoNoise: {\n    displaySignals:' in module_definitions_source
+        and 'key: "xyBurn", label: "X/Y Burn", renderer: "scope2d", settingsSchema: "scope2d", source: { x: "X", y: "Y" }' in module_definitions_source
+        and 'key: "monoTrace", label: "Mono Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out" }' in module_definitions_source
+        and 'ellipsoid: {\n    displayType: "scope2d",\n    displaySignals:' in module_definitions_source
+        and 'spiral: {\n    displayType: "scope2d",\n    displaySignals:' in module_definitions_source
+        and 'lorenzAttractor: {\n    displayType: "scope2d",\n    displaySignals:' in module_definitions_source,
+        "Stereo Noise and chaos modules should declare explicit display modes",
+    )
+    require(
         "function normalizeNodeGraphScope2dTraceSettings(settings = {})" in node_graph_source
         and 'scope2dTrace: Object.freeze({' in node_graph_source
         and '"historySeconds"' in node_graph_source
@@ -12809,15 +12921,13 @@ def require_node_graph_mvp_contract() -> None:
     require("function drawNodeGraphDotOscilloscopeItem" in node_graph_source, "Dot oscilloscope should have a renderer")
     require(
         "function nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer = null)" in node_graph_source
-        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "dot"' in node_graph_source
+        and 'renderer === "dot"' in node_graph_source
         and "capturedBuffer.nodeGraphScopeLightTarget =" in node_graph_source
         and "capturedBuffer.nodeGraphScopeBipolarLightTarget =" in node_graph_source
         and "nodeGraphModuleScopeCapturedFramePositiveLightTarget(capturedBuffer) ??" in node_graph_source
         and "nodeGraphModuleScopeCapturedFrameBipolarLightTarget(capturedBuffer) ??" in node_graph_source
         and "nodeGraphModuleScopeCapturedCurrentPositiveLightTarget(capturedBuffer) ??" in node_graph_source
         and "nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer) ??" in node_graph_source
-        and "capturedBuffer.nodeGraphScopeRecentSampleCount" in node_graph_source
-        and "buffer.nodeGraphScopeRecentSampleCount = count;" in node_graph_source
         and "return capturedBuffer;" in node_graph_source,
         "0D Burn should keep the captured signal buffer and annotate it with unipolar and bipolar frame brightness",
     )
@@ -12956,7 +13066,7 @@ def require_node_graph_mvp_contract() -> None:
     display_settings_apply_source = node_graph_source[display_settings_apply_start:display_settings_apply_end]
     require(
         "const settings = readNodeGraphTraceDisplaySettingsForm();" in display_settings_apply_source
-        and "assignNodeGraphTypedDisplaySettingsEverywhere(node, displayType, settings);" in display_settings_apply_source
+        and "assignNodeGraphTypedDisplaySettingsEverywhere(node, settingsSchema, settings);" in display_settings_apply_source
         and "scheduleNodeGraphModuleScopeDraw();" in display_settings_apply_source
         and "persistNodeGraphTraceDisplaySettingsSoon" in display_settings_apply_source
         and "markNodeGraphRenderPending" not in display_settings_apply_source
@@ -13080,9 +13190,9 @@ def require_node_graph_mvp_contract() -> None:
         and 'spiral: {\n    displayType: "scope2d"' in module_definitions_source
         and 'lorenzAttractor: {\n    displayType: "scope2d"' in module_definitions_source
         and 'visualOscilloscope: {\n    bufferedInputs: ["In", "X", "Y"],\n    displayType: "scope2dTrace"' in module_definitions_source
-        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "scope2dTrace"' in node_graph_source
-        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "scope2d")' in node_graph_source
-        and "buffer = nodeGraphModuleScopeCapturedScope2dBuffer(slot) || capturedBuffer;" in node_graph_source
+        and 'renderer === "scope2dTrace"' in node_graph_source
+        and 'renderer === "scope2d")' in node_graph_source
+        and "buffer = nodeGraphModuleScopeCapturedScope2dBuffer(slot, {" in node_graph_source
         and "function nodeGraphModuleScopeCapturedOutputPairXyBuffer" not in node_graph_source
         and "function nodeGraphModuleScopeCapturedVisualOscilloscopeXyBuffer" not in node_graph_source
         and 'slot?.type === "spiral" || slot?.type === "ellipsoid" || slot?.type === "lorenzAttractor"' not in node_graph_source,
@@ -13232,19 +13342,19 @@ def require_node_graph_mvp_contract() -> None:
     screen_items_source = node_graph_source[screen_items_start:screen_items_end]
     require(
         "function nodeGraphModuleScopeCapturedScope2dBuffer(slot, options = {})" in node_graph_source
-        and "return nodeGraphModuleScopeCapturedScope2dBuffer(slot);" in captured_buffer_source
+        and "return nodeGraphModuleScopeCapturedScope2dBuffer(slot, source" in captured_buffer_source
         and "nodeGraphModuleScopeCapturedBufferForSlot(slot)" in screen_items_source
         and "function nodeGraphModuleScopeConnectedSourceBuffer(nodeId, port = \"In\")" in node_graph_source
         and 'nodeGraphModuleScopeConnectedSourceBuffer(nodeId, "In")' in node_graph_source
-        and 'nodeGraphModuleScopeConnectedSourceBuffer(slot.nodeId, "X")' in node_graph_source
-        and 'nodeGraphModuleScopeConnectedSourceBuffer(slot.nodeId, "Y")' in node_graph_source
+        and "nodeGraphModuleScopeConnectedSourceBuffer(slot.nodeId, xPort)" in node_graph_source
+        and "nodeGraphModuleScopeConnectedSourceBuffer(slot.nodeId, yPort)" in node_graph_source
         and "nodeGraphModuleScopeOfflineInputDisplayBuffer" not in display_buffer_source
         and "nodeGraphModuleScopeOfflineScope2dBuffer" not in display_buffer_source,
         "oscilloscope testbed displays should measure captured wire buffers without offline fallback",
     )
     require(
         '["traceDisplay", "dotOscilloscope", "valueOscilloscope", "lineBurnOscilloscope"].includes(slot.type)' in node_graph_source
-        and '["scope2d", "scope2dTrace"].includes(displayType)' in node_graph_source
+        and '["scope2d", "scope2dTrace"].includes(renderer)' in node_graph_source
         and 'outputs.includes("X") && outputs.includes("Y")' in node_graph_source
         and 'nodeGraphModuleScopeConnectionsTo(slot.nodeId, "Y").length > 0' in node_graph_source,
         "connected oscilloscope display modules should count as model displays while waiting for captured buffers",
@@ -13321,9 +13431,12 @@ def require_node_graph_mvp_contract() -> None:
         "browser fallback should evaluate Sabrina Reverb through the raw stateful DSP port",
     )
     require(
-        "const nodeGraphSabrinaReverbDspEnabled = false" in live_frame_source
-        and "Wet: dryMono" in live_frame_source,
-        "browser fallback should dry-through Sabrina Wet while the DSP core is disabled",
+        "const native = runtime?.nativeSabrinaReverbReady ? runtime?.nativeSabrinaReverb : null" in live_frame_source
+        and "return dry;" in live_frame_source
+        and '"Left Mix": dryLeft' in live_frame_source
+        and '"Mono Mix": dryMono' in live_frame_source
+        and '"Right Mix": dryRight' in live_frame_source,
+        "browser fallback should dry-through Sabrina mix outputs when the native DSP core is unavailable",
     )
     require(
         "sabrinaReverbSample(state, leftInput, rightInput, params" in worklet_source
@@ -13332,9 +13445,8 @@ def require_node_graph_mvp_contract() -> None:
         "AudioWorklet should evaluate Sabrina Reverb through the raw stateful DSP port",
     )
     require(
-        "this.sabrinaReverbDspEnabled = false" in worklet_source
-        and "Wet: dryMono" in worklet_source,
-        "AudioWorklet should dry-through Sabrina Wet while the DSP core is disabled",
+        "return { \"Left Dry\": dryLeft, \"Mono Dry\": dryMono, \"Right Dry\": dryRight, \"Left Mix\": dryLeft, \"Mono Mix\": dryMono, \"Right Mix\": dryRight };" in worklet_source,
+        "AudioWorklet should dry-through Sabrina mix outputs when the native DSP core is unavailable",
     )
     require('id="nodeSceneTimingControls"' in index_source, "Command Center should host timing controls")
     require("function createNodeGraphCommandCenterTimingWidgets" in header_rendering_source, "Command Center timing widgets should reuse header timing inputs")
@@ -13626,7 +13738,7 @@ def require_node_graph_mvp_contract() -> None:
         'osc: {\n    displayType: "trace"' in module_definitions_source
         and 'polyBlep: {\n    displayType: "trace"' in module_definitions_source
         and 'fbPolyBlepOsc: {\n    displayType: "trace"' in module_definitions_source
-        and 'if (nodeGraphModuleScopeIsOscillatorType(type)) {\n    return "trace";\n  }' in node_graph_source,
+        and "return nodeGraphModuleDisplayModesForType(type)[0]?.renderer || nodeGraphModuleDeclaredDisplayTypeForType(type);" in node_graph_source,
         "Oscillator module faces should resolve to the typed 1D Trace renderer",
     )
     trace_slot_settings_source = node_graph_source[
@@ -13634,7 +13746,7 @@ def require_node_graph_mvp_contract() -> None:
         node_graph_source.index("function prepareNodeGraphTraceDisplayBuffer")
     ]
     require(
-        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_slot_settings_source
+        'nodeGraphModuleDisplaySettingsSchemaForSlot(slot) === "trace"' in trace_slot_settings_source
         and "return nodeGraphGlobalTraceSettings();" in trace_slot_settings_source
         and 'slot?.type !== "traceDisplay"' not in trace_slot_settings_source,
         "All trace displays should share global Trace Settings until local overrides are deliberately restored",
@@ -13652,9 +13764,9 @@ def require_node_graph_mvp_contract() -> None:
         node_graph_source.index("function nodeGraphModuleScopeBufferSegmentPoints")
     ]
     require(
-        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_buffer_view_source
-        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_webgl_source
-        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"' in trace_segment_source
+        'nodeGraphModuleDisplayRendererForSlot(slot) === "trace"' in trace_buffer_view_source
+        and 'nodeGraphModuleDisplayRendererForSlot(slot) === "trace"' in trace_webgl_source
+        and 'nodeGraphModuleDisplayRendererForSlot(slot) === "trace"' in trace_segment_source
         and 'slot?.type === "traceDisplay"' not in trace_buffer_view_source
         and 'slot?.type === "traceDisplay"' not in trace_webgl_source
         and 'slot?.type === "traceDisplay"' not in trace_segment_source
@@ -13710,15 +13822,15 @@ def require_node_graph_mvp_contract() -> None:
         and "pulseNodeGraphFloatingWindowAttention(existingPopover)" in global_trace_settings_open_source
         and "nodeGraphMvp.traceDisplaySettingsTargetNode === node.id" in module_trace_settings_open_source
         and "pulseNodeGraphFloatingWindowAttention(existingPopover)" in module_trace_settings_open_source
-        and 'displayType === "lineBurn"\n      ? normalizeNodeGraphLineBurnSettings(node.traceDisplaySettings)' in module_trace_settings_open_source,
-        "Display settings should pulse when already open and preserve 1D Burn settings shape",
+        and "writeNodeGraphTraceDisplaySettingsForm(nodeGraphTraceDisplayCurrentSettingsForFormType())" in module_trace_settings_open_source,
+        "Display settings should pulse when already open and read current settings through the selected display mode",
     )
     require(
         "function nodeGraphTraceDisplaySettingsEditingTraceDefaults()" in node_graph_source
         and "if (nodeGraphTraceDisplaySettingsEditingGlobal()) {" in node_graph_source
-        and "nodeGraphModuleDisplayTypeForType(node?.type) === \"trace\"" in node_graph_source
+        and 'nodeGraphModuleDisplaySettingsSchemaForNode(node) === "trace"' in node_graph_source
         and "nodeGraphMvp.traceSettings = normalizeNodeGraphTraceDisplaySettings(settings)" in node_graph_source
-        and ": nodeGraphGlobalTraceSettings();" in module_trace_settings_open_source,
+        and "nodeGraphTraceDisplayCurrentSettingsForFormType()" in module_trace_settings_open_source,
         "Trace display settings form should edit the global trace defaults used by all trace displays",
     )
     trace_value_normalize_source = node_graph_source[
@@ -14033,7 +14145,7 @@ def require_node_graph_mvp_contract() -> None:
         "? { led: normalizeNodeGraphLedLayout(node.led) }",
         "normalizedNode.led = normalizeNodeGraphLedLayout(node.led)",
         "function nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer)",
-        "nodeGraphModuleDisplayTypeForSlot(slot) === \"dot\"",
+        "renderer === \"dot\"",
         "nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer)",
         "function nodeGraphModuleScopeDefaultShaderSourceForNode(node)",
         "function nodeGraphModuleScopeShaderSourceForSlot(slot)",

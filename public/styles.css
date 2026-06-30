@@ -138,7 +138,7 @@ body.node-boot-loading .shell {
   padding: 0.2rem 0;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 
 .node-boot-loading-bar span {
@@ -11820,6 +11820,18 @@ input[data-global-scope-number-drag="true"]:not([readonly]):focus,
   align-self: start;
   grid-column: 1 / -1;
   min-height: max-content;
+}
+
+.node-trace-display-settings-popover [data-trace-display-mode-select] {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  border: var(--node-hairline, 1px) solid rgba(127, 199, 217, 0.28);
+  background: rgba(3, 8, 10, 0.92);
+  color: var(--node-cyan, #8ee8ff);
+  font-family: var(--mono);
+  font-size: 0.78rem;
 }
 
 .node-trace-display-settings-popover [hidden] {
