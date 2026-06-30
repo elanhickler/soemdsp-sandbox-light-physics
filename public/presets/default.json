@@ -22,16 +22,16 @@
   "connections": [
     {
       "destinationNode": "output",
-      "destinationPort": "Mono",
-      "sourceNode": "clock-1",
-      "sourcePort": "Analog Out",
+      "destinationPort": "Left",
+      "sourceNode": "audioPlayer-1",
+      "sourcePort": "Left",
       "tracePoints": []
     },
     {
-      "destinationNode": "visualOscilloscope-1",
-      "destinationPort": "In",
-      "sourceNode": "clock-1",
-      "sourcePort": "Analog Out",
+      "destinationNode": "output",
+      "destinationPort": "Right",
+      "sourceNode": "audioPlayer-1",
+      "sourcePort": "Right",
       "tracePoints": []
     }
   ],
@@ -46,84 +46,25 @@
   },
   "info": {
     "author": "",
+    "bank": 0,
+    "bankName": "basic",
     "description": "",
-    "name": "Patch name",
-    "tags": "tags"
+    "name": "ellipsoid",
+    "program": 0,
+    "tags": "circle"
   },
   "modulations": [],
   "monitors": [],
   "nodes": [
     {
-      "gx": -21,
-      "gy": 11,
-      "id": "shop",
-      "paramMeta": {},
-      "params": {},
-      "type": "moduleShop",
-      "widthGu": 5
-    },
-    {
-      "gx": -21,
-      "gy": 1,
-      "id": "canvas-origin",
-      "paramMeta": {},
-      "params": {},
-      "type": "canvas",
-      "alias": "Origin",
-      "canvasScript": {
-        "aspectRatio": 1,
-        "background": "#00000000",
-        "bufferedInputs": [
-          "a_buffer"
-        ],
-        "bufferSampleLimit": 262144,
-        "enabled": true,
-        "faceBackground": "checkerboard",
-        "faceFit": "contain",
-        "faceScreen": "#000000",
-        "gridHeightGu": 5,
-        "gridWidthGu": 5,
-        "inputs": [
-          "a_buffer",
-          "a not buffer"
-        ],
-        "kind": "canvasScript",
-        "language": "canvas-js",
-        "layout": "oscilloscope",
-        "layers": [
-          {
-            "id": "a_buffer",
-            "input": "a_buffer",
-            "opacity": 1,
-            "rotation": 0,
-            "scale": 1,
-            "visible": true,
-            "x": 0.5,
-            "y": 0.5
-          }
-        ],
-        "output": "canvas",
-        "ratioHeight": 1,
-        "ratioWidth": 1,
-        "source": "canvas.ratio(1, 1);\ncanvas.background = #00000000;\ncanvas.layout = oscilloscope;\ncanvas.grid(5, 5);\ncanvas.face.background = checkerboard;\ncanvas.face.screen = #000000;\nbufferInput(\"a_buffer\");\ninput(\"a not buffer\");\n\nlayer(\"a_buffer\").input   = a_buffer;\nlayer(\"a_buffer\").x       = 0.5;\nlayer(\"a_buffer\").y       = 0.5;\nlayer(\"a_buffer\").scale   = 1.0;\nlayer(\"a_buffer\").opacity = 1.0;\n\noutput = canvas;"
-      }
-    },
-    {
-      "gx": -21,
-      "gy": 6,
-      "id": "home",
-      "paramMeta": {},
-      "params": {},
-      "type": "moduleHome",
-      "widthGu": 5
-    },
-    {
-      "gx": 22,
-      "gy": 11,
+      "gx": 1,
+      "gy": -3,
       "id": "output",
       "paramMeta": {
         "volume": {
+          "alias": "",
           "choices": [],
+          "curveAmount": 0.5,
           "def": 0.1,
           "displayChoices": false,
           "divideChoicesVisibly": false,
@@ -134,85 +75,46 @@
           "mid": 0.1,
           "min": 0,
           "nonlinearSlider": false,
+          "sliderCurve": "linear",
           "showSign": false,
           "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
           "unit": "",
           "wraparound": false
         }
       },
       "params": {
-        "volume": 0.1
+        "volume": 0.640154150863261
       },
       "type": "output",
-      "alias": "Vibration",
-      "widthGu": 9
-    },
-    {
-      "gx": 22,
-      "gy": 3,
-      "id": "visualOscilloscope-1",
-      "paramMeta": {},
-      "params": {},
-      "type": "visualOscilloscope",
-      "alias": "Oscilloscope",
-      "widthGu": 9,
-      "heightGu": 8,
-      "scopeShader": {
-        "cycles": 1.7639,
-        "enabled": true,
-        "kind": "scopeShader",
-        "language": "scope-js",
-        "length": 1,
-        "mode": "one_value",
-        "padding": 0.04,
-        "source": "video.input     = ~;\nscope.mode      = one_value;\nscope.sync      = inherit;\nscope.cycles    = 1.7639;\nscope.zoom      = 1.0;\nscope.length    = 1.0;\nscope.padding   = 0.04;\nscope.syncSpeed = 1.0;\ndot1.color      = dot1.global.color;\ndot1.size       = 1.0 * dot1.global.size;\ndot1.blur       = 0.00;\ndot1.brightness = 4.50;\ndot2.color      = dot2.global.color;\ndot2.size       = 1.0 * dot2.global.size;\ndot2.blur       = 0.00;\ndot2.brightness = 0.45;\nblend.mode      = laser;",
-        "sync": "inherit",
-        "syncSpeed": 1,
-        "videoInput": "~",
-        "zoom": 1
+      "traceDisplaySettings": {
+        "brightness": 0.92,
+        "color": "#75ebff",
+        "dot1Enabled": true,
+        "dot1Size": 0.08,
+        "dot2Brightness": 0.18,
+        "dot2Color": "#184fff",
+        "dot2Enabled": true,
+        "dot2Size": 0.24,
+        "dot2LineThickness": 0.48,
+        "cycles": 2,
+        "lineThickness": 0.2,
+        "padding": 0,
+        "skipSamples": 1,
+        "sourceSync": true,
+        "zoomSeconds": 0.05
       }
     },
     {
-      "gx": 15,
-      "gy": 7,
-      "id": "clock-1",
+      "gx": -8,
+      "gy": -9,
+      "id": "audioPlayer-1",
       "paramMeta": {
-        "rate": {
-          "choices": [],
-          "def": 2,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "frequency",
-          "linearSmoothing": true,
-          "max": 40,
-          "maxDigits": 5,
-          "mid": 2,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0,
-          "unit": "Hz",
-          "wraparound": false
-        },
-        "duty": {
-          "choices": [],
-          "def": 0.5,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 1,
-          "maxDigits": 3,
-          "mid": 0.5,
-          "min": 0,
-          "nonlinearSlider": false,
-          "showSign": false,
-          "step": 0,
-          "unit": "",
-          "wraparound": false
-        },
         "level": {
+          "alias": "",
           "choices": [],
+          "curveAmount": 0,
           "def": 1,
           "displayChoices": false,
           "divideChoicesVisibly": false,
@@ -223,97 +125,176 @@
           "mid": 0.5,
           "min": 0,
           "nonlinearSlider": false,
+          "sliderCurve": "linear",
           "showSign": false,
           "step": 0,
-          "unit": "",
-          "wraparound": false
-        }
-      },
-      "params": {
-        "rate": 2,
-        "duty": 0.5,
-        "level": 1
-      },
-      "type": "clock",
-      "alias": "Clock",
-      "scopeShader": {
-        "cycles": 1.7639,
-        "enabled": true,
-        "kind": "scopeShader",
-        "language": "scope-js",
-        "length": 1,
-        "mode": "1d_full",
-        "padding": 0.04,
-        "source": "video.input     = output0;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\ndot1.color      = dot1.global.color;\ndot1.size       = 10.7 * dot1.global.size;\ndot1.blur       = 0.03;\ndot1.brightness = 1.05;\ndot2.color      = dot2.global.color;\ndot2.size       = 5.6 * dot2.global.size;\ndot2.blur       = 1.52;\ndot2.brightness = 1.21;\n// Scope modes: 1d_full, 1d_scan\n// Sync options: inherit, on, off\n// Blend options: laser, led, light, paint, solid\n// Change the word after = to switch modes.\nblend.mode      = laser;",
-        "sync": "inherit",
-        "syncSpeed": 1,
-        "videoInput": "output0",
-        "zoom": 1
-      }
-    },
-    {
-      "gx": 15,
-      "gy": -2,
-      "id": "clock-2",
-      "paramMeta": {
-        "rate": {
-          "choices": [],
-          "def": 2,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "frequency",
-          "linearSmoothing": true,
-          "max": 40,
-          "maxDigits": 5,
-          "mid": 2,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0,
-          "unit": "Hz",
-          "wraparound": false
-        },
-        "duty": {
-          "choices": [],
-          "def": 0.5,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 1,
-          "maxDigits": 3,
-          "mid": 0.5,
-          "min": 0,
-          "nonlinearSlider": false,
-          "showSign": false,
-          "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
           "unit": "",
           "wraparound": false
         },
-        "level": {
+        "speed": {
+          "alias": "",
           "choices": [],
+          "curveAmount": 0,
           "def": 1,
           "displayChoices": false,
           "divideChoicesVisibly": false,
           "kind": "decimal",
-          "linearSmoothing": true,
+          "linearSmoothing": false,
+          "max": 8,
+          "maxDigits": 4,
+          "mid": 1,
+          "min": 0,
+          "nonlinearSlider": true,
+          "sliderCurve": "skew",
+          "showSign": false,
+          "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
+          "unit": "x",
+          "wraparound": false
+        },
+        "start": {
+          "alias": "",
+          "choices": [],
+          "curveAmount": 0,
+          "def": 0,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": false,
           "max": 1,
           "maxDigits": 3,
           "mid": 0.5,
           "min": 0,
           "nonlinearSlider": false,
+          "sliderCurve": "linear",
           "showSign": false,
           "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
+          "unit": "",
+          "wraparound": false
+        },
+        "end": {
+          "alias": "",
+          "choices": [],
+          "curveAmount": 0,
+          "def": 1,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 1,
+          "maxDigits": 3,
+          "mid": 0.5,
+          "min": 0,
+          "nonlinearSlider": false,
+          "sliderCurve": "linear",
+          "showSign": false,
+          "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
+          "unit": "",
+          "wraparound": false
+        },
+        "transport": {
+          "alias": "",
+          "choices": [
+            "Off (reset)",
+            "Stop",
+            "Pause",
+            "Play",
+            "Loop"
+          ],
+          "curveAmount": 0,
+          "def": 3,
+          "displayChoices": true,
+          "divideChoicesVisibly": true,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 4,
+          "maxDigits": 3,
+          "mid": 2,
+          "min": 0,
+          "nonlinearSlider": false,
+          "sliderCurve": "linear",
+          "showSign": false,
+          "step": 1,
+          "unboundedMax": false,
+          "unboundedMin": false,
           "unit": "",
           "wraparound": false
         }
       },
       "params": {
-        "rate": 2,
-        "duty": 0.5,
-        "level": 1
+        "level": 1,
+        "speed": 1,
+        "start": 0,
+        "end": 1,
+        "transport": 3
       },
-      "type": "clock"
+      "type": "audioPlayer",
+      "sample": {
+        "id": "chaosarp-lorenz-startup"
+      }
+    }
+  ],
+  "requiredAssets": [
+    {
+      "acceptedTypes": [
+        "audio/*"
+      ],
+      "file": {
+        "extension": "mp3",
+        "mime": "audio/mpeg",
+        "name": "Elan Hickler - ChaosArp Lorenz.mp3",
+        "size": 10447933,
+        "sourcePath": "./public/resources/audio/Elan Hickler - ChaosArp Lorenz.mp3"
+      },
+      "id": "chaosarp-lorenz-startup",
+      "kind": "audio",
+      "metadata": {
+        "artist": "Elan Hickler",
+        "title": "ChaosArp Lorenz",
+        "startupMusic": true
+      },
+      "name": "Elan Hickler - ChaosArp Lorenz",
+      "nodeIds": [
+        "audioPlayer-1"
+      ],
+      "requiredBy": [
+        "Music Player 1"
+      ],
+      "resourceId": "chaosarp-lorenz-startup",
+      "sourceName": "Elan Hickler - ChaosArp Lorenz.mp3",
+      "sourcePath": "./public/resources/audio/Elan Hickler - ChaosArp Lorenz.mp3"
+    }
+  ],
+  "samples": [
+    {
+      "acceptedTypes": [
+        "audio/*"
+      ],
+      "file": {
+        "extension": "mp3",
+        "mime": "audio/mpeg",
+        "name": "Elan Hickler - ChaosArp Lorenz.mp3",
+        "size": 10447933,
+        "sourcePath": "./public/resources/audio/Elan Hickler - ChaosArp Lorenz.mp3"
+      },
+      "id": "chaosarp-lorenz-startup",
+      "kind": "audio",
+      "metadata": {
+        "artist": "Elan Hickler",
+        "title": "ChaosArp Lorenz",
+        "startupMusic": true
+      },
+      "name": "Elan Hickler - ChaosArp Lorenz",
+      "resourceId": "chaosarp-lorenz-startup",
+      "sourceName": "Elan Hickler - ChaosArp Lorenz.mp3",
+      "sourcePath": "./public/resources/audio/Elan Hickler - ChaosArp Lorenz.mp3"
     }
   ],
   "timing": {
@@ -323,8 +304,9 @@
   },
   "uiItems": [],
   "view": {
-    "heightGu": 20,
-    "widthGu": 35
+    "heightGu": 13,
+    "widthGu": 16,
+    "zoom": 0.5956522631507978
   },
   "visual": {
     "background": {

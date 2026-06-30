@@ -15,7 +15,7 @@ function syncNodeGraphRenderedAudioElement() {
   const audio = document.getElementById("audioPlayer");
   if (nodeGraphEarProtectionIsTripped()) {
     clearNodeGraphRenderedAudioElement();
-    labelPrimaryAudioTitle("Ear Protection tripped. Refresh the page to reset audio.", false);
+    labelPrimaryAudioTitle("Ear Protection tripped. Close the dialog to reset audio.", false);
     return;
   }
   if (!audio || !nodeGraphMvp.rendered?.samples?.length) {
@@ -57,46 +57,6 @@ function nodeGraphRenderedPlaybackFrame(maxFrames = 0) {
     return null;
   }
   return Math.max(0, Math.min(maxFrames - 1, Math.round(frame)));
-}
-
-function tickNodeGraphRenderedPlaybackCursor() {
-  const playback = nodeGraphMvp.renderedPlayback;
-  const rendered = nodeGraphMvp.rendered;
-  if (!playback?.playing || !rendered?.frames) {
-    return;
-  }
-  const elapsed = Math.max(0, (Date.now() - playback.startPerformanceTime) / 1000);
-  const progress = playback.durationSeconds > 0
-    ? Math.min(1, elapsed / playback.durationSeconds)
-    : 0;
-  playback.progress = progress;
-  playback.frame = Math.min(rendered.frames - 1, Math.floor(progress * rendered.frames));
-  drawNodeRenderedVisualOutput();
-  if (progress < 1 && nodeGraphMvp.bufferSource) {
-    playback.timer = window.setTimeout(tickNodeGraphRenderedPlaybackCursor, 33);
-  } else {
-    resetNodeGraphRenderedPlaybackCursor(true);
-  }
-}
-
-function startNodeGraphRenderedPlaybackCursor() {
-  const rendered = nodeGraphMvp.rendered;
-  const context = nodeGraphMvp.audioContext;
-  if (!rendered?.frames || !context) {
-    return;
-  }
-  resetNodeGraphRenderedPlaybackCursor(false);
-  nodeGraphMvp.renderedPlayback = {
-    durationSeconds: rendered.durationSeconds || rendered.frames / nodeGraphMvp.sampleRate,
-    frame: 0,
-    frames: rendered.frames,
-    playing: true,
-    progress: 0,
-    startContextTime: context.currentTime,
-    startPerformanceTime: Date.now(),
-    timer: window.setTimeout(tickNodeGraphRenderedPlaybackCursor, 33),
-  };
-  drawNodeRenderedVisualOutput();
 }
 
 function stopNodeGraphRenderedPlayback() {

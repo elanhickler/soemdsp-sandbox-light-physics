@@ -2,9 +2,7 @@ function bindNodeGraphWorkspaceInteractionEvents() {
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("nodegraph:environment-command", handleNodeGraphEnvironmentCommand);
-  document
-    .getElementById("nodeGraphWorkspace")
-    .addEventListener("contextmenu", openNodeSceneContextMenu);
+  document.addEventListener("contextmenu", openNodeSceneContextMenu);
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointerdown", beginNodeSliderDrag, true);
@@ -17,9 +15,21 @@ function bindNodeGraphWorkspaceInteractionEvents() {
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("mousedown", preventNodeGraphMiddleMouseDefault, true);
+  document.addEventListener("auxclick", preventNodeGraphMiddleMouseAuxClick, true);
+  document.addEventListener("mousedown", preventNodeGraphMiddleMouseDefault, true);
+  document.addEventListener("wheel", preventNodeGraphOuterWheelScroll, { passive: false, capture: true });
+  document
+    .getElementById("nodeWorldPositionReadout")
+    ?.addEventListener("click", recenterNodeGraphViewAtWorldOrigin);
+  document
+    .getElementById("nodeWorldPositionReadout")
+    ?.addEventListener("keydown", handleNodeGraphWorldPositionReadoutKeydown);
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointerdown", nodeGraphWireInteractions.beginPatchPointWireDrag, true);
+  document
+    .getElementById("nodeGraphWorkspace")
+    .addEventListener("pointerdown", beginNodeGraphWorkspacePinchZoom, true);
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointerdown", beginNodeGraphWorkspacePan, true);
@@ -63,6 +73,7 @@ function bindNodeGraphWorkspaceInteractionEvents() {
   document.addEventListener("pointerup", endNodeGraphNodeDrag);
   document.addEventListener("pointercancel", endNodeGraphNodeDrag);
   document.addEventListener("pointermove", dragNodeGraphModulePlacement);
+  document.addEventListener("pointerdown", completeNodeGraphModulePlacement, true);
   document.addEventListener("pointermove", dragNodeSlider);
   document.addEventListener("pointermove", dragNodeGraphScopeNumber);
   document.addEventListener("pointerup", nodeGraphWireInteractions.endWireDrag);
@@ -74,6 +85,9 @@ function bindNodeGraphWorkspaceInteractionEvents() {
   document.addEventListener("pointermove", dragNodeGraphWorkspaceResize);
   document.addEventListener("pointerup", endNodeGraphWorkspaceResize);
   document.addEventListener("pointercancel", endNodeGraphWorkspaceResize);
+  document.addEventListener("pointermove", dragNodeGraphWorkspacePinchZoom);
+  document.addEventListener("pointerup", endNodeGraphWorkspacePinchZoom);
+  document.addEventListener("pointercancel", endNodeGraphWorkspacePinchZoom);
   document.addEventListener("pointermove", dragNodeGraphWorkspacePan);
   document.addEventListener("pointerup", endNodeGraphWorkspacePan);
   document.addEventListener("pointercancel", endNodeGraphWorkspacePan);

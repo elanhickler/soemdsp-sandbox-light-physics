@@ -9,7 +9,7 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
 });
 const nodeGraphShaderScriptUtilityCameraPadding = 18;
 const nodeGraphShaderScriptColorWidgetModuleUrl = "./public/color-widget.js?v=shader-token-color-widget-1";
-const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
+const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid", "heatmap"]);
 const nodeGraphShaderScriptBlendModePatternSource = nodeGraphShaderScriptBlendModes
   .map((mode) => mode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");
@@ -22,7 +22,7 @@ const nodeGraphShaderScriptScopeSyncPatternSource = nodeGraphShaderScriptScopeSy
   .map((mode) => mode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");
 const nodeGraphShaderScriptHighlightTokenPattern = new RegExp(
-  `#[0-9a-fA-F]{3,8}\\b|\\b(?:dot[12]\\.(?:global|globals)\\.(?:size|brightness|color)|(?:dot[12]|blend|video|scope)\\.[a-zA-Z_]\\w*|globalsize|global\\.size)\\b|\\b(?:${nodeGraphShaderScriptBlendModePatternSource}|${nodeGraphShaderScriptScopeModePatternSource}|${nodeGraphShaderScriptScopeSyncPatternSource}|none|output\\d+)\\b|~|-?\\d+(?:\\.\\d+)?\\b|[=*]`,
+  `#[0-9a-fA-F]{3,8}\\b|\\b(?:dot[12]\\.(?:global|globals)\\.(?:size|brightness|blur|color)|(?:dot[12]|blend|video|scope)\\.[a-zA-Z_]\\w*|globalsize|global\\.size)\\b|\\b(?:${nodeGraphShaderScriptBlendModePatternSource}|${nodeGraphShaderScriptScopeModePatternSource}|${nodeGraphShaderScriptScopeSyncPatternSource}|none|output\\d+)\\b|~|-?\\d+(?:\\.\\d+)?\\b|[=*]`,
   "g",
 );
 const nodeGraphShaderScriptEditableTokenPattern = new RegExp(
@@ -53,15 +53,54 @@ function normalizeNodeGraphScopeShaderModuleDefaults(defaults = {}) {
   return Object.fromEntries(
     Object.entries(source)
       .filter(([key, value]) => key && typeof value === "string" && value.trim())
-      .map(([key, value]) => [String(key).slice(0, 80), String(value).slice(0, 20000)]),
+      .map(([key, value]) => [
+        String(key).slice(0, 80),
+        nodeGraphScopeShaderCanonicalModuleDefaultSource(String(key), String(value).slice(0, 20000)),
+      ]),
   );
+}
+
+function nodeGraphScopeShaderCanonicalModuleDefaultSource(type, source = "") {
+  const current = String(source || "").trim();
+  if (!current) {
+    return "";
+  }
+  const compact = compactNodeGraphShaderScriptSource(current);
+  const genericLegacy = compactNodeGraphShaderScriptSource(`video.input     = ~;
+scope.mode      = 1d_full;
+scope.sync      = inherit;
+scope.cycles    = 1.7639;
+scope.zoom      = 1.0;
+scope.length    = 1.0;
+scope.padding   = 0.04;
+scope.syncSpeed = 1.0;
+dot1.color      = dot1.global.color;
+dot1.size       = 1.0 * dot1.global.size;
+dot1.blur       = 0.00;
+dot1.brightness = 4.50;
+dot2.color      = dot2.global.color;
+dot2.size       = 1.0 * dot2.global.size;
+dot2.blur       = 0.00;
+dot2.brightness = 0.45;
+blend.mode      = laser;`);
+  const visualLegacy = compactNodeGraphShaderScriptSource(
+    genericLegacy.replace("scope.mode      = 1d_full;", "scope.mode      = x_y;"),
+  );
+  if (compact === genericLegacy || compact === visualLegacy) {
+    return nodeGraphScopeShaderDefaultSourceForType(type);
+  }
+  return current;
 }
 
 function loadNodeGraphScopeShaderModuleDefaults() {
   try {
-    return normalizeNodeGraphScopeShaderModuleDefaults(
-      JSON.parse(window.localStorage.getItem(nodeGraphScopeShaderModuleDefaultsStorageKey) || "{}"),
-    );
+    const stored = window.localStorage.getItem(nodeGraphScopeShaderModuleDefaultsStorageKey) || "{}";
+    const normalized = normalizeNodeGraphScopeShaderModuleDefaults(JSON.parse(stored));
+    const serialized = JSON.stringify(normalized);
+    if (serialized !== stored) {
+      window.localStorage.setItem(nodeGraphScopeShaderModuleDefaultsStorageKey, serialized);
+    }
+    return normalized;
   } catch {
     return {};
   }
@@ -82,9 +121,32 @@ void main() {
 }
 `;
 
-function nodeGraphShaderScriptBrightnessContrastDefaultFragment() {
+// Default dark-room bloom user prefs.
+// Keep these as plain numbers so the default shader can be tuned without
+// editing the GLSL body. Scene exposure brightens/dims the whole room; bloom
+// and glow only affect screen/wire light sources and their illumination.
+const nodeGraphDefaultScreenShaderPrefs = Object.freeze({
+  bloomAmount: 1.0,
+  cornerDarkness: 1.0,
+  glowAmount: 1.0,
+  roomBrightness: 1.0,
+  sceneExposure: 1.0,
+  screenLightAmount: 1.0,
+  warmGlassAmount: 1.0,
+});
+
+function nodeGraphShaderScriptDarkRoomBloomDefaultFragment() {
+  const prefs = nodeGraphDefaultScreenShaderPrefs;
   return `
 precision mediump float;
+
+const float NODE_SHADER_BLOOM_AMOUNT = ${Number(prefs.bloomAmount).toFixed(3)};
+const float NODE_SHADER_CORNER_DARKNESS = ${Number(prefs.cornerDarkness).toFixed(3)};
+const float NODE_SHADER_GLOW_AMOUNT = ${Number(prefs.glowAmount).toFixed(3)};
+const float NODE_SHADER_ROOM_BRIGHTNESS = ${Number(prefs.roomBrightness).toFixed(3)};
+const float NODE_SHADER_SCENE_EXPOSURE = ${Number(prefs.sceneExposure).toFixed(3)};
+const float NODE_SHADER_SCREEN_LIGHT_AMOUNT = ${Number(prefs.screenLightAmount).toFixed(3)};
+const float NODE_SHADER_WARM_GLASS_AMOUNT = ${Number(prefs.warmGlassAmount).toFixed(3)};
 
 uniform vec2 uResolution;
 uniform float uTime;
@@ -94,7 +156,7 @@ uniform vec4 uScopeRects[32];
 
 varying vec2 vUv;
 
-float rectDistance(vec2 p, vec4 rect) {
+float rectSdf(vec2 p, vec4 rect) {
   vec2 center = rect.xy + rect.zw * 0.5;
   vec2 q = abs(p - center) - rect.zw * 0.5;
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
@@ -104,60 +166,57 @@ float grain(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
 
-vec3 adjustBrightnessContrast(vec3 color, float brightness, float contrast) {
-  return (color - 0.5) * contrast + 0.5 + brightness;
+float softLight(float x) {
+  return x * x * (3.0 - 2.0 * x);
 }
 
 void main() {
   vec2 uv = vUv;
-  float vignette = smoothstep(0.14, 0.92, length((uv - 0.5) * vec2(1.28, 1.0)));
-  float glow = 0.0;
-  float core = 0.0;
+  vec2 roomUv = (uv - 0.5) * vec2(1.22, 1.0);
+  float roomFalloff = smoothstep(0.08, 0.82, length(roomUv));
+  float screenBloom = 0.0;
+  float screenCore = 0.0;
+  float screenEdge = 0.0;
 
   for (int i = 0; i < 32; i++) {
     if (i < uScopeCount) {
       vec4 rect = uScopeRects[i];
-      float d = rectDistance(uv, rect);
-      float halo = exp(-max(d, 0.0) * (42.0 + uZoom * 2.0));
-      float nearPane = smoothstep(0.020, -0.003, d);
-      float scan = 0.82 + 0.18 * sin((uv.y * uResolution.y * 1.2) + uTime * 2.2);
-      glow += halo * 0.26 + nearPane * scan * 0.085;
-      core += nearPane;
+      float d = rectSdf(uv, rect);
+      float outer = exp(-max(d, 0.0) * 26.0);
+      float mid = exp(-max(d, 0.0) * 78.0);
+      float pane = smoothstep(0.014, -0.003, d);
+      float edge = smoothstep(0.018, 0.000, abs(d));
+      float scan = 0.88 + 0.12 * sin((uv.y * uResolution.y * 1.35) + uTime * 2.0);
+      screenBloom += (outer * 0.30 + mid * 0.20 + pane * scan * 0.12) * NODE_SHADER_BLOOM_AMOUNT;
+      screenCore += pane;
+      screenEdge += edge;
     }
   }
 
-  glow = clamp(glow, 0.0, 1.0);
-  core = clamp(core, 0.0, 1.0);
-  float dust = (grain(gl_FragCoord.xy + uTime * 14.0) - 0.5) * 0.012;
-  vec3 trace = vec3(0.16, 0.62, 0.54) * glow + vec3(0.78, 0.96, 0.86) * core * 0.075;
-  vec3 room = vec3(0.002, 0.008, 0.010);
-  vec3 color = room + trace;
+  screenBloom = clamp(screenBloom, 0.0, 1.0);
+  screenCore = clamp(screenCore, 0.0, 1.0);
+  screenEdge = clamp(screenEdge, 0.0, 1.0);
 
-  // Settings: realtime safe. Tweak these two values first.
-  float brightness = 0.06;
-  float contrast = 1.18;
+  float dust = (grain(gl_FragCoord.xy + uTime * 9.0) - 0.5) * 0.010;
+  float cornerDark = (0.32 + roomFalloff * 0.34) * NODE_SHADER_CORNER_DARKNESS;
+  vec3 darkRoom = vec3(0.001, 0.004, 0.006) * (1.0 - roomFalloff * 0.35) * NODE_SHADER_ROOM_BRIGHTNESS;
+  vec3 cyanGlow = vec3(0.12, 0.62, 0.68) * softLight(screenBloom) * NODE_SHADER_GLOW_AMOUNT;
+  vec3 warmGlass = vec3(0.70, 0.48, 0.22) * screenEdge * 0.035 * NODE_SHADER_WARM_GLASS_AMOUNT;
+  vec3 screenLight = vec3(0.75, 0.95, 0.88) * screenCore * 0.045 * NODE_SHADER_SCREEN_LIGHT_AMOUNT;
+  vec3 color = (darkRoom + cyanGlow + warmGlass + screenLight) * NODE_SHADER_SCENE_EXPOSURE;
 
-  float alphaBase = 0.20;
-  float vignetteAmount = 0.16;
-  float glowAlphaCut = 0.08;
-  float alphaMin = 0.06;
-  float alphaMax = 0.42;
-
-  // Brightness and contrast only.
-  color = adjustBrightnessContrast(color, brightness, contrast);
-
-  float darkness = alphaBase + vignette * vignetteAmount;
-  float alpha = clamp(darkness - glow * glowAlphaCut + dust, alphaMin, alphaMax);
+  float alpha = clamp(cornerDark - screenBloom * 0.16 - screenCore * 0.045 + dust, 0.10, 0.62);
   gl_FragColor = vec4(color, alpha);
 }
 `.trim();
 }
 
-const nodeGraphShaderScriptDefaultFragmentSource = nodeGraphShaderScriptBrightnessContrastDefaultFragment();
+const nodeGraphShaderScriptDefaultFragmentSource = nodeGraphShaderScriptDarkRoomBloomDefaultFragment();
 
 function nodeGraphShaderScriptIsLegacyDefaultFragmentSource(source = "") {
   const text = String(source || "");
   return text.includes("function nodeGraphShaderScriptCameraPhosphorFragment")
+    || text.includes("function nodeGraphShaderScriptBrightnessContrastDefaultFragment")
     || text.includes("color = (color - 0.5) * contrast + 0.5 + brightness")
     || text.includes("float darkness = 0.20 + vignette * 0.16")
     || text.includes("color = adjustSaturation(color, saturation)")
@@ -176,7 +235,7 @@ const nodeGraphShaderScriptState = {
   dialogMode: "global",
   dialogDrag: null,
   editorFontSizePx: nodeGraphShaderScriptEditorFontSizeLimits.defaultPx,
-  enabled: false,
+  enabled: true,
   fragmentSource: nodeGraphShaderScriptDefaultFragmentSource.trim(),
   gl: null,
   lastError: "",
@@ -224,7 +283,7 @@ function loadNodeGraphShaderScriptState() {
     nodeGraphShaderScriptState.fragmentSource = nodeGraphShaderScriptDefaultFragmentSource.trim();
     nodeGraphShaderScriptState.editorFontSizePx = nodeGraphShaderScriptEditorFontSizeLimits.defaultPx;
     nodeGraphShaderScriptState.syntaxColors = { ...nodeGraphShaderScriptDefaultSyntaxColors };
-    nodeGraphShaderScriptState.enabled = false;
+    nodeGraphShaderScriptState.enabled = true;
   }
 }
 
@@ -531,7 +590,7 @@ function nodeGraphShaderScriptModeTokenKind(token) {
 function nodeGraphShaderScriptModeOptionsForKind(kind) {
   if (kind === "scope") {
     return {
-      label: "scope mode",
+      label: "display mode",
       options: nodeGraphShaderScriptScopeModes,
     };
   }
@@ -1044,10 +1103,7 @@ function positionNodeGraphShaderScriptDialog(left, top) {
   if (!dialog) {
     return;
   }
-  const margin = 12;
-  const rect = dialog.getBoundingClientRect();
-  const nextLeft = clampNodeSliderValue(Number(left) || 0, margin, Math.max(margin, window.innerWidth - rect.width - margin));
-  const nextTop = clampNodeSliderValue(Number(top) || 0, margin, Math.max(margin, window.innerHeight - rect.height - margin));
+  const { left: nextLeft, top: nextTop } = nodeGraphFloatingWindowPosition(dialog, left, top);
   dialog.style.left = `${nextLeft}px`;
   dialog.style.top = `${nextTop}px`;
   dialog.style.right = "auto";
@@ -1303,14 +1359,14 @@ function drawNodeGraphShaderScriptScopePreview() {
   const element = node?.id ? nodeGraphNodeElement(node.id) : null;
   const camera = typeof createNodeGraphUtilityCameraForElement === "function"
     ? createNodeGraphUtilityCameraForElement(nodeGraphShaderScriptUtilityCameraId(node?.id), element, {
-      name: node ? `Scope Shader: ${nodeGraphPatchNodeTitle(node)}` : "Scope Shader",
+      name: node ? `Display Shader: ${nodeGraphPatchNodeTitle(node)}` : "Display Shader",
       padding: nodeGraphShaderScriptUtilityCameraPadding,
     })
     : null;
   if (!camera || typeof renderNodeGraphCameraFeed !== "function") {
     surface.replaceChildren();
     if (status) {
-      status.textContent = "No scope selected.";
+      status.textContent = "No display selected.";
     }
     scheduleNodeGraphShaderScriptScopePreview();
     return;
@@ -1365,7 +1421,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
   const targetNode = scopeMode ? nodeGraphShaderScriptDialogScopeNode() : null;
   if (title) {
     title.textContent = scopeMode && targetNode
-      ? `Scope Shader: ${nodeGraphPatchNodeTitle(targetNode)}`
+      ? `Display Shader: ${nodeGraphPatchNodeTitle(targetNode)}`
       : "Shader Script";
   }
   const modeLabel = title?.closest?.(".node-shader-script-heading")?.querySelector?.("span");
@@ -1388,7 +1444,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
     applyButton.setAttribute("aria-pressed", String(Boolean(nodeGraphShaderScriptState.enabled && !scopeMode)));
     applyButton.setAttribute(
       "aria-label",
-      scopeMode ? "Save scope shader" : "Apply and enable live post processing shader"
+      scopeMode ? "Save display shader" : "Apply and enable live post processing shader"
     );
   }
   const previewPanel = document.getElementById("nodeShaderScriptPreviewPanel");
@@ -1621,10 +1677,7 @@ function openNodeGraphScopeShaderScript(nodeId) {
   if (!node) {
     return false;
   }
-  setNodeGraphShaderScriptDialogMode("scope", node.id);
-  setNodeGraphShaderScriptDialogVisible(true);
-  nodeGraphShaderScriptStatus("ready", false);
-  return true;
+  return false;
 }
 
 function disableNodeGraphShaderScriptLiveApply() {
@@ -1635,14 +1688,14 @@ function disableNodeGraphShaderScriptLiveApply() {
 function saveNodeGraphScopeShaderScriptFromDialog() {
   const targetNode = nodeGraphShaderScriptDialogScopeNode();
   if (!targetNode) {
-    nodeGraphShaderScriptStatus("scope module missing", true);
+    nodeGraphShaderScriptStatus("display module missing", true);
     return false;
   }
   const source = document.getElementById("nodeShaderScriptSource")?.value || "";
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const node = patch.nodes.find((candidate) => candidate.id === targetNode.id);
   if (!node) {
-    nodeGraphShaderScriptStatus("scope module missing", true);
+    nodeGraphShaderScriptStatus("display module missing", true);
     return false;
   }
   node.scopeShader = normalizeNodeGraphScopeShader({
@@ -1650,9 +1703,9 @@ function saveNodeGraphScopeShaderScriptFromDialog() {
     source,
   });
   commitNodeGraphPatch(patch, {
-    status: `scope shader saved for ${nodeGraphPatchNodeTitle(node)}`,
+    status: `display shader saved for ${nodeGraphPatchNodeTitle(node)}`,
   });
-  nodeGraphShaderScriptStatus("scope shader saved", false);
+  nodeGraphShaderScriptStatus("display shader saved", false);
   return true;
 }
 

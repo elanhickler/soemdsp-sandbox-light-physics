@@ -5,6 +5,103 @@ function createNodeGraphHighpassState() {
   };
 }
 
+function nodeGraphExternalButtonEventPulse(runtime, name) {
+  const events = runtime?.externalButtonEvents;
+  if (!(events instanceof Map)) {
+    return 0;
+  }
+  const remaining = Number(events.get(name)) || 0;
+  if (remaining <= 0) {
+    events.delete(name);
+    return 0;
+  }
+  events.set(name, remaining - 1);
+  return 1;
+}
+
+function nodeGraphWireBreakEventSample(runtime) {
+  const event = runtime?.wireBreakEvent;
+  if (!event || typeof event !== "object") {
+    return { Pulse: 0, Gate: 0 };
+  }
+  const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+  const gateSamples = Math.max(0, Number(event.gateSamples) || 0);
+  const output = {
+    Pulse: pulseSamples > 0 ? 1 : 0,
+    Gate: gateSamples > 0 ? 1 : 0,
+  };
+  event.pulseSamples = Math.max(0, pulseSamples - 1);
+  event.gateSamples = Math.max(0, gateSamples - 1);
+  return output;
+}
+
+function nodeGraphWireDisconnectEventSample(runtime) {
+  const event = runtime?.wireDisconnectEvent;
+  if (!event || typeof event !== "object") {
+    return { Pulse: 0 };
+  }
+  const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+  event.pulseSamples = Math.max(0, pulseSamples - 1);
+  return { Pulse: pulseSamples > 0 ? 1 : 0 };
+}
+
+function nodeGraphWireConnectEventSample(runtime) {
+  const event = runtime?.wireConnectEvent;
+  if (!event || typeof event !== "object") {
+    return { Pulse: 0 };
+  }
+  const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+  event.pulseSamples = Math.max(0, pulseSamples - 1);
+  return { Pulse: pulseSamples > 0 ? 1 : 0 };
+}
+
+function nodeGraphShootingStarExplosionEventSample(runtime) {
+  const event = runtime?.shootingStarExplosionEvent;
+  if (!event || typeof event !== "object") {
+    return { Pulse: 0 };
+  }
+  const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+  event.pulseSamples = Math.max(0, pulseSamples - 1);
+  return { Pulse: pulseSamples > 0 ? 1 : 0 };
+}
+
+function nodeGraphWindowReopenEventSample(runtime) {
+  const event = runtime?.windowReopenEvent;
+  if (!event || typeof event !== "object") {
+    return { Pulse: 0, Gate: 0, Sine: 0 };
+  }
+  const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+  const gateSamples = Math.max(0, Number(event.gateSamples) || 0);
+  const totalSamples = Math.max(1, Number(event.totalSamples) || gateSamples || 1);
+  const progress = gateSamples > 0 ? 1 - gateSamples / totalSamples : 1;
+  const sine = gateSamples > 0 ? Math.sin(Math.PI * Math.max(0, Math.min(1, progress))) : 0;
+  event.pulseSamples = Math.max(0, pulseSamples - 1);
+  event.gateSamples = Math.max(0, gateSamples - 1);
+  return {
+    Pulse: pulseSamples > 0 ? 1 : 0,
+    Gate: gateSamples > 0 ? 1 : 0,
+    Sine: sine,
+  };
+}
+
+function createNodeGraphPatchCommandState() {
+  return {
+    lastTrigger: 0,
+  };
+}
+
+function nodeGraphPatchCommandTriggerSample(state, trigger, threshold, command, nodeId) {
+  const safeTrigger = Number.isFinite(Number(trigger)) ? Number(trigger) : 0;
+  const safeThreshold = Number.isFinite(Number(threshold)) ? Number(threshold) : 0;
+  if (state.lastTrigger <= safeThreshold && safeTrigger > safeThreshold) {
+    if (typeof queueNodeGraphLivePatchCommand === "function") {
+      queueNodeGraphLivePatchCommand(command, nodeId);
+    }
+  }
+  state.lastTrigger = safeTrigger;
+  return 0;
+}
+
 function createNodeGraphLowpassState() {
   return {
     outputBuffer: 0,
@@ -28,6 +125,10 @@ function createNodeGraphOscResetState() {
   return {
     lastReset: 0,
   };
+}
+
+function nodeGraphIsPolyBlepOscillatorType(type) {
+  return nodeGraphModuleIsRealtimeOscillatorType(type);
 }
 
 function createNodeGraphGraphLfoState() {
@@ -84,10 +185,28 @@ function createNodeGraphDelayEffectState() {
   };
 }
 
+function createNodeGraphSabrinaReverbState() {
+  return {
+    nativeHandle: 0,
+    nativeParamKey: "",
+    nativeSampleRate: 0,
+  };
+}
+
 function createNodeGraphSampleHoldState() {
   return {
     held: 0,
     lastTrigger: 0,
+  };
+}
+
+function createNodeGraphSamplePlaybackState() {
+  return {
+    lastReset: 0,
+    phase: 0,
+    playing: false,
+    rangeKey: "",
+    sampleId: "",
   };
 }
 
@@ -354,6 +473,12 @@ function nodeGraphEvaluateModuleGroup(runtime, node, mixInput, sampleRate, frame
       return {};
     }
   }
+  groupRuntime.externalButtonEvents = runtime.externalButtonEvents;
+  groupRuntime.wireBreakEvent = runtime.wireBreakEvent;
+  groupRuntime.wireConnectEvent = runtime.wireConnectEvent;
+  groupRuntime.wireDisconnectEvent = runtime.wireDisconnectEvent;
+  groupRuntime.windowReopenEvent = runtime.windowReopenEvent;
+  groupRuntime.shootingStarExplosionEvent = runtime.shootingStarExplosionEvent;
   groupRuntime.externalGroupInputs = new Map(
     group.inputs.map((input) => [input.nodeId, mixInput(node.id, input.name)]),
   );
@@ -545,6 +670,16 @@ function nodeGraphSpeakerProtectionSample(value, runtime, nodeId) {
     runtime.lastSpeakerProtection = { nodeId, peak: runtime.speakerProtectionPeak };
   }
   return unsafe ? 0 : number;
+}
+
+function nodeGraphSoftClipperSample(input, center = 0, width = 2) {
+  const safeWidth = Math.max(0.000001, Math.abs(Number(width) || 2));
+  const safeCenter = Number(center) || 0;
+  const scaleX = 2 / safeWidth;
+  const shiftX = -1 - (scaleX * (safeCenter - 0.5 * safeWidth));
+  const scaleY = 1 / scaleX;
+  const shiftY = -shiftX * scaleY;
+  return shiftY + scaleY * Math.tanh(scaleX * (Number(input) || 0) + shiftX);
 }
 
 function nodeGraphOnePoleHighpassSample(state, input, frequency, sampleRate, runtime = null, nodeId = "") {
@@ -756,6 +891,37 @@ function nodeGraphClockSample(state, reset, phaseOffset, rate, duty, level, samp
   };
 }
 
+function nodeGraphTransportDivisionFactor(divisions) {
+  const division = Math.round(Number(divisions) || 0);
+  if (division > 0) {
+    return division + 1;
+  }
+  if (division < 0) {
+    return 1 / (Math.abs(division) + 1);
+  }
+  return 1;
+}
+
+function nodeGraphTransportSample(params, absoluteFrame, sampleRate, runtime = null, nodeId = "") {
+  const timing = normalizeNodeGraphPatchTiming(runtime?.timing);
+  const rate = Math.max(1, sampleRate || nodeGraphMvp.sampleRate || 44100);
+  const baseHz = Math.max(0, Number(timing.tempoBpm) || 120) / 60;
+  const divisionFactor = nodeGraphTransportDivisionFactor(params.divisions);
+  const frequency = baseHz * divisionFactor;
+  const amplitude = clampNodeSliderValue(
+    nodeGraphSafeFilterNumber(params.amplitude, runtime, nodeId, null, "transport amplitude"),
+    0,
+    1,
+  );
+  const frame = Math.max(0, Number(absoluteFrame) || 0);
+  const phase = frequency > 0 ? wrapNodeSliderValue((frame / rate) * frequency, 0, 1) : 0;
+  const high = phase < 0.5;
+  return {
+    "-1..1": high ? amplitude : -amplitude,
+    "0..1": high ? amplitude : 0,
+  };
+}
+
 function nodeGraphRandomClockNextUnit(state, nodeId, seed) {
   const seedKey = `${nodeId}:${Math.round(Number(seed) || 0)}`;
   if (state.seedKey !== seedKey) {
@@ -922,6 +1088,79 @@ function nodeGraphDelayEffectSample(state, input, params, sampleRate, runtime = 
     Out: (dry * (1 - mix) + state.wet * mix) * level,
     Wet: state.wet * level,
   };
+}
+
+function nodeGraphSabrinaReverbSample(state, leftInput, rightInput, params, sampleRate, runtime = null, nodeId = "") {
+  const dryLeft = nodeGraphSafeFilterNumber(leftInput, runtime, nodeId, null, "Sabrina left input");
+  const dryRight = nodeGraphSafeFilterNumber(rightInput, runtime, nodeId, null, "Sabrina right input");
+  const dryMono = (dryLeft + dryRight) * 0.5;
+  const dry = { "Left Dry": dryLeft, "Mono Dry": dryMono, "Right Dry": dryRight, "Left Mix": dryLeft, "Mono Mix": dryMono, "Right Mix": dryRight };
+  const native = runtime?.nativeSabrinaReverbReady ? runtime?.nativeSabrinaReverb : null;
+  if (!native?.soemdsp_sabrina_reverb_create || !native?.soemdsp_sabrina_reverb_process) {
+    return dry;
+  }
+  try {
+    const safeRate = Math.max(1, Math.round(Number(sampleRate) || 44100));
+    if (!state.nativeHandle || state.nativeSampleRate !== safeRate) {
+      if (state.nativeHandle && native.soemdsp_sabrina_reverb_destroy) {
+        native.soemdsp_sabrina_reverb_destroy(state.nativeHandle);
+      }
+      state.nativeHandle = native.soemdsp_sabrina_reverb_create(safeRate) || 0;
+      state.nativeSampleRate = safeRate;
+      state.nativeParamKey = "";
+    }
+    if (!state.nativeHandle) {
+      return dry;
+    }
+    const safeParams = {
+      delaySize: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.delaySize, runtime, nodeId, null, "Sabrina delay size"))),
+      diffusionAmount: Math.max(0, Math.min(0.98, nodeGraphSafeFilterNumber(params.diffusionAmount, runtime, nodeId, null, "Sabrina diffusion amount"))),
+      diffusionSize: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.diffusionSize, runtime, nodeId, null, "Sabrina diffusion size"))),
+      lfoAmplitude: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.lfoAmplitude, runtime, nodeId, null, "Sabrina lfo amplitude"))),
+      lfoBaseSpeed: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.lfoBaseSpeed, runtime, nodeId, null, "Sabrina lfo speed"))),
+      lfoVariation: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.lfoVariation, runtime, nodeId, null, "Sabrina lfo variation"))),
+      mix: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.mix, runtime, nodeId, null, "Sabrina mix"))),
+      recycle: Math.max(0, Math.min(0.98, nodeGraphSafeFilterNumber(params.recycle, runtime, nodeId, null, "Sabrina recycle"))),
+    };
+    const paramKey = [
+      safeParams.mix,
+      safeParams.diffusionSize,
+      safeParams.diffusionAmount,
+      safeParams.delaySize,
+      safeParams.recycle,
+      safeParams.lfoAmplitude,
+      safeParams.lfoBaseSpeed,
+      safeParams.lfoVariation,
+    ].map((value) => Math.round(value * 1000000)).join(":");
+    if (paramKey !== state.nativeParamKey && native.soemdsp_sabrina_reverb_set_params) {
+      state.nativeParamKey = paramKey;
+      native.soemdsp_sabrina_reverb_set_params(
+        state.nativeHandle,
+        safeParams.mix,
+        safeParams.diffusionSize,
+        safeParams.diffusionAmount,
+        safeParams.delaySize,
+        safeParams.recycle,
+        safeParams.lfoAmplitude,
+        safeParams.lfoBaseSpeed,
+        safeParams.lfoVariation,
+      );
+    }
+    native.soemdsp_sabrina_reverb_process(state.nativeHandle, dryLeft, dryRight);
+    const mixLeft = nodeGraphSafeFilterNumber(native.soemdsp_sabrina_reverb_left?.(state.nativeHandle), runtime, nodeId, null, "Sabrina mix left");
+    const mixRight = nodeGraphSafeFilterNumber(native.soemdsp_sabrina_reverb_right?.(state.nativeHandle), runtime, nodeId, null, "Sabrina mix right");
+    return { "Left Dry": dryLeft, "Mono Dry": dryMono, "Right Dry": dryRight, "Left Mix": mixLeft, "Mono Mix": (mixLeft + mixRight) * 0.5, "Right Mix": mixRight };
+  } catch (error) {
+    if (runtime) {
+      runtime.nativeSabrinaReverbReady = false;
+    }
+    if (state.nativeHandle && native.soemdsp_sabrina_reverb_destroy) {
+      native.soemdsp_sabrina_reverb_destroy(state.nativeHandle);
+    }
+    state.nativeHandle = 0;
+    state.nativeParamKey = "";
+    return dry;
+  }
 }
 
 function nodeGraphSampleHoldSample(state, input, trigger, threshold, runtime = null, nodeId = "") {
@@ -1615,6 +1854,133 @@ function nodeGraphFlowerChildEnvelopeFollowerSample(state, input, params, sample
   return state.out;
 }
 
+function nodeGraphSampleChannelAt(sample, channelIndex, frameIndex) {
+  const channel = sample?.channelData?.[channelIndex] || sample?.samples;
+  if (!channel?.length) {
+    return 0;
+  }
+  const maxIndex = channel.length - 1;
+  const index = clampNodeSliderValue(Number(frameIndex) || 0, 0, maxIndex);
+  const low = Math.floor(index);
+  const high = Math.min(maxIndex, low + 1);
+  const frac = index - low;
+  return (Number(channel[low]) || 0) + ((Number(channel[high]) || 0) - (Number(channel[low]) || 0)) * frac;
+}
+
+function nodeGraphSampleStereoAt(sample, frameIndex) {
+  const left = nodeGraphSampleChannelAt(sample, 0, frameIndex);
+  const right = sample?.channelData?.length > 1
+    ? nodeGraphSampleChannelAt(sample, 1, frameIndex)
+    : left;
+  return {
+    Left: left,
+    Mono: (left + right) * 0.5,
+    Out: (left + right) * 0.5,
+    Right: right,
+  };
+}
+
+function nodeGraphAudioPlayerSample(runtime, node, nodeId, readInput, readParam, sampleRate) {
+  const state = runtime.samplePlaybackStates.get(nodeId) || createNodeGraphSamplePlaybackState();
+  runtime.samplePlaybackStates.set(nodeId, state);
+  const sampleId = normalizeNodeGraphSampleId(node.sample?.id);
+  const sample = runtime.samples?.get?.(sampleId);
+  const frames = Math.max(0, Number(sample?.frames) || sample?.samples?.length || sample?.channelData?.[0]?.length || 0);
+  if (!sample || frames <= 1) {
+    return { Left: 0, Mono: 0, Out: 0, Phase: 0, Right: 0 };
+  }
+  const start = clampNodeSliderValue(readParam("start", 0), 0, 1);
+  const end = clampNodeSliderValue(readParam("end", 1), 0, 1);
+  const collapsedRange = Math.abs(end - start) <= 0.000001;
+  const startPhase = collapsedRange ? 0 : Math.min(start, end);
+  const endPhase = collapsedRange ? 1 : Math.max(start, end);
+  const span = Math.max(0.000001, endPhase - startPhase);
+  const rangeKey = `${startPhase}:${endPhase}`;
+  if (state.sampleId !== sampleId) {
+    state.phase = startPhase;
+    state.completed = false;
+    state.sampleId = sampleId;
+  } else if (state.rangeKey !== rangeKey) {
+    const currentPhase = Number(state.phase);
+    if (!Number.isFinite(currentPhase) || currentPhase < startPhase || currentPhase > endPhase) {
+      state.phase = startPhase;
+    }
+    state.completed = false;
+  }
+  if (state.rangeKey !== rangeKey) {
+    state.rangeKey = rangeKey;
+  }
+  const transportFallback = Object.hasOwn(node?.params || {}, "transport")
+    ? 4
+    : ((Number(node?.params?.loop) || 0) >= 0.5 ? 4 : 0);
+  const transportMode = Math.max(0, Math.min(4, Math.round(readParam("transport", transportFallback))));
+  const transportReset = transportMode <= 0;
+  const transportStopped = transportMode === 1;
+  const transportPlayOnce = transportMode === 3;
+  const transportLooping = transportMode >= 4;
+  if (state.transportMode !== transportMode) {
+    state.completed = false;
+    state.transportMode = transportMode;
+  }
+  const reset = readInput("Reset");
+  const resetEdge = state.lastReset <= 0 && reset > 0;
+  if (resetEdge || transportReset || transportStopped) {
+    state.phase = startPhase;
+    state.completed = false;
+  }
+  state.playing = (transportPlayOnce || transportLooping) && !state.completed;
+  state.lastReset = reset;
+
+  const phaseConnected = runtime.inputConnections?.has?.(nodeGraphInputKey(nodeId, "Phase"));
+  const speedInput = readInput("Speed");
+  const speed = readParam("speed", 1) + speedInput;
+  const sampleRateRatio = (Number(sample.sampleRate) || sampleRate || 44100) / Math.max(1, sampleRate || 44100);
+  const increment = (speed * sampleRateRatio) / frames;
+  const phase = phaseConnected
+    ? clampNodeSliderValue(readInput("Phase"), 0, 1)
+    : clampNodeSliderValue(state.phase, 0, 1);
+  const boundedPhase = phase < startPhase || phase > endPhase
+    ? startPhase
+    : phase;
+  const frameIndex = boundedPhase * (frames - 1);
+  const stereo = nodeGraphSampleStereoAt(sample, frameIndex);
+  const level = readParam("level", 1);
+  let done = 0;
+  if (!phaseConnected && state.playing) {
+    const nextPhase = boundedPhase + increment;
+    if (transportLooping) {
+      const normalizedNext = (nextPhase - startPhase) / span;
+      done = normalizedNext < 0 || normalizedNext >= 1 ? 1 : 0;
+      state.phase = startPhase + wrapNodeSliderValue((nextPhase - startPhase) / span, 0, 1) * span;
+    } else if (speed >= 0 && nextPhase >= endPhase) {
+      state.phase = endPhase;
+      state.completed = true;
+      state.playing = false;
+      done = 1;
+    } else if (speed < 0 && nextPhase <= startPhase) {
+      state.phase = startPhase;
+      state.completed = true;
+      state.playing = false;
+      done = 1;
+    } else {
+      state.phase = clampNodeSliderValue(nextPhase, startPhase, endPhase);
+    }
+  } else if (!phaseConnected && (transportReset || transportStopped)) {
+    state.phase = startPhase;
+  } else {
+    state.phase = boundedPhase;
+  }
+  const outputActive = state.playing;
+  return {
+    Left: outputActive ? stereo.Left * level : 0,
+    Mono: outputActive ? stereo.Mono * level : 0,
+    Out: outputActive ? stereo.Mono * level : 0,
+    Phase: boundedPhase,
+    Right: outputActive ? stereo.Right * level : 0,
+    Trigger: done,
+  };
+}
+
 function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
   const frameValues = new Map();
   const mixInput = (nodeId, port = "In") => (runtime.inputConnections.get(`${nodeId}.${port}`) || []).reduce(
@@ -1700,7 +2066,84 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         Out: ((left + right) * 0.5) * level,
         Right: right * level,
       };
-    } else if (node?.type === "osc" || node?.type === "fbPolyBlepOsc") {
+    } else if (node?.type === "audioPlayer") {
+      const readParam = (key, fallback) => readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        key,
+        fallback,
+        frame,
+        frames,
+        frameValues,
+      );
+      value = nodeGraphAudioPlayerSample(
+        runtime,
+        node,
+        nodeId,
+        (port) => mixInput(nodeId, port),
+        readParam,
+        sampleRate,
+      );
+    } else if (node?.type === "sineWavetable") {
+      const phase = runtime.phases.get(nodeId) || 0;
+      const phaseOffset = nodeGraphPhaseRadians(
+        readNodeGraphLiveEffectiveParam(
+          runtime,
+          node,
+          "phase",
+          0,
+          frame,
+          frames,
+          frameValues,
+        ),
+      );
+      const baseFrequency = readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "freq",
+        440,
+        frame,
+        frames,
+        frameValues,
+      );
+      const freqInput = nodeGraphSafeFilterNumber(
+        mixInput(nodeId, "Freq"),
+        runtime,
+        nodeId,
+        null,
+        "sin/cos freq input",
+      );
+      const ampInput = nodeGraphSafeFilterNumber(
+        mixInput(nodeId, "Amplitude"),
+        runtime,
+        nodeId,
+        null,
+        "sin/cos amplitude input",
+      );
+      const pitchInput = clampNodeSliderValue(nodeGraphSafeFilterNumber(
+        mixInput(nodeId, "0.1V/Oct"),
+        runtime,
+        nodeId,
+        null,
+        "sin/cos 0.1v input",
+      ), -1, 1);
+      const pitchedFrequency = Math.max(0, (baseFrequency + freqInput) * (2 ** (pitchInput / 0.1)));
+      const amplitude = Math.max(0, readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "amp",
+        1,
+        frame,
+        frames,
+        frameValues,
+      ) + ampInput);
+      const phaseIncrement = pitchedFrequency / sampleRate;
+      value = nodeGraphSineCosWavetableSample(phase + phaseOffset, pitchedFrequency, amplitude, sampleRate);
+      runtime.phases.set(
+        nodeId,
+        wrapNodeSliderValue(phase + Math.PI * 2 * phaseIncrement, 0, Math.PI * 2),
+      );
+    } else if (nodeGraphIsPolyBlepOscillatorType(node?.type)) {
       const resetState = runtime.oscResetStates.get(nodeId) || createNodeGraphOscResetState();
       runtime.oscResetStates.set(nodeId, resetState);
       const resetValue = nodeGraphSafeFilterNumber(
@@ -1783,9 +2226,10 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       value = {
         Out: selected,
         Saw: sampleOscillator(runtime, `${nodeId}:saw`, phase + phaseOffset, phaseIncrement, 0) * level,
-        Square: sampleOscillator(runtime, `${nodeId}:square`, phase + phaseOffset, phaseIncrement, 1) * level,
-        Tri: sampleOscillator(runtime, `${nodeId}:tri`, phase + phaseOffset, phaseIncrement, 2) * level,
-        Sine: sampleOscillator(runtime, `${nodeId}:sine`, phase + phaseOffset, phaseIncrement, 3) * level,
+        Ramp: sampleOscillator(runtime, `${nodeId}:ramp`, phase + phaseOffset, phaseIncrement, 1) * level,
+        Square: sampleOscillator(runtime, `${nodeId}:square`, phase + phaseOffset, phaseIncrement, 2) * level,
+        Tri: sampleOscillator(runtime, `${nodeId}:tri`, phase + phaseOffset, phaseIncrement, 3) * level,
+        Sine: sampleOscillator(runtime, `${nodeId}:sine`, phase + phaseOffset, phaseIncrement, 4) * level,
         "Wave Out": selected,
         Noise: selected,
       };
@@ -2038,6 +2482,18 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         readNodeGraphLiveEffectiveParam(runtime, node, "rate", 2, frame, frames, frameValues),
         readNodeGraphLiveEffectiveParam(runtime, node, "duty", 0.5, frame, frames, frameValues),
         readNodeGraphLiveEffectiveParam(runtime, node, "level", 1, frame, frames, frameValues),
+        sampleRate,
+        runtime,
+        nodeId,
+      );
+    } else if (node?.type === "transport") {
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      value = nodeGraphTransportSample(
+        {
+          amplitude: read("amplitude", 1),
+          divisions: read("divisions", 0),
+        },
+        Number.isFinite(runtime.absoluteFrame) ? runtime.absoluteFrame : frame,
         sampleRate,
         runtime,
         nodeId,
@@ -2319,6 +2775,35 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         X: x,
         Y: velocity,
       };
+    } else if (node?.type === "buttonEvents") {
+      value = {
+        Click: nodeGraphExternalButtonEventPulse(runtime, "click"),
+        Hover: nodeGraphExternalButtonEventPulse(runtime, "hover"),
+        Down: nodeGraphExternalButtonEventPulse(runtime, "down"),
+        Up: nodeGraphExternalButtonEventPulse(runtime, "up"),
+        Enter: nodeGraphExternalButtonEventPulse(runtime, "enter"),
+        Leave: nodeGraphExternalButtonEventPulse(runtime, "leave"),
+      };
+    } else if (node?.type === "wireBreak") {
+      value = nodeGraphWireBreakEventSample(runtime);
+    } else if (node?.type === "wireConnect") {
+      value = nodeGraphWireConnectEventSample(runtime);
+    } else if (node?.type === "wireDisconnect") {
+      value = nodeGraphWireDisconnectEventSample(runtime);
+    } else if (node?.type === "windowReopen") {
+      value = nodeGraphWindowReopenEventSample(runtime);
+    } else if (node?.type === "shootingStarExplosion") {
+      value = nodeGraphShootingStarExplosionEventSample(runtime);
+    } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
+      const state = runtime.patchCommandStates.get(nodeId) || createNodeGraphPatchCommandState();
+      runtime.patchCommandStates.set(nodeId, state);
+      value = nodeGraphPatchCommandTriggerSample(
+        state,
+        mixInput(nodeId, "Trigger"),
+        readNodeGraphLiveEffectiveParam(runtime, node, "threshold", 0, frame, frames, frameValues),
+        node?.type === "previousPatch" ? "previousPatch" : "nextPatch",
+        nodeId,
+      );
     } else if (node?.type === "macroControls") {
       const resetActive = hasInput(nodeId, "Reset") && Number(mixInput(nodeId, "Reset")) > 0;
       const macros = Array.isArray(nodeGraphMvp?.macroControls) ? nodeGraphMvp.macroControls : [];
@@ -2371,6 +2856,36 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frames,
         frameValues,
       );
+    } else if (node?.type === "softClipper") {
+      value = nodeGraphSoftClipperSample(
+        mixInput(nodeId),
+        readNodeGraphLiveEffectiveParam(runtime, node, "center", 0, frame, frames, frameValues),
+        readNodeGraphLiveEffectiveParam(runtime, node, "width", 2, frame, frames, frameValues),
+      );
+    } else if (node?.type === "rotate3dTo2d") {
+      const angleX = readNodeGraphLiveEffectiveParam(runtime, node, "rotateX", 0, frame, frames, frameValues) * Math.PI * 2;
+      const angleY = readNodeGraphLiveEffectiveParam(runtime, node, "rotateY", 0, frame, frames, frameValues) * Math.PI * 2;
+      const angleZ = readNodeGraphLiveEffectiveParam(runtime, node, "rotateZ", 0, frame, frames, frameValues) * Math.PI * 2;
+      let x = nodeGraphSafeFilterNumber(mixInput(nodeId, "X"), runtime, nodeId, null, "rotation 3d x input");
+      let y = nodeGraphSafeFilterNumber(mixInput(nodeId, "Y"), runtime, nodeId, null, "rotation 3d y input");
+      let z = nodeGraphSafeFilterNumber(mixInput(nodeId, "Z"), runtime, nodeId, null, "rotation 3d z input");
+      const sinX = Math.sin(angleX);
+      const cosX = Math.cos(angleX);
+      const nextY = y * cosX - z * sinX;
+      const nextZ = y * sinX + z * cosX;
+      y = nextY;
+      z = nextZ;
+      const sinY = Math.sin(angleY);
+      const cosY = Math.cos(angleY);
+      const nextX = x * cosY + z * sinY;
+      z = -x * sinY + z * cosY;
+      x = nextX;
+      const sinZ = Math.sin(angleZ);
+      const cosZ = Math.cos(angleZ);
+      value = {
+        X: nodeGraphSafeFilterNumber(x * cosZ - y * sinZ, runtime, nodeId, null, "rotation 3d x output"),
+        Y: nodeGraphSafeFilterNumber(x * sinZ + y * cosZ, runtime, nodeId, null, "rotation 3d y output"),
+      };
     } else if (node?.type === "valueSlider") {
       const offset = readNodeGraphLiveEffectiveParam(
         runtime,
@@ -2382,6 +2897,17 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frameValues,
       );
       value = { Bias: offset, Out: offset, offset };
+    } else if (node?.type === "macroKnob" || node?.type === "bipolarKnob") {
+      const knobValue = readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "value",
+        0,
+        frame,
+        frames,
+        frameValues,
+      );
+      value = { Out: knobValue, value: knobValue };
     } else if (node?.type === "highpass") {
       const state = runtime.highpassStates.get(nodeId) || createNodeGraphHighpassState();
       runtime.highpassStates.set(nodeId, state);
@@ -2479,6 +3005,30 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
           modRate: read("modRate", 0.1),
           modVariation: read("modVariation", 0),
           time: read("time", 0.18),
+        },
+        sampleRate,
+        runtime,
+        nodeId,
+      );
+    } else if (node?.type === "reverbEffect") {
+      const state = runtime.reverbEffectStates.get(nodeId) || createNodeGraphSabrinaReverbState();
+      runtime.reverbEffectStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      const leftInput = mixInput(nodeId, "Left");
+      const rightInput = hasInput(nodeId, "Right") ? mixInput(nodeId, "Right") : leftInput;
+      value = nodeGraphSabrinaReverbSample(
+        state,
+        leftInput,
+        rightInput,
+        {
+          delaySize: read("delaySize", 0.02),
+          diffusionAmount: read("diffusionAmount", 0.70),
+          diffusionSize: read("diffusionSize", 0.35),
+          lfoAmplitude: read("lfoAmplitude", 0.07),
+          lfoBaseSpeed: read("lfoBaseSpeed", 0.83),
+          lfoVariation: read("lfoVariation", 0.001),
+          mix: read("mix", 0.43),
+          recycle: read("recycle", 0.70),
         },
         sampleRate,
         runtime,

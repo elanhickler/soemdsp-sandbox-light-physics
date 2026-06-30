@@ -6,8 +6,9 @@ import binascii
 import json
 import mimetypes
 import os
-import urllib.error
-import urllib.request
+import re
+import subprocess
+import tempfile
 from datetime import datetime, timezone
 from email.utils import formatdate
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -20,8 +21,24 @@ PUBLIC = ROOT / "public"
 DEFAULT_PRESET = PUBLIC / "presets" / "default.json"
 DEFAULT_UI_SETTINGS = PUBLIC / "presets" / "useruisettings.json"
 DEFAULT_UI_SETTINGS_SCRIPT = PUBLIC / "presets" / "useruisettings.js"
+NATIVE_MODULES = ROOT / "native_modules"
+SAVED_PATCHES = ROOT / "saved-patches"
 MAX_PRESET_BYTES = 512 * 1024
-MAX_YOUTUBE_UPLOAD_JSON_BYTES = 256 * 1024 * 1024
+MAX_AUDIO_FILE_BYTES = 128 * 1024 * 1024
+MAX_AUDIO_UPLOAD_JSON_BYTES = 192 * 1024 * 1024
+MAX_AUDIO_TRANSCODE_BYTES = 256 * 1024 * 1024
+MAX_AUDIO_SEARCH_VISITS = 120000
+SUPPORTED_AUDIO_FILE_SUFFIXES = {
+    ".aac",
+    ".flac",
+    ".m4a",
+    ".mp3",
+    ".oga",
+    ".ogg",
+    ".opus",
+    ".wav",
+    ".wave",
+}
 DEFAULT_SOEMDSP_ROOT = ROOT.parent / "soemdsp"
 DEFAULT_MANIFEST = (
     DEFAULT_SOEMDSP_ROOT / "runtime_dsp_object_bound_wav_resync_demo.manifest.json"
@@ -29,7 +46,11 @@ DEFAULT_MANIFEST = (
 STATIC_MIME_TYPES = {
     ".css": "text/css",
     ".js": "application/javascript",
+    ".wasm": "application/wasm",
 }
+NATIVE_MODULE_HEADER_RE = re.compile(
+    r"^\s*//\s*soemdsp-native-([a-zA-Z0-9_-]+)\s*:\s*(.*?)\s*$"
+)
 # Mirrors soemdsp::meta::MetaType defaults from ../soemdsp/include/soemdsp/meta.hpp.
 NODE_METADATA_KIND_TEMPLATES = {
     "decimal": {
@@ -37,9 +58,10 @@ NODE_METADATA_KIND_TEMPLATES = {
         "label": "Decimal",
         "linearSmoothing": True,
         "max": 1,
+        "maxDigits": 4,
         "mid": 0.5,
         "min": 0,
-        "step": 0.01,
+        "step": 0.0001,
         "unit": "",
     },
     "decimal_bipolar": {
@@ -146,13 +168,13 @@ NODE_METADATA_KIND_TEMPLATES = {
         "unit": "idx",
     },
     "waveform": {
-        "choices": ["Saw", "Square", "Triangle", "Sine", "Noise"],
+        "choices": ["Saw", "Ramp", "Square", "Triangle", "Sine", "Noise"],
         "def": 0,
         "displayChoices": True,
         "divideChoicesVisibly": True,
         "label": "Waveform",
         "linearSmoothing": False,
-        "max": 4,
+        "max": 5,
         "mid": 2,
         "min": 0,
         "step": 1,
@@ -215,6 +237,8 @@ NODE_METADATA_KIND_TEMPLATES = {
 
 for kind, template in NODE_METADATA_KIND_TEMPLATES.items():
     template.setdefault("maxDigits", 5 if kind == "frequency" else 3)
+    template.setdefault("sliderCurve", "skew" if template.get("nonlinearSlider") else "linear")
+    template.setdefault("curveAmount", 0)
 
 
 def ui_settings_script_text(payload: dict) -> str:
@@ -263,6 +287,9 @@ class SandboxServer(BaseHTTPRequestHandler):
         if parsed.path == "/api/presets/default":
             self.save_default_preset()
             return
+        if parsed.path == "/api/patches/save":
+            self.save_demo_patch()
+            return
         if parsed.path == "/api/presets/useruisettings":
             self.save_default_ui_settings()
             return
@@ -275,8 +302,14 @@ class SandboxServer(BaseHTTPRequestHandler):
         if parsed.path == "/api/open-path":
             self.open_local_path()
             return
-        if parsed.path == "/api/youtube/upload":
-            self.upload_youtube_video()
+        if parsed.path == "/api/audio-file/data-url":
+            self.audio_file_data_url()
+            return
+        if parsed.path == "/api/audio-file/find":
+            self.audio_file_find()
+            return
+        if parsed.path == "/api/audio-file/transcode-data-url":
+            self.audio_file_transcode_data_url()
             return
         self.reject_mutation_method()
 
@@ -306,6 +339,11 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.serve_public(relative, send_body=send_body)
             return
 
+        if parsed.path.startswith("/native_modules/"):
+            relative = parsed.path.removeprefix("/native_modules/")
+            self.serve_native_module_file(relative, send_body=send_body)
+            return
+
         if parsed.path == "/api/manifest":
             if not send_body:
                 self.send_error(405, "Method not allowed")
@@ -313,11 +351,32 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.serve_manifest()
             return
 
+        if parsed.path == "/api/native-modules":
+            if not send_body:
+                self.send_error(405, "Method not allowed")
+                return
+            self.serve_native_modules()
+            return
+
         if parsed.path == "/api/node-metadata-kinds":
             if not send_body:
                 self.send_error(405, "Method not allowed")
                 return
             self.serve_node_metadata_kinds()
+            return
+
+        if parsed.path == "/api/patches":
+            if not send_body:
+                self.send_error(405, "Method not allowed")
+                return
+            self.serve_demo_patches()
+            return
+
+        if parsed.path == "/api/patches/file":
+            if not send_body:
+                self.send_error(405, "Method not allowed")
+                return
+            self.serve_demo_patch_file(parsed.query)
             return
 
         if parsed.path == "/artifact":
@@ -332,6 +391,53 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.send_error(403, "Forbidden")
             return
         self.serve_file(path, send_body=send_body)
+
+    def serve_native_module_file(self, relative: str, send_body: bool) -> None:
+        path = (NATIVE_MODULES / unquote(relative)).resolve()
+        if not path.is_relative_to(NATIVE_MODULES):
+            self.send_error(403, "Forbidden")
+            return
+        self.serve_file(path, send_body=send_body)
+
+    def native_module_entry_from_source(self, source_path: Path) -> dict[str, object] | None:
+        headers: dict[str, str] = {}
+        try:
+            for line in source_path.read_text(encoding="utf-8").splitlines()[:48]:
+                match = NATIVE_MODULE_HEADER_RE.match(line)
+                if match:
+                    headers[match.group(1).lower()] = match.group(2).strip()
+        except OSError:
+            return None
+        name = headers.get("module") or headers.get("name") or source_path.parent.name
+        target_type = headers.get("target") or name
+        label = headers.get("label") or name
+        wasm_path = source_path.with_suffix(".wasm")
+        relative_source = source_path.relative_to(ROOT).as_posix()
+        relative_wasm = wasm_path.relative_to(ROOT).as_posix()
+        return {
+            "name": name,
+            "label": label,
+            "targetType": target_type,
+            "kind": headers.get("kind") or "",
+            "source": relative_source,
+            "sourceUrl": f"/{relative_source}",
+            "wasm": relative_wasm,
+            "wasmUrl": f"/{relative_wasm}",
+            "wasmAvailable": wasm_path.exists(),
+        }
+
+    def serve_native_modules(self) -> None:
+        modules = []
+        if NATIVE_MODULES.exists():
+            for source_path in sorted(NATIVE_MODULES.glob("*/*.cpp")):
+                entry = self.native_module_entry_from_source(source_path)
+                if entry:
+                    modules.append(entry)
+        self.send_json({
+            "ok": True,
+            "root": str(NATIVE_MODULES.resolve()),
+            "modules": modules,
+        })
 
     def serve_manifest(self) -> None:
         manifest_path = self.manifest_path.resolve()
@@ -395,30 +501,7 @@ class SandboxServer(BaseHTTPRequestHandler):
         if payload is None:
             return
 
-        patch_format = payload.get("format")
-        if not isinstance(patch_format, dict):
-            self.send_json(
-                {"ok": False, "error": "preset missing format object"},
-                status=400,
-            )
-            return
-        if patch_format.get("kind") != "soemdsp-sandbox-node-patch":
-            self.send_json(
-                {"ok": False, "error": "preset format kind mismatch"},
-                status=400,
-            )
-            return
-        if patch_format.get("version") != 1:
-            self.send_json(
-                {"ok": False, "error": "preset format version mismatch"},
-                status=400,
-            )
-            return
-        if not isinstance(payload.get("nodes"), list):
-            self.send_json(
-                {"ok": False, "error": "preset missing nodes array"},
-                status=400,
-            )
+        if not self.validate_node_patch_payload(payload, "preset"):
             return
 
         DEFAULT_PRESET.parent.mkdir(parents=True, exist_ok=True)
@@ -433,6 +516,171 @@ class SandboxServer(BaseHTTPRequestHandler):
                 "bytes": DEFAULT_PRESET.stat().st_size,
             },
         )
+
+    def serve_demo_patches(self) -> None:
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        bank_filter_enabled = "bank" in params
+        requested_bank = self.normalized_patch_bank(params.get("bank", ["0"])[0])
+        patches = []
+        legacy_program = 0
+        if SAVED_PATCHES.exists():
+            for path in sorted(
+                SAVED_PATCHES.glob("*.json"),
+                key=lambda candidate: candidate.stat().st_mtime,
+                reverse=True,
+            ):
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                    info = payload.get("info") if isinstance(payload, dict) else {}
+                    stat = path.stat()
+                except (OSError, json.JSONDecodeError):
+                    continue
+                bank = self.patch_bank_for_file(path, info)
+                if bank_filter_enabled and bank != requested_bank:
+                    continue
+                program = self.patch_program_for_file(path, info, legacy_program)
+                legacy_program += 1
+                if program < 0 or program > 127:
+                    continue
+                patches.append(
+                    {
+                        "filename": path.name,
+                        "bank": bank,
+                        "bankName": str(info.get("bankName") or ""),
+                        "name": str(info.get("name") or path.stem),
+                        "program": program,
+                        "tags": str(info.get("tags") or ""),
+                        "bytes": stat.st_size,
+                        "modifiedUtc": datetime.fromtimestamp(
+                            stat.st_mtime,
+                            timezone.utc,
+                        )
+                        .replace(microsecond=0)
+                        .isoformat()
+                        .replace("+00:00", "Z"),
+                    }
+                )
+        patches.sort(key=lambda patch: (int(patch["bank"]), int(patch["program"]), str(patch["name"]).lower()))
+        self.send_json({"ok": True, "bank": requested_bank, "patches": patches, "path": str(SAVED_PATCHES)})
+
+    def serve_demo_patch_file(self, query: str) -> None:
+        params = parse_qs(query)
+        filename = params.get("name", [""])[0]
+        if not filename or filename != Path(filename).name or not filename.endswith(".json"):
+            self.send_json({"ok": False, "error": "invalid patch filename"}, status=400)
+            return
+        path = (SAVED_PATCHES / filename).resolve()
+        if not path.is_relative_to(SAVED_PATCHES.resolve()):
+            self.send_json({"ok": False, "error": "invalid patch path"}, status=400)
+            return
+        if not path.exists():
+            self.send_json({"ok": False, "error": "patch not found"}, status=404)
+            return
+        self.serve_file(path)
+
+    def save_demo_patch(self) -> None:
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        payload = self.read_json_preset_payload("patch")
+        if payload is None:
+            return
+        if not self.validate_node_patch_payload(payload, "patch"):
+            return
+
+        info = payload.get("info") if isinstance(payload.get("info"), dict) else {}
+        bank = self.normalized_patch_bank(params.get("bank", [info.get("bank", 0)])[0])
+        program = self.normalized_patch_program(params.get("program", [info.get("program", 0)])[0])
+        info["bank"] = bank
+        info["program"] = program
+        payload["info"] = info
+        title = str(info.get("name") or "soemdsp-patch")
+        tag = str(info.get("tags") or "").strip()
+        safe_title = self.safe_filename_part("-".join(part for part in (title, tag) if part))
+        filename = f"bank{bank:03d}-program{program:03d}-{safe_title or 'soemdsp-patch'}.json"
+        try:
+            SAVED_PATCHES.mkdir(parents=True, exist_ok=True)
+            for existing in SAVED_PATCHES.glob(f"bank{bank:03d}-program{program:03d}-*.json"):
+                existing.unlink(missing_ok=True)
+            path = SAVED_PATCHES / filename
+            path.write_text(
+                f"{json.dumps(payload, indent=2, sort_keys=False)}\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            self.send_json({"ok": False, "error": f"patch save failed: {exc}"}, status=500)
+            return
+
+        self.send_json(
+            {
+                "ok": True,
+                "bank": bank,
+                "filename": filename,
+                "path": str(path),
+                "program": program,
+                "bytes": path.stat().st_size,
+            },
+        )
+
+    def normalized_patch_bank(self, value: object) -> int:
+        try:
+            number = round(float(value))
+        except (TypeError, ValueError):
+            return 0
+        return max(0, min(127, number))
+
+    def normalized_patch_program(self, value: object) -> int:
+        try:
+            number = round(float(value))
+        except (TypeError, ValueError):
+            return 0
+        return max(0, min(127, number))
+
+    def patch_bank_for_file(self, path: Path, info: dict) -> int:
+        if "bank" in info:
+            return self.normalized_patch_bank(info.get("bank"))
+        match = re.match(r"bank(\d{3})-program\d{3}-", path.name)
+        return self.normalized_patch_bank(match.group(1)) if match else 0
+
+    def patch_program_for_file(self, path: Path, info: dict, fallback: int) -> int:
+        if "program" in info:
+            return self.normalized_patch_program(info.get("program"))
+        match = re.match(r"bank\d{3}-program(\d{3})-", path.name)
+        return self.normalized_patch_program(match.group(1)) if match else self.normalized_patch_program(fallback)
+
+    def validate_node_patch_payload(self, payload: dict, label: str) -> bool:
+        patch_format = payload.get("format")
+        if not isinstance(patch_format, dict):
+            self.send_json(
+                {"ok": False, "error": f"{label} missing format object"},
+                status=400,
+            )
+            return False
+        if patch_format.get("kind") != "soemdsp-sandbox-node-patch":
+            self.send_json(
+                {"ok": False, "error": f"{label} format kind mismatch"},
+                status=400,
+            )
+            return False
+        if patch_format.get("version") != 1:
+            self.send_json(
+                {"ok": False, "error": f"{label} format version mismatch"},
+                status=400,
+            )
+            return False
+        if not isinstance(payload.get("nodes"), list):
+            self.send_json(
+                {"ok": False, "error": f"{label} missing nodes array"},
+                status=400,
+            )
+            return False
+        return True
+
+    def safe_filename_part(self, value: str) -> str:
+        return "".join(
+            character.lower() if character.isalnum() else "-"
+            for character in value.strip()
+        ).strip("-")[:80]
 
     def save_default_ui_settings(self) -> None:
         payload = self.read_json_preset_payload("ui settings")
@@ -610,128 +858,269 @@ class SandboxServer(BaseHTTPRequestHandler):
 
         self.send_json({"ok": True, "path": str(target)})
 
-    def upload_youtube_video(self) -> None:
+    def audio_file_data_url(self) -> None:
         payload = self.read_json_payload(
-            "youtube upload",
-            max_bytes=MAX_YOUTUBE_UPLOAD_JSON_BYTES,
+            "audio file",
+            max_bytes=16 * 1024,
         )
         if payload is None:
             return
 
-        access_token = os.environ.get("SOEMDSP_YOUTUBE_ACCESS_TOKEN", "").strip()
-        if not access_token:
+        source_path = payload.get("path")
+        if not isinstance(source_path, str) or not source_path.strip():
+            self.send_json({"ok": False, "error": "path is required"}, status=400)
+            return
+
+        try:
+            target = Path(source_path).expanduser().resolve()
+        except OSError as exc:
+            self.send_json({"ok": False, "error": f"path resolve failed: {exc}"}, status=400)
+            return
+
+        home = Path.home().resolve()
+        if not target.is_relative_to(home):
+            self.send_json({"ok": False, "error": "audio path must stay inside the user home folder"}, status=403)
+            return
+        if not target.exists() or not target.is_file():
+            self.send_json({"ok": False, "error": "audio file does not exist", "path": str(target)}, status=404)
+            return
+        if target.suffix.lower() not in SUPPORTED_AUDIO_FILE_SUFFIXES:
+            self.send_json({"ok": False, "error": "unsupported audio file extension"}, status=400)
+            return
+        try:
+            size = target.stat().st_size
+        except OSError as exc:
+            self.send_json({"ok": False, "error": f"audio file stat failed: {exc}"}, status=500)
+            return
+        if size <= 0:
+            self.send_json({"ok": False, "error": "audio file is empty"}, status=400)
+            return
+        if size > MAX_AUDIO_FILE_BYTES:
+            self.send_json({"ok": False, "error": "audio file is too large"}, status=413)
+            return
+
+        transcoded = self.transcode_audio_file_to_wav(target)
+        if transcoded is not None:
             self.send_json(
                 {
-                    "ok": False,
-                    "error": "youtube access token missing",
-                    "setup": "Set SOEMDSP_YOUTUBE_ACCESS_TOKEN to a valid YouTube Data API OAuth access token, then restart the sandbox server.",
+                    "ok": True,
+                    "dataUrl": f"data:audio/wav;base64,{base64.b64encode(transcoded).decode('ascii')}",
+                    "name": f"{target.stem}.wav",
+                    "originalName": target.name,
+                    "path": str(target),
+                    "size": len(transcoded),
+                    "sourceSize": size,
+                    "transcoded": True,
                 },
-                status=501,
             )
             return
 
-        title = str(payload.get("title") or "").strip()
-        description = str(payload.get("description") or "").strip()
-        mime_type = str(payload.get("mimeType") or "video/mp4").strip() or "video/mp4"
-        video_base64 = payload.get("videoBase64")
-        if not title:
-            self.send_json({"ok": False, "error": "title is required"}, status=400)
-            return
-        if not isinstance(video_base64, str) or not video_base64.strip():
-            self.send_json({"ok": False, "error": "videoBase64 is required"}, status=400)
-            return
-
         try:
-            video_bytes = base64.b64decode(video_base64, validate=True)
-        except (ValueError, binascii.Error) as exc:
-            self.send_json({"ok": False, "error": f"videoBase64 decode failed: {exc}"}, status=400)
-            return
-        if not video_bytes:
-            self.send_json({"ok": False, "error": "video is empty"}, status=400)
-            return
-
-        metadata = {
-            "snippet": {
-                "title": title,
-                "description": description,
-                "categoryId": "10",
-            },
-            "status": {
-                "privacyStatus": "private",
-                "selfDeclaredMadeForKids": False,
-            },
-        }
-        metadata_body = json.dumps(metadata).encode("utf-8")
-        start_request = urllib.request.Request(
-            "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
-            data=metadata_body,
-            method="POST",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json; charset=UTF-8",
-                "Content-Length": str(len(metadata_body)),
-                "X-Upload-Content-Type": mime_type,
-                "X-Upload-Content-Length": str(len(video_bytes)),
-            },
-        )
-        try:
-            with urllib.request.urlopen(start_request, timeout=30) as response:
-                upload_url = response.headers.get("Location")
-        except urllib.error.HTTPError as exc:
-            self.send_json(self.youtube_error_payload(exc, "youtube upload session failed"), status=502)
-            return
+            content = target.read_bytes()
         except OSError as exc:
-            self.send_json({"ok": False, "error": f"youtube upload session failed: {exc}"}, status=502)
+            self.send_json({"ok": False, "error": f"audio file read failed: {exc}"}, status=500)
             return
 
-        if not upload_url:
-            self.send_json({"ok": False, "error": "youtube upload session did not return a Location header"}, status=502)
-            return
-
-        upload_request = urllib.request.Request(
-            upload_url,
-            data=video_bytes,
-            method="PUT",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": mime_type,
-                "Content-Length": str(len(video_bytes)),
-            },
-        )
-        try:
-            with urllib.request.urlopen(upload_request, timeout=300) as response:
-                response_payload = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            self.send_json(self.youtube_error_payload(exc, "youtube video upload failed"), status=502)
-            return
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            self.send_json({"ok": False, "error": f"youtube video upload failed: {exc}"}, status=502)
-            return
-
-        video_id = str(response_payload.get("id") or "")
+        mime_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
         self.send_json(
             {
                 "ok": True,
-                "videoId": video_id,
-                "url": f"https://youtu.be/{video_id}" if video_id else "",
-                "privacyStatus": "private",
+                "dataUrl": f"data:{mime_type};base64,{base64.b64encode(content).decode('ascii')}",
+                "name": target.name,
+                "path": str(target),
+                "size": size,
             },
         )
 
-    def youtube_error_payload(self, error: urllib.error.HTTPError, label: str) -> dict:
-        try:
-            body = error.read().decode("utf-8")
-        except OSError:
-            body = ""
-        try:
-            details = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            details = body
-        return {
-            "ok": False,
-            "error": f"{label}: HTTP {error.code}",
-            "details": details,
+    def audio_file_find(self) -> None:
+        payload = self.read_json_payload(
+            "audio file search",
+            max_bytes=24 * 1024,
+        )
+        if payload is None:
+            return
+
+        root_text = payload.get("root")
+        if not isinstance(root_text, str) or not root_text.strip():
+            self.send_json({"ok": False, "error": "search path is required"}, status=400)
+            return
+
+        names = payload.get("names")
+        if not isinstance(names, list):
+            names = [payload.get("name")]
+        target_names = {
+            str(name).strip().lower()
+            for name in names
+            if isinstance(name, str) and str(name).strip()
         }
+        if not target_names:
+            self.send_json({"ok": False, "error": "audio file name is required"}, status=400)
+            return
+
+        try:
+            root = Path(root_text).expanduser().resolve()
+        except OSError as exc:
+            self.send_json({"ok": False, "error": f"search path resolve failed: {exc}"}, status=400)
+            return
+
+        home = Path.home().resolve()
+        if not root.is_relative_to(home):
+            self.send_json({"ok": False, "error": "search path must stay inside the user home folder"}, status=403)
+            return
+        if not root.exists():
+            self.send_json({"ok": False, "error": "search path does not exist", "path": str(root)}, status=404)
+            return
+
+        roots = [root] if root.is_dir() else [root.parent]
+        if root.is_file() and self.audio_search_candidate_matches(root, target_names):
+            self.send_json({"ok": True, "path": str(root), "name": root.name, "visited": 1})
+            return
+
+        visited = 0
+        first_suffix_match: Path | None = None
+        for search_root in roots:
+            try:
+                iterator = search_root.rglob("*")
+                for candidate in iterator:
+                    visited += 1
+                    if visited > MAX_AUDIO_SEARCH_VISITS:
+                        self.send_json(
+                            {
+                                "ok": False,
+                                "error": f"audio search stopped after {MAX_AUDIO_SEARCH_VISITS} files; choose a narrower folder",
+                                "path": str(root),
+                            },
+                            status=413,
+                        )
+                        return
+                    if not candidate.is_file() or candidate.suffix.lower() not in SUPPORTED_AUDIO_FILE_SUFFIXES:
+                        continue
+                    if self.audio_search_candidate_matches(candidate, target_names):
+                        self.send_json({"ok": True, "path": str(candidate), "name": candidate.name, "visited": visited})
+                        return
+                    if first_suffix_match is None and candidate.name.lower() in target_names:
+                        first_suffix_match = candidate
+            except OSError as exc:
+                self.send_json({"ok": False, "error": f"audio search failed: {exc}", "path": str(search_root)}, status=500)
+                return
+
+        if first_suffix_match:
+            self.send_json({"ok": True, "path": str(first_suffix_match), "name": first_suffix_match.name, "visited": visited})
+            return
+        self.send_json(
+            {
+                "ok": False,
+                "error": "audio file not found under search path",
+                "path": str(root),
+                "names": sorted(target_names),
+                "visited": visited,
+            },
+            status=404,
+        )
+
+    def audio_search_candidate_matches(self, candidate: Path, target_names: set[str]) -> bool:
+        name = candidate.name.lower()
+        stem = candidate.stem.lower()
+        if name in target_names or stem in target_names:
+            return True
+        for target in target_names:
+            if not target:
+                continue
+            target_path_name = Path(target).name.lower()
+            target_stem = Path(target_path_name).stem.lower()
+            if name == target_path_name or stem == target_stem:
+                return True
+            if name.endswith(target_path_name) or stem.endswith(target_stem):
+                return True
+        return False
+
+    def audio_file_transcode_data_url(self) -> None:
+        payload = self.read_json_payload(
+            "audio upload",
+            max_bytes=MAX_AUDIO_UPLOAD_JSON_BYTES,
+        )
+        if payload is None:
+            return
+
+        name = str(payload.get("name") or "audio").strip()[:128]
+        data_url = payload.get("dataUrl")
+        if not isinstance(data_url, str) or "," not in data_url:
+            self.send_json({"ok": False, "error": "audio data URL is required"}, status=400)
+            return
+        suffix = Path(name).suffix.lower() or ".audio"
+        if suffix not in SUPPORTED_AUDIO_FILE_SUFFIXES:
+            self.send_json({"ok": False, "error": "unsupported audio file extension"}, status=400)
+            return
+        try:
+            content = base64.b64decode(data_url.split(",", 1)[1], validate=True)
+        except (binascii.Error, ValueError):
+            self.send_json({"ok": False, "error": "audio data URL base64 decode failed"}, status=400)
+            return
+        if not content:
+            self.send_json({"ok": False, "error": "audio file is empty"}, status=400)
+            return
+        if len(content) > MAX_AUDIO_FILE_BYTES:
+            self.send_json({"ok": False, "error": "audio file is too large"}, status=413)
+            return
+
+        with tempfile.TemporaryDirectory(prefix="soemdsp-audio-upload-") as directory:
+            source = Path(directory) / f"source{suffix}"
+            try:
+                source.write_bytes(content)
+            except OSError as exc:
+                self.send_json({"ok": False, "error": f"audio upload write failed: {exc}"}, status=500)
+                return
+            transcoded = self.transcode_audio_file_to_wav(source)
+
+        if transcoded is None:
+            self.send_json({"ok": False, "error": "audio transcode failed"}, status=422)
+            return
+        self.send_json(
+            {
+                "ok": True,
+                "dataUrl": f"data:audio/wav;base64,{base64.b64encode(transcoded).decode('ascii')}",
+                "name": f"{Path(name).stem or 'audio'}.wav",
+                "originalName": name,
+                "size": len(transcoded),
+                "sourceSize": len(content),
+                "transcoded": True,
+            },
+        )
+
+    def transcode_audio_file_to_wav(self, target: Path) -> bytes | None:
+        with tempfile.TemporaryDirectory(prefix="soemdsp-audio-") as directory:
+            output = Path(directory) / "audio.wav"
+            command = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(target),
+                "-vn",
+                "-acodec",
+                "pcm_s16le",
+                str(output),
+            ]
+            try:
+                completed = subprocess.run(
+                    command,
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    timeout=90,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                return None
+            if completed.returncode != 0 or not output.exists():
+                return None
+            try:
+                if output.stat().st_size > MAX_AUDIO_TRANSCODE_BYTES:
+                    return None
+                return output.read_bytes()
+            except OSError:
+                return None
 
     def read_json_preset_payload(self, label: str) -> dict | None:
         return self.read_json_payload(label, max_bytes=MAX_PRESET_BYTES)

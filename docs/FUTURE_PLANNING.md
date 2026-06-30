@@ -41,3 +41,11 @@ Future visual-to-sound routing should decide:
 - Which visual values are stable enough to expose as graph outputs.
 - How renderer-rate values are resampled, smoothed, and BADVAL-guarded for audio-rate DSP.
 - Whether visual modules expose both sink inputs and source outputs, or whether a dedicated bridge module owns the boundary.
+
+## Dropdown Window Buttons
+
+Next version: consider turning Command Center buttons into dropdowns instead of opening separate floating windows for every tool.
+
+The current floating-window direction is good enough for this release. The next pass can consolidate window bodies into button-owned dropdown panels, because the panels are already starting to look and behave like compact modules.
+
+Keep this as a next-version cleanup, not a release blocker.

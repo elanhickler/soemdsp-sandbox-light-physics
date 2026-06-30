@@ -9,6 +9,62 @@ const nodeLiveRaptEllipticQuarterbandSos = Object.freeze([
   Object.freeze([1, -1.3980241837651683, 1, 1, -1.5032624176850438, 0.9843747059042128]),
 ]);
 
+function nodeLiveIsPolyBlepOscillatorType(type) {
+  return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc" || type === "sineWavetable";
+}
+
+const nodeLiveSineWavetableSize = 2048;
+const nodeLiveSineWavetable = new Float32Array(nodeLiveSineWavetableSize + 1);
+for (let index = 0; index <= nodeLiveSineWavetableSize; index += 1) {
+  nodeLiveSineWavetable[index] = Math.sin((index / nodeLiveSineWavetableSize) * Math.PI * 2);
+}
+
+function nodeLiveClamp01(value) {
+  return Math.max(0, Math.min(1, Number(value) || 0));
+}
+
+function nodeLiveSmoothStep01(value) {
+  const t = nodeLiveClamp01(value);
+  return t * t * (3 - 2 * t);
+}
+
+function nodeLiveNyquistFadeAmplitude(frequency, sampleRate) {
+  const safeRate = Math.max(1, Number(sampleRate) || 44100);
+  const nyquist = safeRate * 0.5;
+  const safeFrequency = Math.max(0, Number(frequency) || 0);
+  const fadeStart = Math.min(20000, nyquist * 0.9);
+  if (safeFrequency <= fadeStart) {
+    return 1;
+  }
+  if (safeFrequency >= nyquist) {
+    return 0;
+  }
+  const fadeProgress = (safeFrequency - fadeStart) / Math.max(1, nyquist - fadeStart);
+  return 1 - nodeLiveSmoothStep01(fadeProgress);
+}
+
+function nodeLiveWrap01(value) {
+  return ((Number(value) || 0) % 1 + 1) % 1;
+}
+
+function nodeLiveSineWavetableLookup(phaseRadians) {
+  const cycle = nodeLiveWrap01((Number(phaseRadians) || 0) / (Math.PI * 2));
+  const position = cycle * nodeLiveSineWavetableSize;
+  const index = Math.floor(position);
+  const fraction = position - index;
+  const a = nodeLiveSineWavetable[index] || 0;
+  const b = nodeLiveSineWavetable[index + 1] || nodeLiveSineWavetable[0] || 0;
+  return a + (b - a) * fraction;
+}
+
+function nodeLiveSineCosWavetableSample(phaseRadians, frequency, amplitude, sampleRate) {
+  const level = Math.max(0, Number(amplitude) || 0) * nodeLiveNyquistFadeAmplitude(frequency, sampleRate);
+  return {
+    cos: nodeLiveSineWavetableLookup((Number(phaseRadians) || 0) + Math.PI * 0.5) * level,
+    sin: nodeLiveSineWavetableLookup(phaseRadians) * level,
+  };
+}
+
 class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -17,16 +73,31 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.lastBadValueReason = "";
     this.lastBadValueNodeId = "";
     this.lastBadValueSource = "";
+    this.audioPlayerMeterNodeId = "";
+    this.audioPlayerMeterPeak = 0;
+    this.audioPlayerMeterPhase = 0;
+    this.audioPlayerMeterReason = "";
+    this.audioPlayerMeterSamples = 0;
+    this.audioPlayerNodeIds = [];
     this.inputMeterPeak = 0;
     this.inputMeterSamples = 0;
     this.inputMeterSquareSum = 0;
+    this.maxBlockProcessMs = 0;
+    this.maxBlockBudgetRatio = 0;
     this.meterClipCount = 0;
     this.meterCounter = 0;
+    this.meterOverrunCount = 0;
     this.meterPeak = 0;
     this.meterProtectionMuteCount = 0;
     this.meterSamples = 0;
     this.meterSquareSum = 0;
     this.macroControls = new Array(10).fill(0);
+    this.externalButtonEvents = new Map();
+    this.wireBreakEvent = { pulseSamples: 0, gateSamples: 0 };
+    this.wireConnectEvent = { pulseSamples: 0 };
+    this.wireDisconnectEvent = { pulseSamples: 0 };
+    this.windowReopenEvent = { pulseSamples: 0, gateSamples: 0, totalSamples: 0 };
+    this.shootingStarExplosionEvent = { pulseSamples: 0 };
     this.pitchModWheelSignal = { mod: 0, pitch: 0 };
     this.midiKeyboardGatePulseSamples = 0;
     this.midiKeyboardSignal = null;
@@ -51,6 +122,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.delayedTriggerStates = new Map();
     this.delayEffectStates = new Map();
     this.expAdsrStates = new Map();
+    this.ellipsoidOutputFrames = new Map();
+    this.nativeEllipsoid = null;
+    this.nativeEllipsoidReady = false;
+    this.nativeSabrinaReverb = null;
+    this.nativeSabrinaReverbReady = false;
     this.fractalBrownianNoiseStates = new Map();
     this.graphInputConnections = new Map();
     this.gpuAdditiveQueues = new Map();
@@ -70,19 +146,26 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.oscillatorStoppedSamples = new Map();
     this.outputNode = "output";
     this.patchFingerprint = "";
+    this.patchCommandStates = new Map();
     this.phases = new Map();
     this.pluckEnvelopeStates = new Map();
     this.planSerial = 0;
     this.randomClockStates = new Map();
+    this.reverbEffectStates = new Map();
     this.sampleHoldStates = new Map();
+    this.samplePlaybackStates = new Map();
+    this.samples = new Map();
     this.randomWalkStates = new Map();
     this.sessionId = 0;
     this.scopeBuffers = new Map();
+    this.scopeCaptureNodeIds = [];
     this.scopeCounter = 0;
+    this.scopeSampleStride = 1;
     this.slewLimiterStates = new Map();
     this.smoothers = new Map();
     this.spiralStates = new Map();
     this.stepSequencerStates = new Map();
+    this.timing = this.normalizePatchTiming();
     this.triggerCounterStates = new Map();
     this.triggerDividerStates = new Map();
     this.triangleStates = new Map();
@@ -202,13 +285,32 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.visualControlStates = visualState.states;
   }
 
+  destroySabrinaReverbState(state) {
+    if (!state?.nativeHandle || !this.nativeSabrinaReverb?.soemdsp_sabrina_reverb_destroy) {
+      return;
+    }
+    this.nativeSabrinaReverb.soemdsp_sabrina_reverb_destroy(state.nativeHandle);
+    state.nativeHandle = 0;
+  }
+
   handleMessage(message) {
     if (message.type === "stop") {
+      if (message.sessionId !== this.sessionId || message.planSerial !== this.planSerial) {
+        return;
+      }
       this.clearPlan();
       return;
     }
     if (message.type === "setPlan") {
       this.setPlan(message.plan, message);
+      return;
+    }
+    if (message.type === "setConnections") {
+      this.setConnections(message.plan || message, message);
+      return;
+    }
+    if (message.type === "setNativeModuleWasm") {
+      this.setNativeModuleWasm(message);
       return;
     }
     if (message.type === "setParams") {
@@ -229,6 +331,83 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     if (message.type === "setPitchModWheelSignal") {
       this.setPitchModWheelSignal(message.signal);
+      return;
+    }
+    if (message.type === "externalButtonEvent") {
+      this.setExternalButtonEvent(message.name);
+      return;
+    }
+    if (message.type === "wireBreakEvent") {
+      this.setWireBreakEvent();
+      return;
+    }
+    if (message.type === "wireConnectEvent") {
+      this.setWireConnectEvent();
+      return;
+    }
+    if (message.type === "wireDisconnectEvent") {
+      this.setWireDisconnectEvent();
+      return;
+    }
+    if (message.type === "windowReopenEvent") {
+      this.setWindowReopenEvent();
+      return;
+    }
+    if (message.type === "shootingStarExplosionEvent") {
+      this.setShootingStarExplosionEvent();
+      return;
+    }
+  }
+
+  async setNativeModuleWasm(message) {
+    if (!(message.bytes instanceof ArrayBuffer)) {
+      return;
+    }
+    const name = String(message.name || "");
+    const targetType = String(message.targetType || "");
+    try {
+      const result = await WebAssembly.instantiate(message.bytes, {});
+      const exports = result?.instance?.exports || null;
+      if (name === "ellipsoid" || targetType === "ellipsoid") {
+        this.nativeEllipsoid = exports;
+        this.nativeEllipsoidReady = Boolean(this.nativeEllipsoid?.soemdsp_ellipsoid_vector_sample);
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "ellipsoid",
+          status: this.nativeEllipsoidReady ? "ready" : "missing exports",
+        });
+        return;
+      }
+      if (name === "sabrina_reverb" || targetType === "reverbEffect") {
+        for (const state of this.reverbEffectStates.values()) {
+          this.destroySabrinaReverbState(state);
+        }
+        this.nativeSabrinaReverb = exports;
+        this.nativeSabrinaReverbReady = Boolean(
+          this.nativeSabrinaReverb?.soemdsp_sabrina_reverb_create &&
+          this.nativeSabrinaReverb?.soemdsp_sabrina_reverb_process &&
+          this.nativeSabrinaReverb?.soemdsp_sabrina_reverb_left &&
+          this.nativeSabrinaReverb?.soemdsp_sabrina_reverb_right,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "sabrina_reverb",
+          status: this.nativeSabrinaReverbReady ? "ready" : "missing exports",
+        });
+        return;
+      }
+      this.port.postMessage({
+        type: "nativeModuleStatus",
+        name,
+        status: "unsupported native module",
+      });
+    } catch (error) {
+      this.port.postMessage({
+        type: "nativeModuleStatus",
+        name,
+        status: "error",
+        message: String(error?.message || error || "native module load failed"),
+      });
     }
   }
 
@@ -249,6 +428,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.meterSamples = 0;
     this.meterSquareSum = 0;
     this.macroControls = new Array(10).fill(0);
+    this.externalButtonEvents = new Map();
+    this.wireBreakEvent = { pulseSamples: 0, gateSamples: 0 };
+    this.wireConnectEvent = { pulseSamples: 0 };
+    this.wireDisconnectEvent = { pulseSamples: 0 };
+    this.windowReopenEvent = { pulseSamples: 0, gateSamples: 0, totalSamples: 0 };
     this.pitchModWheelSignal = { mod: 0, pitch: 0 };
     this.midiKeyboardGatePulseSamples = 0;
     this.midiKeyboardSignal = null;
@@ -258,6 +442,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nodes = new Map();
     this.order = [];
     this.patchFingerprint = "";
+    this.patchCommandStates = new Map();
     this.engineSampleRate = sampleRate;
     this.hostSampleRate = sampleRate;
     this.oversamplingRatio = 1;
@@ -285,8 +470,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.graphLfoStates = new Map();
     this.pluckEnvelopeStates = new Map();
     this.randomClockStates = new Map();
+    for (const state of this.reverbEffectStates.values()) {
+      this.destroySabrinaReverbState(state);
+    }
+    this.reverbEffectStates = new Map();
     this.randomWalkStates = new Map();
     this.sampleHoldStates = new Map();
+    this.samplePlaybackStates = new Map();
+    this.samples = new Map();
     this.slewLimiterStates = new Map();
     this.scopeBuffers = new Map();
     this.scopeCounter = 0;
@@ -415,15 +606,21 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.sessionId = message.sessionId || 0;
     this.gpuAdditiveQueues = new Map();
     this.gpuAdditiveUnderruns = 0;
+    this.autoSmoothingSeconds = 0.016;
     this.hostSampleRate = Math.max(1, Number(message.sampleRate) || sampleRate || 44100);
     const requestedRatio = Number(message.oversamplingRatio) ||
       ((Number(message.engineSampleRate) || this.hostSampleRate) / this.hostSampleRate);
     this.oversamplingRatio = Math.max(1, Math.min(4, Math.round(requestedRatio) || 1));
     this.engineSampleRate = this.hostSampleRate * this.oversamplingRatio;
+    this.timing = this.normalizePatchTiming(plan?.timing);
     if (this.raptEllipticDecimatorRatio !== this.oversamplingRatio) {
       this.resetRaptEllipticDecimator();
     }
     const nodes = Array.isArray(plan?.nodes) ? plan.nodes : [];
+    this.audioPlayerNodeIds = nodes
+      .filter((node) => node?.type === "audioPlayer")
+      .map((node) => String(node.id || ""))
+      .filter(Boolean);
     const ids = new Set(nodes.map((node) => node.id));
     this.nodes = new Map(nodes.map((node) => [node.id, {
       id: node.id,
@@ -432,17 +629,31 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       moduleGroupPlan: node.moduleGroupPlan || null,
       paramMeta: node.paramMeta || {},
       params: node.params || {},
+      sample: node.sample || null,
       type: node.type,
     }]));
+    this.samples = new Map((Array.isArray(plan?.samples) ? plan.samples : []).map((sample) => [
+      String(sample?.id || ""),
+      {
+        ...sample,
+        channelData: (Array.isArray(sample?.channelData) ? sample.channelData : []).map((channel) =>
+          channel instanceof Float32Array ? channel : new Float32Array(channel || [])),
+        samples: sample?.samples instanceof Float32Array ? sample.samples : new Float32Array(sample?.samples || []),
+      },
+    ]).filter(([id]) => id));
     this.order = Array.isArray(plan?.order) ? [...plan.order] : [...ids];
     this.outputNode = plan?.outputNode || "output";
+    this.scopeCaptureNodeIds = Array.isArray(plan?.scopeCaptureNodeIds)
+      ? plan.scopeCaptureNodeIds.map((nodeId) => String(nodeId || "")).filter(Boolean)
+      : [];
     this.visualSinks = (Array.isArray(plan?.visualSinks) ? plan.visualSinks : []).map((sink) => ({
       ...sink,
       bufferedInputs: Array.isArray(sink?.bufferedInputs) ? [...sink.bufferedInputs] : [],
       inputs: (Array.isArray(sink?.inputs) ? sink.inputs : []).map((input) => ({ ...input })),
     }));
     this.syncVisualInputBuffers();
-    this.inputConnections = this.buildInputConnectionMap(plan?.connections, ids);
+    const newInputConnections = this.buildInputConnectionMap(plan?.connections, ids);
+    this.inputConnections = newInputConnections;
     this.graphInputConnections = this.buildGraphInputConnectionMap(plan?.graphConnections, ids);
     this.modulationConnections = this.buildModulationConnectionMap(plan?.modulations, ids);
     this.resetVisualControls();
@@ -452,16 +663,16 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.nodeOutputs.set(id, 0);
       }
       const node = this.nodes.get(id);
-      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc") && !this.phases.has(id)) {
+      if (nodeLiveIsPolyBlepOscillatorType(node?.type) && !this.phases.has(id)) {
         this.phases.set(id, 0);
       }
-      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc") && !this.oscResetStates.has(id)) {
+      if (nodeLiveIsPolyBlepOscillatorType(node?.type) && !this.oscResetStates.has(id)) {
         this.oscResetStates.set(id, this.createOscResetState());
       }
-      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc") && !this.triangleStates.has(id)) {
+      if (nodeLiveIsPolyBlepOscillatorType(node?.type) && !this.triangleStates.has(id)) {
         this.triangleStates.set(id, 0);
       }
-      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc" || node?.type === "noise") && !this.noiseSeeds.has(id)) {
+      if ((nodeLiveIsPolyBlepOscillatorType(node?.type) || node?.type === "noise") && !this.noiseSeeds.has(id)) {
         this.noiseSeeds.set(id, this.stableSeed(id));
       }
       if (node?.type === "stereoNoise") {
@@ -508,11 +719,20 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "delayEffect" && !this.delayEffectStates.has(id)) {
         this.delayEffectStates.set(id, this.createDelayEffectState());
       }
+      if (node?.type === "reverbEffect" && !this.reverbEffectStates.has(id)) {
+        this.reverbEffectStates.set(id, this.createSabrinaReverbState());
+      }
       if (node?.type === "randomClock" && !this.randomClockStates.has(id)) {
         this.randomClockStates.set(id, this.createRandomClockState());
       }
       if (node?.type === "sampleHold" && !this.sampleHoldStates.has(id)) {
         this.sampleHoldStates.set(id, this.createSampleHoldState());
+      }
+      if ((node?.type === "samplePlayer" || node?.type === "sampleLooper" || node?.type === "audioPlayer") && !this.samplePlaybackStates.has(id)) {
+        this.samplePlaybackStates.set(id, this.createSamplePlaybackState());
+      }
+      if ((node?.type === "nextPatch" || node?.type === "previousPatch") && !this.patchCommandStates.has(id)) {
+        this.patchCommandStates.set(id, this.createPatchCommandState());
       }
       if (node?.type === "slewLimiter" && !this.slewLimiterStates.has(id)) {
         this.slewLimiterStates.set(id, this.createSlewLimiterState());
@@ -684,9 +904,25 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.delayEffectStates.delete(id);
       }
     }
+    for (const id of [...this.reverbEffectStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroySabrinaReverbState(this.reverbEffectStates.get(id));
+        this.reverbEffectStates.delete(id);
+      }
+    }
     for (const id of [...this.sampleHoldStates.keys()]) {
       if (!ids.has(id)) {
         this.sampleHoldStates.delete(id);
+      }
+    }
+    for (const id of [...this.samplePlaybackStates.keys()]) {
+      if (!ids.has(id)) {
+        this.samplePlaybackStates.delete(id);
+      }
+    }
+    for (const id of [...this.patchCommandStates.keys()]) {
+      if (!ids.has(id)) {
+        this.patchCommandStates.delete(id);
       }
     }
     for (const id of [...this.slewLimiterStates.keys()]) {
@@ -797,11 +1033,33 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     });
   }
 
+  setConnections(plan, message = {}) {
+    this.patchFingerprint = message.patchFingerprint || plan?.patchFingerprint || this.patchFingerprint || "";
+    this.planSerial = message.planSerial || this.planSerial || 0;
+    this.sessionId = message.sessionId || this.sessionId || 0;
+    this.outputNode = plan?.outputNode || this.outputNode || "output";
+    this.scopeCaptureNodeIds = Array.isArray(plan?.scopeCaptureNodeIds)
+      ? plan.scopeCaptureNodeIds.map((nodeId) => String(nodeId || "")).filter(Boolean)
+      : this.scopeCaptureNodeIds;
+    this.visualSinks = (Array.isArray(plan?.visualSinks) ? plan.visualSinks : this.visualSinks).map((sink) => ({
+      ...sink,
+      bufferedInputs: Array.isArray(sink?.bufferedInputs) ? [...sink.bufferedInputs] : [],
+      inputs: (Array.isArray(sink?.inputs) ? sink.inputs : []).map((input) => ({ ...input })),
+    }));
+    this.syncVisualInputBuffers();
+    const ids = new Set([...this.nodes.keys()]);
+    this.inputConnections = this.buildInputConnectionMap(plan?.connections, ids);
+    this.graphInputConnections = this.buildGraphInputConnectionMap(plan?.graphConnections, ids);
+    this.modulationConnections = this.buildModulationConnectionMap(plan?.modulations, ids);
+  }
+
   setParams(nodes, message = {}) {
     const patchFingerprint = message.patchFingerprint || "";
     this.patchFingerprint = patchFingerprint || this.patchFingerprint;
     this.planSerial = message.planSerial || 0;
     this.sessionId = message.sessionId || 0;
+    this.autoSmoothingSeconds = this.clampAutoSmoothingSeconds(message.autoSmoothingSeconds);
+    this.syncNestedAutoSmoothingSeconds(this.autoSmoothingSeconds);
     this.gpuAdditiveQueues = new Map();
     this.gpuAdditiveUnderruns = 0;
     let parameterCount = 0;
@@ -871,6 +1129,150 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.pitchModWheelSignal = {
       mod: this.clampValue(Number(source.mod) || 0, 0, 1),
       pitch: this.clampValue(Number.isFinite(pitch) ? pitch : 0, -1, 1),
+    };
+  }
+
+  normalizeExternalButtonEventName(name) {
+    const key = String(name || "").trim().toLowerCase();
+    if (key === "mousedown" || key === "pointerdown") return "down";
+    if (key === "mouseup" || key === "pointerup") return "up";
+    if (key === "mouseenter" || key === "pointerenter") return "enter";
+    if (key === "mouseleave" || key === "pointerleave") return "leave";
+    return ["click", "hover", "down", "up", "enter", "leave"].includes(key) ? key : "";
+  }
+
+  setExternalButtonEvent(name) {
+    const key = this.normalizeExternalButtonEventName(name);
+    if (!key) return;
+    const samples = Math.max(1, Math.round(Math.max(1, this.engineSampleRate || sampleRate) * 0.02));
+    this.externalButtonEvents.set(key, Math.max(Number(this.externalButtonEvents.get(key)) || 0, samples));
+  }
+
+  externalButtonEventPulse(name) {
+    const remaining = Number(this.externalButtonEvents.get(name)) || 0;
+    if (remaining <= 0) {
+      this.externalButtonEvents.delete(name);
+      return 0;
+    }
+    this.externalButtonEvents.set(name, remaining - 1);
+    return 1;
+  }
+
+  wireBreakGateSamples() {
+    return Math.max(1, Math.round(Math.max(1, this.engineSampleRate || sampleRate) * 0.52));
+  }
+
+  gameTriggerPulseSamples() {
+    return Math.max(1, Math.round(Math.max(1, this.engineSampleRate || sampleRate) * 0.02));
+  }
+
+  setWireBreakEvent() {
+    const event = this.wireBreakEvent && typeof this.wireBreakEvent === "object"
+      ? this.wireBreakEvent
+      : { pulseSamples: 0, gateSamples: 0 };
+    event.pulseSamples = Math.max(Number(event.pulseSamples) || 0, this.gameTriggerPulseSamples());
+    event.gateSamples = Math.max(Number(event.gateSamples) || 0, this.wireBreakGateSamples());
+    this.wireBreakEvent = event;
+  }
+
+  wireBreakEventSample() {
+    const event = this.wireBreakEvent && typeof this.wireBreakEvent === "object"
+      ? this.wireBreakEvent
+      : { pulseSamples: 0, gateSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    const gateSamples = Math.max(0, Number(event.gateSamples) || 0);
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    event.gateSamples = Math.max(0, gateSamples - 1);
+    this.wireBreakEvent = event;
+    return {
+      Pulse: pulseSamples > 0 ? 1 : 0,
+      Gate: gateSamples > 0 ? 1 : 0,
+    };
+  }
+
+  setWireConnectEvent() {
+    const event = this.wireConnectEvent && typeof this.wireConnectEvent === "object"
+      ? this.wireConnectEvent
+      : { pulseSamples: 0 };
+    event.pulseSamples = Math.max(Number(event.pulseSamples) || 0, this.gameTriggerPulseSamples());
+    this.wireConnectEvent = event;
+  }
+
+  wireConnectEventSample() {
+    const event = this.wireConnectEvent && typeof this.wireConnectEvent === "object"
+      ? this.wireConnectEvent
+      : { pulseSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    this.wireConnectEvent = event;
+    return { Pulse: pulseSamples > 0 ? 1 : 0 };
+  }
+
+  setWireDisconnectEvent() {
+    const event = this.wireDisconnectEvent && typeof this.wireDisconnectEvent === "object"
+      ? this.wireDisconnectEvent
+      : { pulseSamples: 0 };
+    event.pulseSamples = Math.max(Number(event.pulseSamples) || 0, this.gameTriggerPulseSamples());
+    this.wireDisconnectEvent = event;
+  }
+
+  wireDisconnectEventSample() {
+    const event = this.wireDisconnectEvent && typeof this.wireDisconnectEvent === "object"
+      ? this.wireDisconnectEvent
+      : { pulseSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    this.wireDisconnectEvent = event;
+    return { Pulse: pulseSamples > 0 ? 1 : 0 };
+  }
+
+  setShootingStarExplosionEvent() {
+    const event = this.shootingStarExplosionEvent && typeof this.shootingStarExplosionEvent === "object"
+      ? this.shootingStarExplosionEvent
+      : { pulseSamples: 0 };
+    event.pulseSamples = Math.max(0, Number(event.pulseSamples) || 0) + 1;
+    this.shootingStarExplosionEvent = event;
+  }
+
+  shootingStarExplosionEventSample() {
+    const event = this.shootingStarExplosionEvent && typeof this.shootingStarExplosionEvent === "object"
+      ? this.shootingStarExplosionEvent
+      : { pulseSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    this.shootingStarExplosionEvent = event;
+    return { Pulse: pulseSamples > 0 ? 1 : 0 };
+  }
+
+  windowReopenGateSamples() {
+    return Math.max(1, Math.round(Math.max(1, this.engineSampleRate || sampleRate) * 1));
+  }
+
+  setWindowReopenEvent() {
+    const samples = this.windowReopenGateSamples();
+    this.windowReopenEvent = {
+      gateSamples: samples,
+      pulseSamples: this.gameTriggerPulseSamples(),
+      totalSamples: samples,
+    };
+  }
+
+  windowReopenEventSample() {
+    const event = this.windowReopenEvent && typeof this.windowReopenEvent === "object"
+      ? this.windowReopenEvent
+      : { pulseSamples: 0, gateSamples: 0, totalSamples: 0 };
+    const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
+    const gateSamples = Math.max(0, Number(event.gateSamples) || 0);
+    const totalSamples = Math.max(1, Number(event.totalSamples) || gateSamples || 1);
+    const progress = gateSamples > 0 ? 1 - gateSamples / totalSamples : 1;
+    const sine = gateSamples > 0 ? Math.sin(Math.PI * Math.max(0, Math.min(1, progress))) : 0;
+    event.pulseSamples = Math.max(0, pulseSamples - 1);
+    event.gateSamples = Math.max(0, gateSamples - 1);
+    this.windowReopenEvent = event;
+    return {
+      Pulse: pulseSamples > 0 ? 1 : 0,
+      Gate: gateSamples > 0 ? 1 : 0,
+      Sine: sine,
     };
   }
 
@@ -1301,16 +1703,29 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return 0;
   }
 
-  captureModuleScopeFrame() {
-    for (const nodeId of this.order) {
-      if (!this.nodeOutputs.has(nodeId)) {
-        continue;
+  captureModuleScopeFrame(frameValues = null, frame = 0, frames = 1) {
+    this.scopeSampleStride = Math.max(1, Math.floor((Number(this.engineSampleRate) || sampleRate || 44100) / 12000));
+    const captureDebugScope = (this.scopeCounter % this.scopeSampleStride) === 0;
+    if (captureDebugScope) {
+      const captureNodeIds = Array.isArray(this.scopeCaptureNodeIds)
+        ? this.scopeCaptureNodeIds
+        : this.order;
+      for (const nodeId of captureNodeIds) {
+        if (!this.nodeOutputs.has(nodeId)) {
+          continue;
+        }
+        this.captureModuleScopeOutput(nodeId, this.nodeOutputs.get(nodeId));
       }
-      this.captureModuleScopeOutput(nodeId, this.nodeOutputs.get(nodeId));
     }
     for (const sink of this.visualSinks || []) {
       const nodeId = String(sink?.nodeId || "");
       if (!nodeId) {
+        continue;
+      }
+      if (
+        Array.isArray(this.scopeCaptureNodeIds) &&
+        !this.scopeCaptureNodeIds.includes(nodeId)
+      ) {
         continue;
       }
       let value = 0;
@@ -1320,11 +1735,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         }
         const inputValue = (input.connections || []).reduce(
           (connectionSum, connection) => connectionSum + this.readRuntimePortOutput(
-            null,
+            frameValues,
             connection.sourceNode,
             connection.sourcePort,
-            0,
-            1,
+            frame,
+            frames,
           ),
           0,
         );
@@ -1333,28 +1748,74 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         if (input?.buffered && inputPort) {
           this.writeVisualInputBufferSample(nodeId, inputPort, inputValue, sink.bufferSampleLimit);
         }
-        if (inputPort) {
+        if (captureDebugScope && inputPort && !input?.buffered) {
           const portId = `${nodeId}:${inputPort}`;
-          const portSamples = this.scopeBuffers.get(portId) || [];
-          portSamples.push(this.scopeScalarValue(inputValue));
-          this.scopeBuffers.set(portId, portSamples);
+          this.appendScopeBufferSample(portId, inputValue);
         }
       }
-      const samples = this.scopeBuffers.get(nodeId) || [];
-      samples.push(this.scopeScalarValue(value));
-      this.scopeBuffers.set(nodeId, samples);
+      if (captureDebugScope) {
+        this.appendScopeBufferSample(nodeId, value);
+      }
     }
   }
 
+  appendScopeBufferSample(id, value) {
+    const key = String(id || "");
+    if (!key) {
+      return;
+    }
+    const limit = 4096;
+    let samples = this.scopeBuffers.get(key);
+    if (!(samples instanceof Float32Array)) {
+      samples = new Float32Array(limit);
+      samples.nodeGraphScopeWriteIndex = 0;
+      samples.nodeGraphScopeLength = 0;
+      this.scopeBuffers.set(key, samples);
+    }
+    const writeIndex = Math.max(0, Math.min(limit - 1, Number(samples.nodeGraphScopeWriteIndex) || 0));
+    samples[writeIndex] = this.scopeScalarValue(value);
+    samples.nodeGraphScopeWriteIndex = (writeIndex + 1) % limit;
+    samples.nodeGraphScopeLength = Math.min(limit, (Number(samples.nodeGraphScopeLength) || 0) + 1);
+  }
+
   createVisualInputBuffer(capacity = 262144) {
-    const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || 262144)));
+    const safeCapacity = this.normalizeVisualInputBufferCapacity(capacity);
     return {
       absoluteFrame: 0,
       buffer: new Float32Array(safeCapacity),
       capacity: safeCapacity,
       length: 0,
+      postedFrame: 0,
       writeIndex: 0,
     };
+  }
+
+  normalizeVisualInputBufferCapacity(capacity = 262144) {
+    return Math.max(1, Math.round(Number(capacity) || 262144));
+  }
+
+  resizeVisualInputBufferState(state, capacity = 262144) {
+    const safeCapacity = this.normalizeVisualInputBufferCapacity(capacity);
+    if (!state || state.capacity !== safeCapacity || !(state.buffer instanceof Float32Array)) {
+      const next = this.createVisualInputBuffer(safeCapacity);
+      if (!state?.buffer?.length || !state?.length) {
+        return next;
+      }
+      const oldCapacity = state.capacity || state.buffer.length;
+      const oldLength = Math.min(Number(state.length) || 0, oldCapacity);
+      const copyCount = Math.min(oldLength, safeCapacity);
+      const first = ((Number(state.writeIndex) || 0) - oldLength + oldCapacity) % oldCapacity;
+      for (let index = 0; index < copyCount; index += 1) {
+        const oldIndex = (first + oldLength - copyCount + index) % oldCapacity;
+        next.buffer[index] = state.buffer[oldIndex] || 0;
+      }
+      next.length = copyCount;
+      next.writeIndex = copyCount % safeCapacity;
+      next.absoluteFrame = Math.max(Number(state.absoluteFrame) || 0, copyCount);
+      next.postedFrame = Math.min(Math.max(Number(state.postedFrame) || 0, 0), next.absoluteFrame);
+      return next;
+    }
+    return state;
   }
 
   syncVisualInputBuffers() {
@@ -1373,13 +1834,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           continue;
         }
         const key = `${nodeId}:${port}`;
-        expected.set(key, Math.max(1, Math.min(1048576, Math.round(Number(sink.bufferSampleLimit) || 262144))));
+        expected.set(key, this.normalizeVisualInputBufferCapacity(sink.bufferSampleLimit));
       }
     }
     for (const [key, capacity] of expected) {
       const current = this.visualInputBuffers.get(key);
       if (!current || current.capacity !== capacity) {
-        this.visualInputBuffers.set(key, this.createVisualInputBuffer(capacity));
+        this.visualInputBuffers.set(key, this.resizeVisualInputBufferState(current, capacity));
       }
     }
     for (const key of [...this.visualInputBuffers.keys()]) {
@@ -1392,9 +1853,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   writeVisualInputBufferSample(nodeId, port, value, capacity = 262144) {
     const key = `${nodeId}:${port}`;
     let buffer = this.visualInputBuffers.get(key);
-    const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || 262144)));
+    const safeCapacity = this.normalizeVisualInputBufferCapacity(capacity);
     if (!buffer || buffer.capacity !== safeCapacity) {
-      buffer = this.createVisualInputBuffer(safeCapacity);
+      buffer = this.resizeVisualInputBufferState(buffer, safeCapacity);
       this.visualInputBuffers.set(key, buffer);
     }
     buffer.buffer[buffer.writeIndex] = this.scopeScalarValue(value);
@@ -1408,9 +1869,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     if (!id) {
       return;
     }
-    const samples = this.scopeBuffers.get(id) || [];
-    samples.push(this.scopeScalarValue(output));
-    this.scopeBuffers.set(id, samples);
+    this.appendScopeBufferSample(id, output);
     if (!output || typeof output !== "object") {
       return;
     }
@@ -1419,26 +1878,76 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         continue;
       }
       const portId = `${id}:${port}`;
-      const portSamples = this.scopeBuffers.get(portId) || [];
-      portSamples.push(this.scopeScalarValue(value));
-      this.scopeBuffers.set(portId, portSamples);
+      this.appendScopeBufferSample(portId, value);
     }
   }
 
   postModuleScopeSnapshot() {
     const values = [];
+    const engineSampleRate = Math.max(1, Number(this.engineSampleRate) || sampleRate || 44100);
+    const scopeSampleStride = Math.max(1, Number(this.scopeSampleStride) || 1);
+    const decimatedScopeSampleRate = engineSampleRate / scopeSampleStride;
     for (const [nodeId, samples] of this.scopeBuffers) {
-      if (!samples.length) {
+      const length = samples instanceof Float32Array
+        ? Math.min(samples.length, Number(samples.nodeGraphScopeLength) || 0)
+        : samples?.length || 0;
+      if (!length) {
         continue;
       }
-      values.push([nodeId, samples]);
+      if (samples instanceof Float32Array) {
+        const writeIndex = Number(samples.nodeGraphScopeWriteIndex) || 0;
+        const ordered = new Float32Array(length);
+        const start = (writeIndex - length + samples.length) % samples.length;
+        for (let index = 0; index < length; index += 1) {
+          ordered[index] = samples[(start + index) % samples.length] || 0;
+        }
+        values.push([nodeId, ordered, {
+          sampleRate: decimatedScopeSampleRate,
+          sampleStride: scopeSampleStride,
+          sourceSampleRate: engineSampleRate,
+        }]);
+      } else {
+        values.push([nodeId, samples, {
+          sampleRate: decimatedScopeSampleRate,
+          sampleStride: scopeSampleStride,
+          sourceSampleRate: engineSampleRate,
+        }]);
+      }
+    }
+    for (const [key, state] of this.visualInputBuffers || []) {
+      const length = Math.min(Number(state?.length) || 0, state?.capacity || state?.buffer?.length || 0);
+      if (!state?.buffer?.length || length <= 0) {
+        continue;
+      }
+      const absoluteFrame = Math.max(0, Math.floor(Number(state.absoluteFrame) || 0));
+      const postedFrame = Math.max(0, Math.floor(Number(state.postedFrame) || 0));
+      const freshCount = postedFrame > 0
+        ? Math.max(0, absoluteFrame - postedFrame)
+        : Math.min(length, Math.ceil((Number(this.engineSampleRate) || sampleRate || 44100) / 30));
+      const count = Math.min(length, freshCount);
+      if (count <= 0) {
+        continue;
+      }
+      const ordered = new Float32Array(count);
+      const start = ((Number(state.writeIndex) || 0) - count + state.capacity) % state.capacity;
+      for (let index = 0; index < count; index += 1) {
+        ordered[index] = state.buffer[(start + index) % state.capacity] || 0;
+      }
+      values.push([key, ordered, {
+        absoluteFrame,
+        sampleRate: engineSampleRate,
+        sampleStride: 1,
+        sourceSampleRate: engineSampleRate,
+        startFrame: absoluteFrame - count,
+      }]);
+      state.postedFrame = absoluteFrame;
     }
     if (!values.length) {
       return;
     }
     this.port.postMessage({
       patchFingerprint: this.patchFingerprint,
-      sampleRate: this.engineSampleRate,
+      sampleRate: engineSampleRate,
       sessionId: this.sessionId,
       type: "scope",
       values,
@@ -1463,14 +1972,42 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   createSmoother(initialValue, metadata = {}) {
     const value = Number(initialValue);
     const safeValue = Number.isFinite(value) ? value : 0;
+    const signal = this.parameterValueToNormalizedSignal(safeValue, metadata);
     return {
       current: safeValue,
       linearSmoothing: metadata?.linearSmoothing !== false,
       max: Number.isFinite(Number(metadata?.max)) ? Number(metadata.max) : 1,
+      metadata,
       min: Number.isFinite(Number(metadata?.min)) ? Number(metadata.min) : 0,
+      nonlinearSmoothing: metadata?.linearSmoothing !== false,
+      outputBuffer: signal,
+      targetSignal: signal,
       target: safeValue,
+      lastFrame: -1,
+      lastValue: safeValue,
       wraparound: Boolean(metadata?.wraparound),
     };
+  }
+
+  clampAutoSmoothingSeconds(seconds) {
+    const value = Number(seconds);
+    if (!Number.isFinite(value)) {
+      return 0.016;
+    }
+    return Math.max(0, value);
+  }
+
+  smoothingFrequencyFromSeconds(seconds) {
+    const normalized = this.clampAutoSmoothingSeconds(seconds);
+    return normalized <= 0 ? 0 : 1 / normalized;
+  }
+
+  syncNestedAutoSmoothingSeconds(seconds = this.autoSmoothingSeconds) {
+    const normalized = this.clampAutoSmoothingSeconds(seconds);
+    for (const runtime of this.moduleGroupRuntimes?.values?.() || []) {
+      runtime.autoSmoothingSeconds = normalized;
+      runtime.syncNestedAutoSmoothingSeconds?.(normalized);
+    }
   }
 
   updateSmoother(smoother, targetValue, metadata = {}) {
@@ -1478,10 +2015,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     smoother.target = Number.isFinite(value) ? value : smoother.target;
     smoother.linearSmoothing = metadata?.linearSmoothing !== false;
     smoother.max = Number.isFinite(Number(metadata?.max)) ? Number(metadata.max) : smoother.max;
+    smoother.metadata = metadata;
     smoother.min = Number.isFinite(Number(metadata?.min)) ? Number(metadata.min) : smoother.min;
+    smoother.nonlinearSmoothing = metadata?.linearSmoothing !== false;
+    smoother.targetSignal = this.parameterValueToNormalizedSignal(smoother.target, metadata);
     smoother.wraparound = Boolean(metadata?.wraparound);
     if (!smoother.linearSmoothing) {
       smoother.current = smoother.target;
+      smoother.outputBuffer = smoother.targetSignal;
+      smoother.lastValue = smoother.target;
     }
   }
 
@@ -1491,7 +2033,34 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       const value = Number(node?.params?.[key]);
       return Number.isFinite(value) ? value : fallback;
     }
-    if (!smoother.linearSmoothing || frames <= 1) {
+    if (!smoother.linearSmoothing) {
+      return smoother.target;
+    }
+    if (smoother.nonlinearSmoothing) {
+      if (smoother.lastFrame === frame) {
+        return smoother.lastValue;
+      }
+      const smoothingSeconds = this.clampAutoSmoothingSeconds(this.autoSmoothingSeconds);
+      if (smoothingSeconds <= 0) {
+        smoother.current = smoother.target;
+        smoother.outputBuffer = smoother.targetSignal;
+        smoother.lastFrame = frame;
+        smoother.lastValue = smoother.target;
+        return smoother.target;
+      }
+      const signal = this.onePoleLowpassSample(
+        smoother,
+        smoother.targetSignal,
+        this.smoothingFrequencyFromSeconds(smoothingSeconds),
+        sampleRate,
+      );
+      const value = this.normalizedSignalToParameterValue(signal, smoother.metadata);
+      smoother.current = value;
+      smoother.lastFrame = frame;
+      smoother.lastValue = value;
+      return value;
+    }
+    if (frames <= 1) {
       return smoother.target;
     }
     const progress = (frame + 1) / frames;
@@ -1506,6 +2075,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   finishSmoothing() {
     for (const smoother of this.smoothers.values()) {
+      if (smoother.nonlinearSmoothing) {
+        smoother.current = smoother.lastValue ?? smoother.current;
+        smoother.lastFrame = -1;
+        continue;
+      }
       smoother.current = smoother.wraparound
         ? this.wrapValue(smoother.target, smoother.min, smoother.max)
         : smoother.target;
@@ -1518,6 +2092,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   applyParameterBounds(value, metadata = {}) {
     const min = Number(metadata.min);
     const max = Number(metadata.max);
+    if (metadata.unboundedMin && metadata.unboundedMax) {
+      return value;
+    }
+    if (metadata.unboundedMin && Number.isFinite(max)) {
+      return Math.min(value, max);
+    }
+    if (metadata.unboundedMax && Number.isFinite(min)) {
+      return Math.max(value, min);
+    }
     if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
       return value;
     }
@@ -1617,6 +2200,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const base = this.readSmoothedParameter(node, key, fallback, frame, frames);
     const metadata = node?.paramMeta?.[key] || {};
     const modulations = this.modulationConnections.get(this.parameterKey(node?.id, key)) || [];
+    const min = Number(metadata.min);
+    const max = Number(metadata.max);
+    const hasMetadataRange = Number.isFinite(min) && Number.isFinite(max) && max > min;
+    if (!hasMetadataRange && !modulations.length) {
+      return base;
+    }
     const modulationSignal = modulations.reduce(
       (sum, modulation) => sum + this.normalizeParameterModulationInput(this.readRuntimePortOutput(
         frameValues,
@@ -1627,6 +2216,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       ), metadata),
       0,
     );
+    if (!hasMetadataRange) {
+      return base + modulationSignal;
+    }
     return this.applyParameterModulation(base, modulationSignal, metadata);
   }
 
@@ -1720,9 +2312,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     let sample = 0;
     switch (Math.round(Number(waveform) || 0)) {
       case 1:
-        sample = this.polyBlepSquare(phaseCycle, renderPhaseIncrement);
+        sample = -1 + phaseCycle * 2 - this.polyBlep(phaseCycle, renderPhaseIncrement);
         break;
       case 2:
+        sample = this.polyBlepSquare(phaseCycle, renderPhaseIncrement);
+        break;
+      case 3:
         {
           const triangle = this.triangleStates.get(nodeId) || 0;
           if (phaseStopped) {
@@ -1734,10 +2329,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           sample = this.clampValue(nextTriangle, -1, 1);
           break;
         }
-      case 3:
+      case 4:
         sample = Math.sin(phase);
         break;
-      case 4:
+      case 5:
         sample = phaseStopped ? this.currentNoiseSample(nodeId) : this.nextNoiseSample(nodeId);
         break;
       case 0:
@@ -1776,16 +2371,75 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return this.clampValue(((x * shapeCos) + (y * shapeSin)) / denominator, -1, 1);
   }
 
-  ellipsoidVectorSample(phase, params = {}) {
-    const level = this.clampValue(Number(params.level) || 0, 0, 1);
-    const x = this.ellipsoidSample(phase, params.offsetX, params.shapeX, params.scaleX) * level;
-    const y = this.ellipsoidSample(phase - Math.PI * 0.5, params.offsetY, params.shapeY, params.scaleY) * level;
-    return {
-      Out: x,
-      X: x,
-      Y: y,
-      "Wave Out": x,
-    };
+  ellipsoidVectorSample(
+    target,
+    phase,
+    levelValue = 1,
+    offsetX = 0,
+    offsetY = 0,
+    scaleX = 1,
+    scaleY = 1,
+    shapeX = 0,
+    shapeY = 0,
+  ) {
+    const level = Number(levelValue) || 0;
+    const x = this.ellipsoidSample(phase, offsetX, shapeX, scaleX) * level;
+    const y = this.ellipsoidSample(phase - Math.PI * 0.5, offsetY, shapeY, scaleY) * level;
+    const output = target || {};
+    output.Out = x;
+    output.Mono = x;
+    output.X = x;
+    output.Y = y;
+    output.Wave = x;
+    output["Wave Out"] = x;
+    return output;
+  }
+
+  nativeEllipsoidVectorSample(
+    target,
+    phase,
+    levelValue = 1,
+    offsetX = 0,
+    offsetY = 0,
+    scaleX = 1,
+    scaleY = 1,
+    shapeX = 0,
+    shapeY = 0,
+  ) {
+    const native = this.nativeEllipsoidReady ? this.nativeEllipsoid : null;
+    if (!native?.soemdsp_ellipsoid_vector_sample) {
+      return this.ellipsoidVectorSample(
+        target,
+        phase,
+        levelValue,
+        offsetX,
+        offsetY,
+        scaleX,
+        scaleY,
+        shapeX,
+        shapeY,
+      );
+    }
+    native.soemdsp_ellipsoid_vector_sample(
+      Number(phase) || 0,
+      Number(levelValue) || 0,
+      Number(offsetX) || 0,
+      Number(offsetY) || 0,
+      Number(scaleX) || 0,
+      Number(scaleY) || 0,
+      Number(shapeX) || 0,
+      Number(shapeY) || 0,
+    );
+    const x = this.clampValue(Number(native.soemdsp_ellipsoid_x?.()) || 0, -1, 1);
+    const y = this.clampValue(Number(native.soemdsp_ellipsoid_y?.()) || 0, -1, 1);
+    const output = target || {};
+    output.Out = x;
+    output.Mono = x;
+    output.X = x;
+    output.Y = y;
+    output.Wave = x;
+    output["Wave Out"] = x;
+    return output;
   }
 
   additiveWaveformHarmonic(waveform, harmonic, modA = 0.5) {
@@ -2076,6 +2730,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     };
   }
 
+  createPatchCommandState() {
+    return {
+      lastTrigger: 0,
+    };
+  }
+
   createDelayEffectState() {
     return {
       buffer: new Float32Array(1),
@@ -2091,6 +2751,16 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return {
       held: 0,
       lastTrigger: 0,
+    };
+  }
+
+  createSamplePlaybackState() {
+    return {
+      lastReset: 0,
+      phase: 0,
+      playing: false,
+      rangeKey: "",
+      sampleId: "",
     };
   }
 
@@ -2443,6 +3113,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   createNestedRuntime(plan) {
     const runtime = Object.create(NodeLiveAudioProcessor.prototype);
     runtime.inputConnections = new Map();
+    runtime.autoSmoothingSeconds = this.autoSmoothingSeconds;
     runtime.badNumberCount = 0;
     runtime.lastBadValueReason = "";
     runtime.lastBadValueNodeId = "";
@@ -2458,12 +3129,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.meterSquareSum = 0;
     runtime.macroControls = this.macroControls;
     runtime.pitchModWheelSignal = this.pitchModWheelSignal;
+    runtime.externalButtonEvents = this.externalButtonEvents;
+    runtime.wireBreakEvent = this.wireBreakEvent;
+    runtime.wireConnectEvent = this.wireConnectEvent;
+    runtime.wireDisconnectEvent = this.wireDisconnectEvent;
+    runtime.windowReopenEvent = this.windowReopenEvent;
+    runtime.shootingStarExplosionEvent = this.shootingStarExplosionEvent;
     runtime.midiKeyboardGatePulseSamples = 0;
     runtime.midiKeyboardSignal = null;
     runtime.moduleGroupRuntimes = new Map();
     runtime.modulationConnections = new Map();
     runtime.nodeOutputs = new Map();
     runtime.nodes = new Map();
+    runtime.nativeEllipsoid = this.nativeEllipsoid;
+    runtime.nativeEllipsoidReady = this.nativeEllipsoidReady;
+    runtime.nativeSabrinaReverb = this.nativeSabrinaReverb;
+    runtime.nativeSabrinaReverbReady = this.nativeSabrinaReverbReady;
     runtime.noiseSeedKeys = new Map();
     runtime.noiseSeeds = new Map();
     runtime.order = [];
@@ -2491,11 +3172,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.graphLfoStates = new Map();
     runtime.outputNode = plan?.outputNode || "output";
     runtime.patchFingerprint = plan?.patchFingerprint || "";
+    runtime.patchCommandStates = new Map();
     runtime.phases = new Map();
     runtime.pluckEnvelopeStates = new Map();
     runtime.planSerial = 0;
     runtime.randomClockStates = new Map();
+    runtime.reverbEffectStates = new Map();
     runtime.sampleHoldStates = new Map();
+    runtime.samplePlaybackStates = new Map();
+    runtime.samples = this.samples;
     runtime.randomWalkStates = new Map();
     runtime.sessionId = this.sessionId;
     runtime.scopeBuffers = new Map();
@@ -2524,6 +3209,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       moduleGroupPlan: node.moduleGroupPlan || null,
       paramMeta: node.paramMeta || {},
       params: node.params || {},
+      sample: node.sample || null,
       type: node.type,
     }]));
     this.order = Array.isArray(plan?.order) ? [...plan.order] : [...ids];
@@ -2534,12 +3220,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     for (const id of ids) {
       const node = this.nodes.get(id);
       this.nodeOutputs.set(id, 0);
-      if (node?.type === "osc" || node?.type === "fbPolyBlepOsc") {
+      if (nodeLiveIsPolyBlepOscillatorType(node?.type)) {
         this.phases.set(id, 0);
         this.oscResetStates.set(id, this.createOscResetState());
         this.triangleStates.set(id, 0);
       }
-      if (node?.type === "osc" || node?.type === "fbPolyBlepOsc" || node?.type === "noise") {
+      if (nodeLiveIsPolyBlepOscillatorType(node?.type) || node?.type === "noise") {
         this.noiseSeeds.set(id, this.stableSeed(id));
       }
       if (node?.type === "stereoNoise") {
@@ -2558,8 +3244,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "clockDivider") this.clockDividerStates.set(id, this.createTriggerDividerState());
       if (node?.type === "delayedTrigger") this.delayedTriggerStates.set(id, this.createDelayedTriggerState());
       if (node?.type === "delayEffect") this.delayEffectStates.set(id, this.createDelayEffectState());
+      if (node?.type === "reverbEffect") this.reverbEffectStates.set(id, this.createSabrinaReverbState());
       if (node?.type === "randomClock") this.randomClockStates.set(id, this.createRandomClockState());
       if (node?.type === "sampleHold") this.sampleHoldStates.set(id, this.createSampleHoldState());
+      if (node?.type === "samplePlayer" || node?.type === "sampleLooper" || node?.type === "audioPlayer") {
+        this.samplePlaybackStates.set(id, this.createSamplePlaybackState());
+      }
+      if (node?.type === "nextPatch" || node?.type === "previousPatch") this.patchCommandStates.set(id, this.createPatchCommandState());
       if (node?.type === "slewLimiter") this.slewLimiterStates.set(id, this.createSlewLimiterState());
       if (node?.type === "expAdsr") this.expAdsrStates.set(id, this.createExpAdsrState());
       if (node?.type === "linearEnvelope") this.linearEnvelopeStates.set(id, this.createLinearEnvelopeState());
@@ -2596,6 +3287,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.oversamplingRatio = this.oversamplingRatio;
     runtime.macroControls = this.macroControls;
     runtime.pitchModWheelSignal = this.pitchModWheelSignal;
+    runtime.externalButtonEvents = this.externalButtonEvents;
+    runtime.wireBreakEvent = this.wireBreakEvent;
+    runtime.wireConnectEvent = this.wireConnectEvent;
+    runtime.wireDisconnectEvent = this.wireDisconnectEvent;
+    runtime.windowReopenEvent = this.windowReopenEvent;
+    runtime.shootingStarExplosionEvent = this.shootingStarExplosionEvent;
     runtime.externalGroupInputs = new Map(
       (node.moduleGroup?.inputs || []).map((input) => [input.nodeId, mixInput(node.id, input.name)]),
     );
@@ -2736,6 +3433,154 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     });
   }
 
+  sampleChannelAt(sample, channelIndex, frameIndex) {
+    const channel = sample?.channelData?.[channelIndex] || sample?.samples;
+    if (!channel?.length) {
+      return 0;
+    }
+    const maxIndex = channel.length - 1;
+    const index = this.clampValue(Number(frameIndex) || 0, 0, maxIndex);
+    const low = Math.floor(index);
+    const high = Math.min(maxIndex, low + 1);
+    const frac = index - low;
+    return (Number(channel[low]) || 0) + ((Number(channel[high]) || 0) - (Number(channel[low]) || 0)) * frac;
+  }
+
+  sampleStereoAt(sample, frameIndex) {
+    const left = this.sampleChannelAt(sample, 0, frameIndex);
+    const right = sample?.channelData?.length > 1
+      ? this.sampleChannelAt(sample, 1, frameIndex)
+      : left;
+    return {
+      Left: left,
+      Mono: (left + right) * 0.5,
+      Out: (left + right) * 0.5,
+      Right: right,
+    };
+  }
+
+  audioPlayerSample(node, nodeId, readInput, readParam, rate = sampleRate) {
+    const state = this.samplePlaybackStates.get(nodeId) || this.createSamplePlaybackState();
+    this.samplePlaybackStates.set(nodeId, state);
+    const sampleId = String(node?.sample?.id || "");
+    const sample = this.samples.get(sampleId);
+    const frames = Math.max(0, Number(sample?.frames) || sample?.samples?.length || sample?.channelData?.[0]?.length || 0);
+    this.audioPlayerMeterNodeId = nodeId;
+    if (!sample || frames <= 1) {
+      this.audioPlayerMeterReason = sampleId ? "engine waiting for sample" : "engine no sample id";
+      return { Left: 0, Mono: 0, Out: 0, Phase: 0, Right: 0, Trigger: 0 };
+    }
+    const start = this.clampValue(readParam("start", 0), 0, 1);
+    const end = this.clampValue(readParam("end", 1), 0, 1);
+    const collapsedRange = Math.abs(end - start) <= 0.000001;
+    const startPhase = collapsedRange ? 0 : Math.min(start, end);
+    const endPhase = collapsedRange ? 1 : Math.max(start, end);
+    const span = Math.max(0.000001, endPhase - startPhase);
+    const rangeKey = `${startPhase}:${endPhase}`;
+    if (state.sampleId !== sampleId) {
+      state.phase = startPhase;
+      state.completed = false;
+      state.sampleId = sampleId;
+    } else if (state.rangeKey !== rangeKey) {
+      const currentPhase = Number(state.phase);
+      if (!Number.isFinite(currentPhase) || currentPhase < startPhase || currentPhase > endPhase) {
+        state.phase = startPhase;
+      }
+      state.completed = false;
+    }
+    if (state.rangeKey !== rangeKey) {
+      state.rangeKey = rangeKey;
+    }
+    const transportFallback = Object.hasOwn(node?.params || {}, "transport")
+      ? 4
+      : ((Number(node?.params?.loop) || 0) >= 0.5 ? 4 : 0);
+    const transportMode = Math.max(0, Math.min(4, Math.round(readParam("transport", transportFallback))));
+    const transportReset = transportMode <= 0;
+    const transportStopped = transportMode === 1;
+    const transportPaused = transportMode === 2;
+    const transportPlayOnce = transportMode === 3;
+    const transportLooping = transportMode >= 4;
+    if (state.transportMode !== transportMode) {
+      state.completed = false;
+      state.transportMode = transportMode;
+    }
+    const reset = readInput("Reset");
+    const resetEdge = state.lastReset <= 0 && reset > 0;
+    if (resetEdge || transportReset || transportStopped) {
+      state.phase = startPhase;
+      state.completed = false;
+    }
+    state.playing = (transportPlayOnce || transportLooping) && !state.completed;
+    state.lastReset = reset;
+
+    const phaseConnected = this.inputConnections?.has?.(this.inputKey(nodeId, "Phase"));
+    const speed = readParam("speed", 1) + readInput("Speed");
+    const sampleRateRatio = (Number(sample.sampleRate) || rate || 44100) / Math.max(1, rate || 44100);
+    const increment = (speed * sampleRateRatio) / frames;
+    const phase = phaseConnected
+      ? this.clampValue(readInput("Phase"), 0, 1)
+      : this.clampValue(state.phase, 0, 1);
+    const boundedPhase = phase < startPhase || phase > endPhase
+      ? startPhase
+      : phase;
+    const stereo = this.sampleStereoAt(sample, boundedPhase * (frames - 1));
+    const level = readParam("level", 1);
+    const outputActive = state.playing;
+    const left = outputActive ? stereo.Left * level : 0;
+    const mono = outputActive ? stereo.Mono * level : 0;
+    const right = outputActive ? stereo.Right * level : 0;
+    this.audioPlayerMeterPhase = boundedPhase;
+    this.audioPlayerMeterPeak = Math.max(
+      this.audioPlayerMeterPeak,
+      Math.abs(left),
+      Math.abs(mono),
+      Math.abs(right),
+    );
+    this.audioPlayerMeterReason = state.playing
+      ? (transportLooping ? "engine looping" : "engine playing")
+      : transportPaused
+        ? "engine paused"
+        : transportStopped
+          ? "engine stopped"
+          : state.completed
+            ? "engine complete"
+            : "engine off reset";
+    this.audioPlayerMeterSamples += 1;
+    let done = 0;
+    if (!phaseConnected && state.playing) {
+      const nextPhase = boundedPhase + increment;
+      if (transportLooping) {
+        const normalizedNext = (nextPhase - startPhase) / span;
+        done = normalizedNext < 0 || normalizedNext >= 1 ? 1 : 0;
+        state.phase = startPhase + this.wrapValue((nextPhase - startPhase) / span, 0, 1) * span;
+      } else if (speed >= 0 && nextPhase >= endPhase) {
+        state.phase = endPhase;
+        state.completed = true;
+        state.playing = false;
+        done = 1;
+      } else if (speed < 0 && nextPhase <= startPhase) {
+        state.phase = startPhase;
+        state.completed = true;
+        state.playing = false;
+        done = 1;
+      } else {
+        state.phase = this.clampValue(nextPhase, startPhase, endPhase);
+      }
+    } else if (!phaseConnected && (transportReset || transportStopped)) {
+      state.phase = startPhase;
+    } else {
+      state.phase = boundedPhase;
+    }
+    return {
+      Left: left,
+      Mono: mono,
+      Out: mono,
+      Phase: boundedPhase,
+      Right: right,
+      Trigger: done,
+    };
+  }
+
   monitorBadValueSample(value, nodeId) {
     const number = Number(value);
     const reason = this.badValueReason(number);
@@ -2746,6 +3591,16 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.lastBadValueSource = "BADVAL Monitor input";
     }
     return number;
+  }
+
+  softClipperSample(input, center = 0, width = 2) {
+    const safeWidth = Math.max(0.000001, Math.abs(Number(width) || 2));
+    const safeCenter = Number(center) || 0;
+    const scaleX = 2 / safeWidth;
+    const shiftX = -1 - (scaleX * (safeCenter - 0.5 * safeWidth));
+    const scaleY = 1 / scaleX;
+    const shiftY = -shiftX * scaleY;
+    return shiftY + scaleY * Math.tanh(scaleX * (Number(input) || 0) + shiftX);
   }
 
   onePoleHighpassSample(state, input, frequency, rate = sampleRate) {
@@ -3032,6 +3887,39 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     };
   }
 
+  normalizePatchTiming(timing = {}) {
+    const source = timing && typeof timing === "object" ? timing : {};
+    return {
+      tempoBpm: Math.max(1, Math.round(Number(source.tempoBpm) || 120)),
+      timeSignatureDenominator: Math.max(1, Math.round(Number(source.timeSignatureDenominator) || 4)),
+      timeSignatureNumerator: Math.max(1, Math.round(Number(source.timeSignatureNumerator) || 4)),
+    };
+  }
+
+  transportDivisionFactor(divisions) {
+    const division = Math.round(Number(divisions) || 0);
+    if (division > 0) {
+      return division + 1;
+    }
+    if (division < 0) {
+      return 1 / (Math.abs(division) + 1);
+    }
+    return 1;
+  }
+
+  transportSample(params, frame, rateHz = sampleRate) {
+    const rate = Math.max(1, Number(rateHz) || sampleRate || 44100);
+    const tempoBpm = Math.max(1, Number(this.timing?.tempoBpm) || 120);
+    const frequency = (tempoBpm / 60) * this.transportDivisionFactor(params.divisions);
+    const amplitude = this.clampValue(this.safeFilterNumber(params.amplitude, null), 0, 1);
+    const phase = frequency > 0 ? this.wrapValue((Math.max(0, Number(frame) || 0) / rate) * frequency, 0, 1) : 0;
+    const high = phase < 0.5;
+    return {
+      "-1..1": high ? amplitude : -amplitude,
+      "0..1": high ? amplitude : 0,
+    };
+  }
+
   randomClockNextUnit(state, nodeId, seed) {
     const seedKey = `${nodeId}:${Math.round(Number(seed) || 0)}`;
     if (state.seedKey !== seedKey) {
@@ -3125,6 +4013,21 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return this.safeFilterNumber(output, null);
   }
 
+  patchCommandTriggerSample(state, trigger, threshold, command, nodeId) {
+    const safeTrigger = this.safeFilterNumber(trigger, null);
+    const safeThreshold = this.safeFilterNumber(threshold, null);
+    if (state.lastTrigger <= safeThreshold && safeTrigger > safeThreshold) {
+      this.port.postMessage({
+        command,
+        nodeId,
+        sessionId: this.sessionId,
+        type: "patchCommand",
+      });
+    }
+    state.lastTrigger = safeTrigger;
+    return 0;
+  }
+
   delayParabolSample(phase) {
     const wrapped = phase - Math.floor(phase);
     return wrapped < 0.5 ? wrapped * 4 - 1 : 3 - wrapped * 4;
@@ -3184,6 +4087,129 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       Out: (dry * (1 - mix) + state.wet * mix) * level,
       Wet: state.wet * level,
     };
+  }
+
+  createSabrinaReverbState() {
+    return {
+      nativeHandle: 0,
+      nativeParamKey: "",
+      nativeSampleRate: 0,
+      idleCounter: 0,
+      isIdle: false,
+    };
+  }
+
+  nativeSabrinaReverbSample(state, leftInput, rightInput, params, rateHz = sampleRate, frame = 0) {
+    const native = this.nativeSabrinaReverb;
+    if (
+      !this.nativeSabrinaReverbReady ||
+      !native?.soemdsp_sabrina_reverb_create ||
+      !native?.soemdsp_sabrina_reverb_process
+    ) {
+      return null;
+    }
+    try {
+      const safeRate = Math.max(1, Number(rateHz) || sampleRate || 44100);
+      if (!state.nativeHandle || state.nativeSampleRate !== safeRate) {
+        if (state.nativeHandle && native.soemdsp_sabrina_reverb_destroy) {
+          native.soemdsp_sabrina_reverb_destroy(state.nativeHandle);
+        }
+        state.nativeHandle = native.soemdsp_sabrina_reverb_create(safeRate) || 0;
+        state.nativeSampleRate = safeRate;
+        state.nativeParamKey = "";
+        state.idleCounter = 0;
+        state.isIdle = false;
+      }
+      if (!state.nativeHandle) {
+        return null;
+      }
+      const safeParams = {
+        delaySize: this.clampValue(this.safeFilterNumber(params.delaySize, null), 0, 1),
+        diffusionAmount: this.clampValue(this.safeFilterNumber(params.diffusionAmount, null), 0, 0.98),
+        diffusionSize: this.clampValue(this.safeFilterNumber(params.diffusionSize, null), 0, 1),
+        lfoAmplitude: this.clampValue(this.safeFilterNumber(params.lfoAmplitude, null), 0, 1),
+        lfoBaseSpeed: this.clampValue(this.safeFilterNumber(params.lfoBaseSpeed, null), 0, 1),
+        lfoVariation: this.clampValue(this.safeFilterNumber(params.lfoVariation, null), 0, 1),
+        mix: this.clampValue(this.safeFilterNumber(params.mix, null), 0, 1),
+        recycle: this.clampValue(this.safeFilterNumber(params.recycle, null), 0, 0.98),
+      };
+      const paramKey = [
+        safeParams.mix,
+        safeParams.diffusionSize,
+        safeParams.diffusionAmount,
+        safeParams.delaySize,
+        safeParams.recycle,
+        safeParams.lfoAmplitude,
+        safeParams.lfoBaseSpeed,
+        safeParams.lfoVariation,
+      ].map((value) => Math.round(value * 1000000)).join(":");
+      if (paramKey !== state.nativeParamKey && native.soemdsp_sabrina_reverb_set_params) {
+        state.nativeParamKey = paramKey;
+        native.soemdsp_sabrina_reverb_set_params(
+          state.nativeHandle,
+          safeParams.mix,
+          safeParams.diffusionSize,
+          safeParams.diffusionAmount,
+          safeParams.delaySize,
+          safeParams.recycle,
+          safeParams.lfoAmplitude,
+          safeParams.lfoBaseSpeed,
+          safeParams.lfoVariation,
+        );
+      }
+      const dryLeft = this.safeFilterNumber(leftInput, null);
+      const dryRight = this.safeFilterNumber(rightInput, null);
+      const dryMono = (dryLeft + dryRight) * 0.5;
+      const inputActive = Math.abs(dryLeft) >= 0.000001 || Math.abs(dryRight) >= 0.000001;
+      if (inputActive) {
+        state.isIdle = false;
+        state.idleCounter = 0;
+      }
+      // Bypass mode: reverb is idle, pass dry signal straight through all outputs
+      if (state.isIdle) {
+        return { "Left Dry": dryLeft, "Mono Dry": dryMono, "Right Dry": dryRight, "Left Mix": dryLeft, "Mono Mix": dryMono, "Right Mix": dryRight };
+      }
+      native.soemdsp_sabrina_reverb_process(state.nativeHandle, dryLeft, dryRight);
+      const mixLeft = this.safeFilterNumber(native.soemdsp_sabrina_reverb_left?.(state.nativeHandle), null);
+      const mixRight = this.safeFilterNumber(native.soemdsp_sabrina_reverb_right?.(state.nativeHandle), null);
+      const outputPeak = Math.max(Math.abs(mixLeft), Math.abs(mixRight));
+      if (outputPeak < 0.000001) {
+        state.idleCounter += 1;
+        if (state.idleCounter >= safeRate) {
+          state.isIdle = true;
+        }
+      } else {
+        state.idleCounter = 0;
+      }
+      return { "Left Dry": dryLeft, "Mono Dry": dryMono, "Right Dry": dryRight, "Left Mix": mixLeft, "Mono Mix": (mixLeft + mixRight) * 0.5, "Right Mix": mixRight };
+    } catch (error) {
+      this.nativeSabrinaReverbReady = false;
+      if (state.nativeHandle && native.soemdsp_sabrina_reverb_destroy) {
+        native.soemdsp_sabrina_reverb_destroy(state.nativeHandle);
+      }
+      state.nativeHandle = 0;
+      state.nativeParamKey = "";
+      state.idleCounter = 0;
+      state.isIdle = false;
+      this.port.postMessage({
+        type: "nativeModuleStatus",
+        name: "sabrina_reverb",
+        status: "disabled",
+        message: String(error?.message || error || "native Sabrina failed"),
+      });
+      return null;
+    }
+  }
+
+  sabrinaReverbSample(state, leftInput, rightInput, params, rateHz = sampleRate, frame = 0) {
+    const dryLeft = this.safeFilterNumber(leftInput, null);
+    const dryRight = this.safeFilterNumber(rightInput, null);
+    const dryMono = (dryLeft + dryRight) * 0.5;
+    const nativeOutput = this.nativeSabrinaReverbSample(state, leftInput, rightInput, params, rateHz, frame);
+    if (nativeOutput) {
+      return nativeOutput;
+    }
+    return { "Left Dry": dryLeft, "Mono Dry": dryMono, "Right Dry": dryRight, "Left Mix": dryLeft, "Mono Mix": dryMono, "Right Mix": dryRight };
   }
 
   sampleHoldSample(state, input, trigger, threshold) {
@@ -3875,8 +4901,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const sigma = Math.max(0, Number(options.sigma) || 10);
     const rho = Number.isFinite(Number(options.rho)) ? Number(options.rho) : 28;
     const beta = Math.max(0, Number(options.beta) || 8 / 3);
-    const dt = Math.min(0.004, (0.75 * speed) / sampleRateValue);
-    const steps = Math.max(1, Math.min(8, Math.ceil(dt / 0.0007)));
+    const dt = (0.75 * speed) / sampleRateValue;
+    const steps = Math.max(1, Math.ceil(dt / 0.0007));
     const stepDt = steps > 0 ? dt / steps : 0;
     for (let index = 0; index < steps; index += 1) {
       const dx = sigma * (state.y - state.x);
@@ -4124,7 +5150,51 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           Out: ((left + right) * 0.5) * level,
           Right: right * level,
         };
-      } else if (node?.type === "osc" || node?.type === "fbPolyBlepOsc") {
+      } else if (node?.type === "audioPlayer") {
+        const readParam = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        value = this.audioPlayerSample(
+          node,
+          nodeId,
+          (port) => mixInput(nodeId, port),
+          readParam,
+          safeRate,
+        );
+      } else if (node?.type === "sineWavetable") {
+        const phase = this.phases.get(nodeId) || 0;
+        const phaseOffset = this.phaseRadians(
+          this.readEffectiveParameter(node, "phase", 0, frame, frames, frameValues),
+        );
+        const baseFrequency = this.readEffectiveParameter(
+          node,
+          "freq",
+          440,
+          frame,
+          frames,
+          frameValues,
+        );
+        const freqInput = this.safeFilterNumber(mixInput(nodeId, "Freq"), null);
+        const ampInput = this.safeFilterNumber(mixInput(nodeId, "Amplitude"), null);
+        const pitchInput = this.clampValue(
+          this.safeFilterNumber(mixInput(nodeId, "0.1V/Oct"), null),
+          -1,
+          1,
+        );
+        const pitchedFrequency = Math.max(0, (baseFrequency + freqInput) * (2 ** (pitchInput / 0.1)));
+        const amplitude = Math.max(0, this.readEffectiveParameter(
+          node,
+          "amp",
+          1,
+          frame,
+          frames,
+          frameValues,
+        ) + ampInput);
+        const phaseIncrement = pitchedFrequency / safeRate;
+        value = nodeLiveSineCosWavetableSample(phase + phaseOffset, pitchedFrequency, amplitude, safeRate);
+        this.phases.set(
+          nodeId,
+          this.wrapValue(phase + Math.PI * 2 * phaseIncrement, 0, Math.PI * 2),
+        );
+      } else if (nodeLiveIsPolyBlepOscillatorType(node?.type)) {
         const resetState = this.oscResetStates.get(nodeId) || this.createOscResetState();
         this.oscResetStates.set(nodeId, resetState);
         const resetValue = this.safeFilterNumber(mixInput(nodeId, "Reset"), resetState);
@@ -4171,9 +5241,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         value = {
           Out: selected,
           Saw: sampleOscillator(`${nodeId}:saw`, 0) * level,
-          Square: sampleOscillator(`${nodeId}:square`, 1) * level,
-          Tri: sampleOscillator(`${nodeId}:tri`, 2) * level,
-          Sine: sampleOscillator(`${nodeId}:sine`, 3) * level,
+          Ramp: sampleOscillator(`${nodeId}:ramp`, 1) * level,
+          Square: sampleOscillator(`${nodeId}:square`, 2) * level,
+          Tri: sampleOscillator(`${nodeId}:tri`, 3) * level,
+          Sine: sampleOscillator(`${nodeId}:sine`, 4) * level,
           "Wave Out": selected,
           Noise: selected,
         };
@@ -4244,16 +5315,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         const resetEdge = resetState.lastReset <= 0 && resetValue > 0;
         resetState.lastReset = resetValue;
         const phase = resetEdge ? 0 : this.phases.get(nodeId) || 0;
-        const read = (key, fallback) => this.readEffectiveParameter(
-          node,
-          key,
-          fallback,
-          frame,
-          frames,
-          frameValues,
+        const phaseOffset = this.phaseRadians(
+          this.readEffectiveParameter(node, "phase", 0, frame, frames, frameValues),
         );
-        const phaseOffset = this.phaseRadians(read("phase", 0));
-        const frequency = read("frequency", 220);
+        const frequency = this.readEffectiveParameter(node, "frequency", 220, frame, frames, frameValues);
         const pitchInput = this.clampValue(
           this.safeFilterNumber(mixInput(nodeId, "0.1V/Oct"), null),
           -1,
@@ -4262,15 +5327,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         const pitchedFrequency = Math.max(0, frequency * (2 ** (pitchInput / 0.1)));
         const incrementInput = this.safeFilterNumber(mixInput(nodeId, "Increment"), null);
         const phaseIncrement = (pitchedFrequency / safeRate) + incrementInput;
-        value = this.ellipsoidVectorSample(phase + phaseOffset, {
-          level: read("level", 1),
-          offsetX: read("offsetX", 0),
-          offsetY: read("offsetY", 0),
-          scaleX: read("scaleX", 1),
-          scaleY: read("scaleY", 1),
-          shapeX: read("shapeX", 0),
-          shapeY: read("shapeY", 0),
-        });
+        let ellipsoidFrame = this.ellipsoidOutputFrames.get(nodeId);
+        if (!ellipsoidFrame) {
+          ellipsoidFrame = { Mono: 0, Out: 0, Wave: 0, "Wave Out": 0, X: 0, Y: 0 };
+          this.ellipsoidOutputFrames.set(nodeId, ellipsoidFrame);
+        }
+        value = this.nativeEllipsoidVectorSample(
+          ellipsoidFrame,
+          phase + phaseOffset,
+          this.readEffectiveParameter(node, "level", 1, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "offsetX", 0, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "offsetY", 0, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "scaleX", 1, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "scaleY", 1, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "shapeX", 0, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "shapeY", 0, frame, frames, frameValues),
+        );
         this.phases.set(
           nodeId,
           this.wrapValue(phase + Math.PI * 2 * phaseIncrement, 0, Math.PI * 2),
@@ -4354,6 +5426,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           this.readEffectiveParameter(node, "rate", 2, frame, frames, frameValues),
           this.readEffectiveParameter(node, "duty", 0.5, frame, frames, frameValues),
           this.readEffectiveParameter(node, "level", 1, frame, frames, frameValues),
+          safeRate,
+        );
+      } else if (node?.type === "transport") {
+        value = this.transportSample(
+          {
+            amplitude: read("amplitude", 1),
+            divisions: read("divisions", 0),
+          },
+          frame,
           safeRate,
         );
       } else if (node?.type === "randomClock") {
@@ -4616,6 +5697,35 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           X: x,
           Y: velocity,
         };
+      } else if (node?.type === "buttonEvents") {
+        value = {
+          Click: this.externalButtonEventPulse("click"),
+          Hover: this.externalButtonEventPulse("hover"),
+          Down: this.externalButtonEventPulse("down"),
+          Up: this.externalButtonEventPulse("up"),
+          Enter: this.externalButtonEventPulse("enter"),
+          Leave: this.externalButtonEventPulse("leave"),
+        };
+      } else if (node?.type === "wireBreak") {
+        value = this.wireBreakEventSample();
+      } else if (node?.type === "wireConnect") {
+        value = this.wireConnectEventSample();
+      } else if (node?.type === "wireDisconnect") {
+        value = this.wireDisconnectEventSample();
+      } else if (node?.type === "windowReopen") {
+        value = this.windowReopenEventSample();
+      } else if (node?.type === "shootingStarExplosion") {
+        value = this.shootingStarExplosionEventSample();
+      } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
+        const state = this.patchCommandStates.get(nodeId) || this.createPatchCommandState();
+        this.patchCommandStates.set(nodeId, state);
+        value = this.patchCommandTriggerSample(
+          state,
+          mixInput(nodeId, "Trigger"),
+          this.readEffectiveParameter(node, "threshold", 0, frame, frames, frameValues),
+          node?.type === "previousPatch" ? "previousPatch" : "nextPatch",
+          nodeId,
+        );
       } else if (node?.type === "macroControls") {
         const resetActive = hasInput(nodeId, "Reset") && Number(mixInput(nodeId, "Reset")) > 0;
         value = {};
@@ -4655,9 +5765,42 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       } else if (node?.type === "bias") {
         value = mixInput(nodeId) +
           this.readEffectiveParameter(node, "offset", 0, frame, frames, frameValues);
+      } else if (node?.type === "softClipper") {
+        value = this.softClipperSample(
+          mixInput(nodeId),
+          this.readEffectiveParameter(node, "center", 0, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "width", 2, frame, frames, frameValues),
+        );
+      } else if (node?.type === "rotate3dTo2d") {
+        const angleX = this.readEffectiveParameter(node, "rotateX", 0, frame, frames, frameValues) * Math.PI * 2;
+        const angleY = this.readEffectiveParameter(node, "rotateY", 0, frame, frames, frameValues) * Math.PI * 2;
+        const angleZ = this.readEffectiveParameter(node, "rotateZ", 0, frame, frames, frameValues) * Math.PI * 2;
+        let x = this.safeFilterNumber(mixInput(nodeId, "X"), null);
+        let y = this.safeFilterNumber(mixInput(nodeId, "Y"), null);
+        let z = this.safeFilterNumber(mixInput(nodeId, "Z"), null);
+        const sinX = Math.sin(angleX);
+        const cosX = Math.cos(angleX);
+        const nextY = y * cosX - z * sinX;
+        const nextZ = y * sinX + z * cosX;
+        y = nextY;
+        z = nextZ;
+        const sinY = Math.sin(angleY);
+        const cosY = Math.cos(angleY);
+        const nextX = x * cosY + z * sinY;
+        z = -x * sinY + z * cosY;
+        x = nextX;
+        const sinZ = Math.sin(angleZ);
+        const cosZ = Math.cos(angleZ);
+        value = {
+          X: this.safeFilterNumber(x * cosZ - y * sinZ, null),
+          Y: this.safeFilterNumber(x * sinZ + y * cosZ, null),
+        };
       } else if (node?.type === "valueSlider") {
         const offset = this.readEffectiveParameter(node, "offset", 0, frame, frames, frameValues);
         value = { Bias: offset, Out: offset, offset };
+      } else if (node?.type === "macroKnob" || node?.type === "bipolarKnob") {
+        const knobValue = this.readEffectiveParameter(node, "value", 0, frame, frames, frameValues);
+        value = { Out: knobValue, value: knobValue };
       } else if (node?.type === "highpass") {
         const state = this.highpassStates.get(nodeId) || this.createHighpassState();
         this.highpassStates.set(nodeId, state);
@@ -4732,6 +5875,30 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           },
           safeRate,
           nodeId,
+        );
+      } else if (node?.type === "reverbEffect") {
+        const state = this.reverbEffectStates.get(nodeId) || this.createSabrinaReverbState();
+        this.reverbEffectStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        const monoInput = mixInput(nodeId, "In");
+        const leftInput = mixInput(nodeId, "Left") + monoInput;
+        const rightInput = mixInput(nodeId, "Right") + monoInput;
+        value = this.sabrinaReverbSample(
+          state,
+          leftInput,
+          rightInput,
+          {
+            delaySize: read("delaySize", 0.02),
+            diffusionAmount: read("diffusionAmount", 0.70),
+            diffusionSize: read("diffusionSize", 0.35),
+            lfoAmplitude: read("lfoAmplitude", 0.07),
+            lfoBaseSpeed: read("lfoBaseSpeed", 0.83),
+            lfoVariation: read("lfoVariation", 0.001),
+            mix: read("mix", 0.43),
+            recycle: read("recycle", 0.70),
+          },
+          safeRate,
+          frame,
         );
       } else if (node?.type === "slewLimiter") {
         const state = this.slewLimiterStates.get(nodeId) || this.createSlewLimiterState();
@@ -5049,6 +6216,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       : 1;
 
     const outputMono = mixInput(this.outputNode || "output", "Mono");
+    this.currentFrameValues = frameValues;
     return {
       left: (outputMono + mixInput(this.outputNode || "output", "Left")) * outputVolume,
       right: (outputMono + mixInput(this.outputNode || "output", "Right")) * outputVolume,
@@ -5056,6 +6224,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   process(inputs, outputs) {
+    const blockStartedAt = globalThis.performance?.now?.() || 0;
     const output = outputs[0] || [];
     const frames = output[0]?.length || 128;
     const input = inputs[0] || [];
@@ -5096,7 +6265,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           leftSum += subframeOutput.left;
           rightSum += subframeOutput.right;
         }
-        this.captureModuleScopeFrame();
+        this.captureModuleScopeFrame(this.currentFrameValues, engineFrame, engineFrames);
         this.scopeCounter += 1;
         if (this.scopeCounter >= Math.max(1, Math.floor(engineSampleRate / 30))) {
           this.scopeCounter = 0;
@@ -5149,9 +6318,25 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       }
     }
     this.finishSmoothing();
+    if (blockStartedAt > 0) {
+      const elapsedMs = Math.max(0, (globalThis.performance?.now?.() || blockStartedAt) - blockStartedAt);
+      const blockBudgetMs = (frames / Math.max(1, sampleRate || this.hostSampleRate || 44100)) * 1000;
+      const budgetRatio = blockBudgetMs > 0 ? elapsedMs / blockBudgetMs : 0;
+      this.maxBlockProcessMs = Math.max(Number(this.maxBlockProcessMs) || 0, elapsedMs);
+      this.maxBlockBudgetRatio = Math.max(Number(this.maxBlockBudgetRatio) || 0, budgetRatio);
+      if (budgetRatio >= 0.85) {
+        this.meterOverrunCount += 1;
+      }
+    }
     this.meterCounter += frames;
     if (this.meterCounter >= sampleRate / 10) {
       this.port.postMessage({
+        audioPlayerNodeId: this.audioPlayerMeterNodeId || this.audioPlayerNodeIds[0] || "",
+        audioPlayerNodeIds: [...this.audioPlayerNodeIds],
+        audioPlayerPeak: this.audioPlayerMeterPeak,
+        audioPlayerPhase: this.audioPlayerMeterPhase,
+        audioPlayerReason: this.audioPlayerMeterReason,
+        audioPlayerSamples: this.audioPlayerMeterSamples,
         clipCount: this.meterClipCount,
         badNumberCount: this.badNumberCount,
         lastBadValueReason: this.lastBadValueReason,
@@ -5159,6 +6344,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         lastBadValueSource: this.lastBadValueSource,
         inputPeak: this.inputMeterPeak,
         inputRms: Math.sqrt(this.inputMeterSquareSum / Math.max(1, this.inputMeterSamples)),
+        maxBlockBudgetRatio: this.maxBlockBudgetRatio,
+        maxBlockProcessMs: this.maxBlockProcessMs,
+        overrunCount: this.meterOverrunCount,
         peak: this.meterPeak,
         protectionNodeId: this.speakerProtectionNodeId || "",
         protectionPeak: Number(this.speakerProtectionPeak) || 0,
@@ -5169,10 +6357,18 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       });
       this.meterCounter = 0;
       this.inputMeterPeak = 0;
+      this.audioPlayerMeterNodeId = "";
+      this.audioPlayerMeterPeak = 0;
+      this.audioPlayerMeterPhase = 0;
+      this.audioPlayerMeterReason = "";
+      this.audioPlayerMeterSamples = 0;
       this.inputMeterSamples = 0;
       this.inputMeterSquareSum = 0;
       this.meterClipCount = 0;
       this.badNumberCount = 0;
+      this.maxBlockProcessMs = 0;
+      this.maxBlockBudgetRatio = 0;
+      this.meterOverrunCount = 0;
       this.lastBadValueReason = "";
       this.lastBadValueNodeId = "";
       this.lastBadValueSource = "";

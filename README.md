@@ -5,6 +5,12 @@
 Browser sandbox for trying `soemdsp` patching, generated artifacts, waveform
 views, Render Sample, and Live Audio.
 
+## License
+
+This repository is source-available for noncommercial use only. Commercial use
+requires a separate written commercial license from Soundemote. See
+[`LICENSE`](LICENSE).
+
 ```powershell
 # Requirements:
 # - Python 3
@@ -129,7 +135,8 @@ tools/webui-clap-host/README.md
 Boundaries:
 
 ```text
-The server is read-only.
+The server only writes through explicit save/settings/audio helper routes.
+Open Path is restricted to Downloads.
 The browser patch graph is demo-scoped state.
 The browser compiler is not the production soemdsp scheduler.
 The WebUI does not instantiate real C++ DSP objects yet.
