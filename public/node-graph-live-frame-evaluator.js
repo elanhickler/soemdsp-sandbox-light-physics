@@ -3549,7 +3549,11 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       const mono = mixInput(nodeId, "Mono");
       const left = mixInput(nodeId, "Left");
       const right = mixInput(nodeId, "Right");
-      value = mono + (left + right) * 0.5;
+      value = {
+        Left: mono + left,
+        Out: mono + (left + right) * 0.5,
+        Right: mono + right,
+      };
     }
 
     frameValues.set(nodeId, value);

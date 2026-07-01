@@ -6757,7 +6757,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           Right: 0,
         };
       } else if (node?.type === "output") {
-        value = mixInput(nodeId, "Mono") + (mixInput(nodeId, "Left") + mixInput(nodeId, "Right")) * 0.5;
+        const outputMonoIn = mixInput(nodeId, "Mono");
+        const outputLeftIn = mixInput(nodeId, "Left");
+        const outputRightIn = mixInput(nodeId, "Right");
+        value = {
+          Left: outputMonoIn + outputLeftIn,
+          Out: outputMonoIn + (outputLeftIn + outputRightIn) * 0.5,
+          Right: outputMonoIn + outputRightIn,
+        };
       }
       frameValues.set(nodeId, value);
       this.nodeOutputs.set(nodeId, value);
