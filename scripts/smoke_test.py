@@ -6493,7 +6493,7 @@ def require_node_graph_mvp_contract() -> None:
         "Render Sample",
         "toggleDebugButton",
         '<body class="debug-collapsed node-boot-loading">',
-        '<script src="./public/boot-loading.js?v=boot-fade-shell-20260701"></script>',
+        '<script src="./public/boot-loading.js?v=hide-cpu-sysinfo-20260701"></script>',
         "node-boot-loading-screen",
         'aria-label="loading"',
         "nodeBootLoadingLabel",
@@ -17153,6 +17153,7 @@ def require_native_module_contract(base_url: str) -> None:
             "soemdsp_helmholtz_fidelity",
         ],
         "ladder_filter": ["soemdsp_ladder_filter_create", "soemdsp_ladder_filter_destroy", "soemdsp_ladder_filter_sample"],
+        "logistic_map": ["soemdsp_logistic_map_create", "soemdsp_logistic_map_destroy", "soemdsp_logistic_map_sample"],
         "noise_generator": ["soemdsp_noise_generator_create", "soemdsp_noise_generator_destroy", "soemdsp_noise_generator_sample"],
         "passive_filter": [
             "soemdsp_passive_filter_create",
@@ -17160,6 +17161,7 @@ def require_native_module_contract(base_url: str) -> None:
             "soemdsp_passive_filter_sample",
             "soemdsp_passive_filter_metadata_json",
         ],
+        "pitch_quantizer": ["soemdsp_pitch_quantizer_create", "soemdsp_pitch_quantizer_destroy", "soemdsp_pitch_quantizer_sample"],
         "pll": ["soemdsp_pll_create", "soemdsp_pll_destroy", "soemdsp_pll_process"],
         "polyblep": [
             "soemdsp_polyblep_create",
