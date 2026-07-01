@@ -6088,10 +6088,9 @@ function nodeGraphTraceDisplayBufferView(buffer, slot) {
   const validSamples = Math.max(0, validEnd - validStart);
   const visibleSamples = Math.min(validSamples, nodeGraphTraceDisplayVisibleSamples(buffer, settings));
   let start = Math.max(validStart, validEnd - visibleSamples);
-  const estimatedCycle = settings.sourceSync && !zoomEditActive && visibleSamples < validSamples
-    ? nodeGraphModuleScopeEstimatedCycle(syncBuffer || buffer)
-    : null;
-  if (settings.sourceSync && !zoomEditActive && estimatedCycle && visibleSamples < validSamples) {
+  const syncEligible = settings.sourceSync && !zoomEditActive && visibleSamples < validSamples;
+  const estimatedCycle = syncEligible ? nodeGraphModuleScopeEstimatedCycle(syncBuffer || buffer) : null;
+  if (syncEligible && estimatedCycle) {
     const triggeredStart = nodeGraphTraceDisplayStabilizedSyncStart(
       buffer,
       syncBuffer,
