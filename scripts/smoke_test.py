@@ -17098,6 +17098,31 @@ def require_native_module_contract(base_url: str) -> None:
     native_sources = sorted((ROOT / "native_modules").glob("*/*.cpp"))
     require(native_sources, "native modules folder should contain C++ sources")
 
+    require(
+        '"wasmUrl": relative_wasm,' in server_source
+        and '"wasmUrl": f"/{relative_wasm}"' not in server_source,
+        "native module wasmUrl must be a relative path so it resolves correctly when the sandbox is mounted under a subdirectory (e.g. embedded as a static export)",
+    )
+    require(
+        "async function fetchNodeGraphLiveNativeModuleCatalogFallback()" in live_runtime_source
+        and 'fetch("native-modules-catalog.json"' in live_runtime_source
+        and "fetchNodeGraphLiveNativeModuleCatalogFallback()" in live_runtime_source[
+            live_runtime_source.index("async function fetchNodeGraphLiveNativeModuleCatalog()"):
+        ],
+        "native module catalog fetch should fall back to a static bundled catalog when /api/native-modules is unavailable (static hosting has no server behind it)",
+    )
+    static_catalog_path = PUBLIC / "native-modules-catalog.json"
+    require(static_catalog_path.exists(), "public/native-modules-catalog.json should exist for static-hosting fallback")
+    static_catalog = json.loads(static_catalog_path.read_text(encoding="utf-8"))
+    require(
+        isinstance(static_catalog.get("modules"), list) and len(static_catalog["modules"]) == len(native_sources),
+        "static native module catalog should list every native module (run scripts/generate_native_modules_catalog.py after adding one)",
+    )
+    require(
+        all(not str(entry.get("wasmUrl", "")).startswith("/") for entry in static_catalog["modules"]),
+        "static native module catalog wasmUrl entries must be relative paths",
+    )
+
     expected_native_exports = {
         "ellipsoid": ["soemdsp_ellipsoid_sample", "soemdsp_ellipsoid_vector_sample"],
         "fractal_brownian_noise": ["soemdsp_fbm_create", "soemdsp_fbm_destroy", "soemdsp_fbm_sample"],

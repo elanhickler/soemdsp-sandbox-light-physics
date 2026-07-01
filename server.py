@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
-BUILD_NUMBER = "20260710"
+BUILD_NUMBER = "20260711"
 DEFAULT_PRESET = PUBLIC / "presets" / "default.json"
 DEFAULT_UI_SETTINGS = PUBLIC / "presets" / "useruisettings.json"
 DEFAULT_UI_SETTINGS_SCRIPT = PUBLIC / "presets" / "useruisettings.js"
@@ -425,7 +425,7 @@ class SandboxServer(BaseHTTPRequestHandler):
             "source": relative_source,
             "sourceUrl": f"https://github.com/soundemote/soemdsp-sandbox/blob/master/{relative_source}",
             "wasm": relative_wasm,
-            "wasmUrl": f"/{relative_wasm}",
+            "wasmUrl": relative_wasm,
             "wasmAvailable": wasm_path.exists(),
         }
 
