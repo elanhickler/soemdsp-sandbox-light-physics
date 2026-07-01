@@ -8454,7 +8454,6 @@ def require_node_graph_mvp_contract() -> None:
         "function redoNodeGraphPatch()",
         "function setNodeGraphViewMode(mode)",
         "const settingsMode = mode === \"settings\"",
-        "const shopMode = mode === \"shop\"",
         "const codeMode = mode === \"code\"",
         "const mappingMode = mode === \"mapping\"",
         "nodeCodeScreenView",
@@ -8466,9 +8465,6 @@ def require_node_graph_mvp_contract() -> None:
         "renderNodeGraphMappingView()",
         "setNodeGraphViewMode(\"mapping\")",
         "nodeModuleShopView",
-        "const moduleShopView = document.getElementById(\"nodeModuleShopView\")",
-        "if (shopMode) {\n    moduleShopView.hidden = false;",
-        "} else if (!modularMode) {\n    moduleShopView.hidden = true;",
         "nodeSceneOpenModuleBrowser",
         "openNodeGraphModuleShop(nodeGraphMvp.sceneContextPoint, contextMenuClientPoint)",
         "function rememberNodeGraphContextMenuClientPoint(event)",
@@ -12631,6 +12627,21 @@ def require_node_graph_mvp_contract() -> None:
     patch_runtime_source = script_sources["./public/node-graph-patch-runtime.js"]
     execution_plan_source = script_sources["./public/node-graph-execution-plan.js"]
     live_frame_source = script_sources["./public/node-graph-live-frame-evaluator.js"]
+    view_controls_source = script_sources["./public/node-graph-view-controls.js"]
+    open_shop_start = module_store_source.index("function openNodeGraphModuleShop(")
+    open_shop_end = module_store_source.index("function closeNodeGraphModuleShop()")
+    open_shop_source = module_store_source[open_shop_start:open_shop_end]
+    close_shop_start = open_shop_end
+    close_shop_end = module_store_source.index("function loadNodeGraphModuleStoreStateLocal()", close_shop_start)
+    close_shop_source = module_store_source[close_shop_start:close_shop_end]
+    require(
+        'setNodeGraphViewMode(' not in open_shop_source
+        and 'setNodeGraphViewMode(' not in close_shop_source
+        and "panel.hidden = false;" in open_shop_source
+        and "panel.hidden = true;" in close_shop_source
+        and '"shop"' not in view_controls_source,
+        "module browser is a floating window and must never change the main view mode, in either direction",
+    )
     live_plan_runtime_source = script_sources["./public/node-graph-live-plan-runtime.js"]
     header_rendering_source = script_sources["./public/node-graph-module-header-rendering.js"]
     require('"transport"' in module_store_source, "Transport should be listed in the module browser type registry")
