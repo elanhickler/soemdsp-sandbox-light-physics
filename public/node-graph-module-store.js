@@ -124,7 +124,7 @@ const nodeGraphModuleCatalogVisibilityStorageKey = "soemdsp-sandbox.moduleCatalo
 const nodeGraphModuleStoreDepartments = Object.freeze([
   "Oscillator",
   "Chaos",
-  "OMS",
+  "Jerobeam",
   "Noise",
   "Filter",
   "Envelope",
@@ -147,7 +147,7 @@ const nodeGraphModuleStoreDepartments = Object.freeze([
 const nodeGraphModuleStoreVisualGroups = Object.freeze([
   {
     label: "Generate",
-    departments: Object.freeze(["Oscillator", "Chaos", "OMS", "Noise", "Drum", "Sequence"]),
+    departments: Object.freeze(["Oscillator", "Chaos", "Jerobeam", "Noise", "Drum", "Sequence"]),
   },
   {
     label: "Process",
@@ -263,10 +263,10 @@ const nodeGraphModuleStoreDepartmentAds = Object.freeze({
     title: "Chaos",
     pitch: "All the various attractors and strange motion systems. The wild shelf where math starts looking back.",
   },
-  OMS: {
-    symbol: "OMS",
-    title: "OMS",
-    pitch: "Orbit and motion systems. Spiral Generator lives here while this style gets its own lane.",
+  Jerobeam: {
+    symbol: "JRB",
+    title: "Jerobeam",
+    pitch: "Jerobeam spiral and orbit motion systems. Spiral Generator lives here.",
   },
   Visual: {
     symbol: "V",
@@ -371,7 +371,7 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["placeholder", "note pattern", "arp engine"],
   },
   spiral: {
-    category: "OMS",
+    category: "Jerobeam",
     description: "Jerobeam spiral engine. Emits X/Y/Z motion-signal for alien curves and audiovisual flight paths.",
     label: "Spiral Generator",
     notes: ["attractor motion", "rotation", "density and morph controls"],
