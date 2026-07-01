@@ -13744,16 +13744,20 @@ def require_node_graph_mvp_contract() -> None:
         "Trace display settings form should edit the global trace defaults used by all trace displays",
     )
     trace_value_normalize_source = node_graph_source[
-        node_graph_source.index("function normalizeNodeGraphTraceDisplaySettingValueForKey"):
+        node_graph_source.index("function nodeGraphTraceDisplayClampUnit"):
         node_graph_source.index("function nodeGraphTraceDisplayFieldFromTarget")
     ]
     require(
-        '["burn", "decay", "dot1Size", "dot2Size", "lineLength", "capSize", "capLength"].includes(key)' in trace_value_normalize_source
-        and 'formType === "dot" && ["lineThickness", "dot2LineThickness"].includes(key)' in trace_value_normalize_source
-        and '["dot1Brightness", "dot2Brightness"].includes(key)' in trace_value_normalize_source
-        and "return clampNodeSliderValue(Number(value) || 0, 0, 2);" in trace_value_normalize_source
-        and "return Math.max(0, Number(value) || 0);" in trace_value_normalize_source,
-        "Trace settings numeric ranges should clamp size to 0..1, brightness to 0..2, and keep thickness nonnegative",
+        "const nodeGraphTraceDisplaySharedValueClamps = Object.freeze({" in trace_value_normalize_source
+        and "const nodeGraphTraceDisplayFormTypeValueClampOverrides = Object.freeze({" in trace_value_normalize_source
+        and "dot: Object.freeze({" in trace_value_normalize_source
+        and "scope2d: Object.freeze({" in trace_value_normalize_source
+        and "scope2dTrace: Object.freeze({" in trace_value_normalize_source
+        and "dot1Brightness: nodeGraphTraceDisplayClampBrightness," in trace_value_normalize_source
+        and "dot2Brightness: nodeGraphTraceDisplayClampBrightness," in trace_value_normalize_source
+        and "function normalizeNodeGraphTraceDisplaySettingValueForKey(key, value)" in trace_value_normalize_source
+        and "nodeGraphTraceDisplayFormTypeValueClampOverrides[formType]?.[key] ||" in trace_value_normalize_source,
+        "Trace settings clamp rules should be isolated per display type, not a shared cascading if-chain",
     )
     for snippet in [
         "function nodeGraphTraceDisplayTimingEnabled()",
@@ -13885,9 +13889,8 @@ def require_node_graph_mvp_contract() -> None:
         and "const innerThickness = Math.max(0, dotSpace * clampNodeSliderValue(settings.dot1Size, 0, 1))" in node_graph_source
         and "settings.dot2Enabled !== false && settings.dot2Brightness > 0 && outerThickness > 0" in node_graph_source
         and "settings.dot1Enabled !== false && settings.dot1Brightness > 0 && innerThickness > 0" in node_graph_source
-        and '["burn", "decay", "dot1Size", "dot2Size", "lineLength", "capSize", "capLength"].includes(key)' in node_graph_source
-        and 'formType === "dot" && ["lineThickness", "dot2LineThickness"].includes(key)' in node_graph_source
-        and '["dot1Brightness", "dot2Brightness"].includes(key)' in node_graph_source
+        and "const nodeGraphTraceDisplaySharedValueClamps = Object.freeze({" in node_graph_source
+        and "const nodeGraphTraceDisplayFormTypeValueClampOverrides = Object.freeze({" in node_graph_source
         and "function setNodeGraphTraceDisplaySettingsFormType(node = null)" in node_graph_source
         and "nodeGraphTraceDisplayActiveControlsByType" in node_graph_source
         and "dot: Object.freeze({" in node_graph_source

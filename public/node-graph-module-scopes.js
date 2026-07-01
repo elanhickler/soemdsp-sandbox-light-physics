@@ -2312,13 +2312,22 @@ const nodeGraphZeroDBurnSettingsDefaults = Object.freeze({
 });
 
 const nodeGraphValueOscilloscopeSettingsDefaults = Object.freeze({
-  ...nodeGraphTraceDisplaySettingsDefaults,
+  brightness: 0.92,
   burn: 0,
   capEnabled: true,
   capLength: 0.16,
   capSize: 0.08,
+  color: "#75ebff",
   decay: 0,
+  dot1Enabled: true,
+  dot1Size: 0.08,
+  dot2Brightness: 0.18,
+  dot2Color: "#184fff",
+  dot2Enabled: true,
+  dot2LineThickness: 0.48,
+  dot2Size: 0.24,
   lineLength: 0.88,
+  lineThickness: 0.2,
 });
 
 const nodeGraphScope2dSettingsDefaults = Object.freeze({
@@ -2492,31 +2501,39 @@ function normalizeNodeGraphTraceDisplaySettings(settings = {}) {
 
 function normalizeNodeGraphValueOscilloscopeSettings(settings = {}) {
   const source = settings && typeof settings === "object" ? settings : {};
-  const normalized = normalizeNodeGraphTraceDisplaySettings({
-    ...nodeGraphValueOscilloscopeSettingsDefaults,
-    ...source,
-  });
+  const defaults = nodeGraphValueOscilloscopeSettingsDefaults;
   return {
-    ...normalized,
+    brightness: normalizeNodeGraphTraceDisplayNumber(
+      source.brightness ?? source.dot1Brightness,
+      defaults.brightness,
+      0,
+      Infinity,
+    ),
+    burn: normalizeNodeGraphTraceDisplayNumber(source.burn, defaults.burn, 0, 1),
     capEnabled: source.capEnabled !== false,
-    capLength: normalizeNodeGraphTraceDisplayNumber(
-      source.capLength,
-      nodeGraphValueOscilloscopeSettingsDefaults.capLength,
+    capLength: normalizeNodeGraphTraceDisplayNumber(source.capLength, defaults.capLength, 0, 1),
+    capSize: normalizeNodeGraphTraceDisplayNumber(source.capSize, defaults.capSize, 0, 1),
+    color: normalizeNodeGraphTraceDisplayColor(source.color ?? source.dot1Color, defaults.color),
+    decay: normalizeNodeGraphTraceDisplayNumber(source.decay, defaults.decay, 0, 1),
+    dot1Enabled: source.dot1Enabled !== false,
+    dot1Size: normalizeNodeGraphTraceDisplayNumber(source.dot1Size, defaults.dot1Size, 0, 1),
+    dot2Brightness: normalizeNodeGraphTraceDisplayNumber(
+      source.dot2Brightness,
+      defaults.dot2Brightness,
+      0,
+      Infinity,
+    ),
+    dot2Color: normalizeNodeGraphTraceDisplayColor(source.dot2Color, defaults.dot2Color),
+    dot2Enabled: source.dot2Enabled !== false,
+    dot2LineThickness: normalizeNodeGraphTraceDisplayNumber(
+      source.dot2LineThickness,
+      defaults.dot2LineThickness,
       0,
       1,
     ),
-    capSize: normalizeNodeGraphTraceDisplayNumber(
-      source.capSize,
-      nodeGraphValueOscilloscopeSettingsDefaults.capSize,
-      0,
-      1,
-    ),
-    lineLength: normalizeNodeGraphTraceDisplayNumber(
-      source.lineLength,
-      nodeGraphValueOscilloscopeSettingsDefaults.lineLength,
-      0,
-      1,
-    ),
+    dot2Size: normalizeNodeGraphTraceDisplayNumber(source.dot2Size, defaults.dot2Size, 0, 1),
+    lineLength: normalizeNodeGraphTraceDisplayNumber(source.lineLength, defaults.lineLength, 0, 1),
+    lineThickness: normalizeNodeGraphTraceDisplayNumber(source.lineThickness, defaults.lineThickness, 0, 1),
   };
 }
 
@@ -4139,36 +4156,62 @@ function setNodeGraphTraceDisplayZoomEditActive(active) {
   nodeGraphMvp.traceDisplayZoomEditActive = Boolean(active);
 }
 
+function nodeGraphTraceDisplayClampUnit(value) {
+  return clampNodeSliderValue(Number(value) || 0, 0, 1);
+}
+
+function nodeGraphTraceDisplayClampNonNegative(value) {
+  return Math.max(0, Number(value) || 0);
+}
+
+function nodeGraphTraceDisplayClampBrightness(value) {
+  return clampNodeSliderValue(Number(value) || 0, 0, 2);
+}
+
+// Clamp rules shared by every display-settings form type, keyed by field name.
+// Each entry owns exactly one field's rule — adding/changing a rule for one
+// display type cannot silently change behavior for another.
+const nodeGraphTraceDisplaySharedValueClamps = Object.freeze({
+  burn: nodeGraphTraceDisplayClampUnit,
+  capLength: nodeGraphTraceDisplayClampUnit,
+  capSize: nodeGraphTraceDisplayClampUnit,
+  cycles: (value) => Math.max(1, Math.min(64, Math.round(Number(value) || 0))),
+  decay: nodeGraphTraceDisplayClampUnit,
+  dot1Brightness: nodeGraphTraceDisplayClampBrightness,
+  dot1Size: nodeGraphTraceDisplayClampUnit,
+  dot2Brightness: nodeGraphTraceDisplayClampBrightness,
+  dot2LineThickness: nodeGraphTraceDisplayClampNonNegative,
+  dot2Size: nodeGraphTraceDisplayClampUnit,
+  historySeconds: nodeGraphTraceDisplayClampNonNegative,
+  lineLength: nodeGraphTraceDisplayClampUnit,
+  lineThickness: nodeGraphTraceDisplayClampNonNegative,
+  scale: nodeGraphTraceDisplayClampNonNegative,
+  zoomSeconds: nodeGraphTraceDisplayClampNonNegative,
+});
+
+// Per-formType overrides, only for the (formType, field) pairs that diverge
+// from the shared table above. Isolated per formType so a new override can't
+// leak into unrelated display types.
+const nodeGraphTraceDisplayFormTypeValueClampOverrides = Object.freeze({
+  dot: Object.freeze({
+    lineThickness: nodeGraphTraceDisplayClampUnit,
+    dot2LineThickness: nodeGraphTraceDisplayClampUnit,
+  }),
+  scope2d: Object.freeze({
+    lineThickness: nodeGraphTraceDisplayClampUnit,
+    dot2LineThickness: nodeGraphTraceDisplayClampUnit,
+  }),
+  scope2dTrace: Object.freeze({
+    lineThickness: nodeGraphTraceDisplayClampUnit,
+    dot2LineThickness: nodeGraphTraceDisplayClampUnit,
+  }),
+});
+
 function normalizeNodeGraphTraceDisplaySettingValueForKey(key, value) {
   const formType = nodeGraphTraceDisplaySettingsFormType();
-  if (["burn", "decay", "dot1Size", "dot2Size", "lineLength", "capSize", "capLength"].includes(key)) {
-    return clampNodeSliderValue(Number(value) || 0, 0, 1);
-  }
-  if (formType === "dot" && ["lineThickness", "dot2LineThickness"].includes(key)) {
-    return clampNodeSliderValue(Number(value) || 0, 0, 1);
-  }
-  if (formType === "scope2d" && ["lineThickness", "dot2LineThickness"].includes(key)) {
-    return clampNodeSliderValue(Number(value) || 0, 0, 1);
-  }
-  if (formType === "scope2dTrace" && ["lineThickness", "dot2LineThickness"].includes(key)) {
-    return clampNodeSliderValue(Number(value) || 0, 0, 1);
-  }
-  if (["dot1Brightness", "dot2Brightness"].includes(key)) {
-    return clampNodeSliderValue(Number(value) || 0, 0, 2);
-  }
-  if (["lineThickness", "dot2LineThickness"].includes(key)) {
-    return Math.max(0, Number(value) || 0);
-  }
-  if (key === "zoomSeconds" || key === "historySeconds") {
-    return Math.max(0, Number(value) || 0);
-  }
-  if (key === "scale") {
-    return Math.max(0, Number(value) || 0);
-  }
-  if (key === "cycles") {
-    return Math.max(1, Math.min(64, Math.round(Number(value) || 0)));
-  }
-  return value;
+  const clamp = nodeGraphTraceDisplayFormTypeValueClampOverrides[formType]?.[key] ||
+    nodeGraphTraceDisplaySharedValueClamps[key];
+  return clamp ? clamp(value) : value;
 }
 
 function nodeGraphTraceDisplayFieldFromTarget(target) {
