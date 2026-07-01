@@ -12703,8 +12703,18 @@ def require_node_graph_mvp_contract() -> None:
         and 'key: "recycle"' in reverb_definition
         and 'key: "lfoAmplitude"' in reverb_definition
         and 'key: "lfoBaseSpeed"' in reverb_definition
-        and 'key: "lfoVariation"' in reverb_definition,
+        and 'key: "lfoVariation"' in reverb_definition
+        and 'control: "number", defaultValue: "0", key: "seed"' in reverb_definition,
         "Sabrina Reverb should expose stereo I/O and raw Sabrina controls",
+    )
+    require(
+        'control: String(parameter.control || "").trim() === "number" ? "number" : ""' in script_sources["./public/node-graph-parameter-metadata.js"]
+        and 'input.dataset.control = metadata?.control || "";' in script_sources["./public/node-graph-module-factories.js"]
+        and "function nodeSliderReadoutIsNumberOnly(readout)" in script_sources["./public/node-graph-slider-readout-controls.js"]
+        and 'slider?.dataset?.control === "number"' in script_sources["./public/node-graph-slider-readout-controls.js"]
+        and 'readout.addEventListener("pointerdown", stopNodeSliderReadoutPointer);' in script_sources["./public/node-graph-slider-readout-controls.js"]
+        and 'readout.addEventListener("pointerdown", beginNodeSliderDrag);' in script_sources["./public/node-graph-slider-readout-controls.js"],
+        "number-only module controls should double-click edit without pointer-dragging",
     )
     require(
         'reverbEffect: {\n    category: "Delay"' in module_store_source
