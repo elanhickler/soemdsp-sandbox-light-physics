@@ -8768,7 +8768,11 @@ function nodeGraphNumberReadoutFormatValue(sample, decimals) {
   if (!Number.isFinite(value)) {
     return "--";
   }
-  return value.toFixed(clampNodeSliderValue(Math.round(Number(decimals) || 0), 0, 8));
+  const fixed = value.toFixed(clampNodeSliderValue(Math.round(Number(decimals) || 0), 0, 8));
+  // Reserve a sign column so the text width (and its centered position)
+  // stays constant as the value crosses zero — otherwise the "-" appearing
+  // and disappearing shifts the whole readout horizontally every time.
+  return fixed.startsWith("-") ? fixed : ` ${fixed}`;
 }
 
 function drawNodeGraphNumberReadoutItem(renderer, item, pixelRatio) {
