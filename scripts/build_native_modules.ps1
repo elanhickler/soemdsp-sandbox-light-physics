@@ -193,6 +193,23 @@ if (!(Test-Path -LiteralPath $clang)) {
   -fno-exceptions `
   -fno-rtti `
   "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_vactrol_envelope_create" `
+  "-Wl,--export=soemdsp_vactrol_envelope_destroy" `
+  "-Wl,--export=soemdsp_vactrol_envelope_sample" `
+  "-Wl,--export=soemdsp_vactrol_envelope_version" `
+  "-Wl,--export=soemdsp_vactrol_envelope_metadata_json" `
+  "-Wl,--export=soemdsp_vactrol_envelope_metadata_json_size" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\vactrol_envelope\vactrol_envelope.wasm" `
+  "$root\native_modules\vactrol_envelope\vactrol_envelope.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
   "-Wl,--export=soemdsp_shooting_star_explosion_power" `
   "-Wl,--export=soemdsp_shooting_star_explosion_version" `
   "-Wl,--export=soemdsp_shooting_star_explosion_metadata_json" `
