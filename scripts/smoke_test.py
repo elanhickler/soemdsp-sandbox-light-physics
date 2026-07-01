@@ -110,6 +110,7 @@ PUBLIC_SCRIPT_PATHS = (
     "./public/node-graph-image-utils.js",
     "./public/node-graph-graph-utils.js",
     "./public/node-graph-samples.js",
+    "./public/node-graph-embed-config.js",
     "./public/node-graph-resources.js",
     "./public/node-graph-text-box-rendering.js",
     "./public/node-graph-patch-normalizers.js",
@@ -7162,7 +7163,7 @@ def require_node_graph_mvp_contract() -> None:
         "default preset should start Music Player with the official startup music in Play mode",
     )
     require(
-        '<script src="./public/node-graph-resources.js?v=file-grid-resources-1"></script>' in index_source
+        '<script src="./public/node-graph-resources.js?v=embed-config-20260701"></script>' in index_source
         and "await loadNodeGraphResourceManifest();" in script_sources["./public/node-graph-bootstrap.js"]
         and "resources: { resources: [], version: 1 }" in script_sources["./public/node-graph-state.js"]
         and "resourceMap: new Map()" in script_sources["./public/node-graph-state.js"],
