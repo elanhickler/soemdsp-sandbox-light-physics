@@ -154,12 +154,12 @@ const nodeGraphModuleStoreVisualGroups = Object.freeze([
     departments: Object.freeze(["Filter", "Envelope", "Modulators", "Delay", "Dynamics"]),
   },
   {
-    label: "Interact",
-    departments: Object.freeze(["Controllers", "Game Triggers", "Portals", "Oscilloscope", "Visual", "Debug"]),
-  },
-  {
     label: "Memory",
     departments: Object.freeze(["Audio", "Loops", "Samples"]),
+  },
+  {
+    label: "Interact",
+    departments: Object.freeze(["Controllers", "Game Triggers", "Portals", "Oscilloscope", "Visual", "Debug"]),
   },
 ]);
 
@@ -715,13 +715,13 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["Sabrina", "serial diffusion", "cross feedback"],
   },
   pll: {
-    category: "Modulation",
+    category: "Sequence",
     description: "Phase-locked loop based on the Doepfer A-196. VCO tracks an incoming signal via a phase comparator (XOR, RS flip-flop, or PFD) and one-pole loop filter. Outputs VCO, PC, LPF CV, and lock gate.",
     label: "PLL",
     notes: ["phase locked loop", "A-196", "vco", "frequency tracking"],
   },
   helmholtzPitch: {
-    category: "Modulation",
+    category: "Sequence",
     description: "Monophonic pitch detector using the McLeod Pitch Method (normalized square difference function with parabolic interpolation). Outputs detected frequency and a fidelity score; rejects noisy/non-periodic frames.",
     label: "Pitch Detector",
     notes: ["pitch tracking", "pitch detector", "mcleod", "autocorrelation", "frequency follower"],
