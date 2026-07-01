@@ -6889,7 +6889,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           Left: outputMonoIn + outputLeftIn,
           Out: outputMonoIn + (outputLeftIn + outputRightIn) * 0.5,
           Right: outputMonoIn + outputRightIn,
-          Sync: outputMonoIn + outputLeftIn + outputRightIn,
         };
       }
       frameValues.set(nodeId, value);

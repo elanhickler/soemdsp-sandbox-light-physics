@@ -3560,7 +3560,6 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         Left: mono + left,
         Out: mono + (left + right) * 0.5,
         Right: mono + right,
-        Sync: mono + left + right,
       };
     }
 
