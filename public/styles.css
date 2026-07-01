@@ -10661,8 +10661,7 @@ audio {
   display: block;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: clip;
+  overflow: visible;
   white-space: nowrap;
   pointer-events: none;
 }
