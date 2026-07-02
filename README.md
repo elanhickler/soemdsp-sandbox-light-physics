@@ -22,6 +22,10 @@ Spiral all exist because you took the time to work out the curves and put
 them where other people could learn from them. This fork exists to make sure
 that work keeps running.
 
+See [**Beaming Radar Signal to Jerobeam**](BEAMING_RADAR_SIGNAL_TO_JEROBEAM.md)
+for the full dedication, plus a real prettyscope render and animation of the
+Radar module's output.
+
 ---
 
 # soemdsp-sandbox
