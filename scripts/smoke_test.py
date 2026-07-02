@@ -16839,7 +16839,10 @@ def require_node_graph_mvp_contract() -> None:
 
 
 def require_readme_scheduler_contract() -> None:
-    readme_source = (ROOT / "README.md").read_text(encoding="utf-8")
+    # soemdsp-simd branch: README.md is branch-specific; the setup/CLAP/API
+    # contract text this check enforces lives in docs/SANDBOX_REFERENCE.md
+    # instead (kept verbatim from the original README.md).
+    readme_source = (ROOT / "docs" / "SANDBOX_REFERENCE.md").read_text(encoding="utf-8")
     readme_text = " ".join(readme_source.split())
     for snippet in [
         "git clone https://github.com/soundemote/soemdsp-sandbox.git",
