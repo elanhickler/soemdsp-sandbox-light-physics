@@ -878,6 +878,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { key: "zTrace", label: "Z Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Z Raw" } },
     ],
     defaultDisplayMode: "xyBurn",
+    inputs: ["Reset"],
     outputs: ["Out X", "Out Y", "Out Z"],
     parameters: [
       {

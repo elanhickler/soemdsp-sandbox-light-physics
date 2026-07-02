@@ -3318,7 +3318,16 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   createFractalBrownianNoiseState() {
-    return { axes: {}, nativeHandle: 0 };
+    return { axes: {}, nativeHandle: 0, resetWasHigh: false };
+  }
+
+  resetFractalBrownianNoiseState(state) {
+    for (const axisState of Object.values(state.axes || {})) {
+      axisState.time = 0;
+    }
+    if (state.nativeHandle && this.nativeFbm?.soemdsp_fbm_reset) {
+      this.nativeFbm.soemdsp_fbm_reset(state.nativeHandle);
+    }
   }
 
   safeFilterNumber(value, state) {
@@ -5304,8 +5313,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return this.safeFilterNumber(options.raw ? normalized : normalized * level, null);
   }
 
-  fractalBrownianNoiseVector(state, params, rate = sampleRate, nodeId = "") {
+  fractalBrownianNoiseVector(state, params, rate = sampleRate, nodeId = "", reset = 0) {
     const safeRate = Math.max(1, Number(rate) || sampleRate || 44100);
+    const resetHigh = Number(reset) > 0.5;
+    if (resetHigh && !state.resetWasHigh) {
+      this.resetFractalBrownianNoiseState(state);
+    }
+    state.resetWasHigh = resetHigh;
     if (this.nativeFbmReady) {
       if (!state.nativeHandle) {
         state.nativeHandle = this.nativeFbm.soemdsp_fbm_create();
@@ -6656,6 +6670,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           },
           safeRate,
           nodeId,
+          mixInput(nodeId, "Reset"),
         );
       } else if (node?.type === "clock") {
         const state = this.clockStates.get(nodeId) || this.createClockState();

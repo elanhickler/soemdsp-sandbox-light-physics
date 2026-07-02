@@ -339,6 +339,7 @@ function createNodeGraphRandomWalkState() {
 function createNodeGraphFractalBrownianNoiseState() {
   return {
     axes: {},
+    resetWasHigh: false,
   };
 }
 
@@ -1766,7 +1767,14 @@ function nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime 
   return nodeGraphSafeFilterNumber(options.raw ? normalized : normalized * level, runtime, nodeId, null, "fbm output");
 }
 
-function nodeGraphFractalBrownianNoiseVector(state, params, sampleRate, runtime = null, nodeId = "") {
+function nodeGraphFractalBrownianNoiseVector(state, params, sampleRate, runtime = null, nodeId = "", reset = 0) {
+  const resetHigh = Number(reset) > 0.5;
+  if (resetHigh && !state.resetWasHigh) {
+    for (const axisState of Object.values(state.axes || {})) {
+      axisState.time = 0;
+    }
+  }
+  state.resetWasHigh = resetHigh;
   const rawX = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "x", { raw: true });
   const rawY = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "y", { raw: true });
   const rawZ = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "z", { raw: true });
@@ -2612,6 +2620,7 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         sampleRate,
         runtime,
         nodeId,
+        mixInput(nodeId, "Reset"),
       );
     } else if (node?.type === "clock") {
       const state = runtime.clockStates.get(nodeId) || createNodeGraphClockState();

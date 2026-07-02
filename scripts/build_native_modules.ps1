@@ -126,6 +126,7 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--no-entry" `
   "-Wl,--export=soemdsp_fbm_create" `
   "-Wl,--export=soemdsp_fbm_destroy" `
+  "-Wl,--export=soemdsp_fbm_reset" `
   "-Wl,--export=soemdsp_fbm_sample" `
   "-Wl,--export=soemdsp_fbm_x" `
   "-Wl,--export=soemdsp_fbm_y" `
