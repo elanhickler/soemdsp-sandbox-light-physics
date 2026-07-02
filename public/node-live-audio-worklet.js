@@ -6933,9 +6933,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.pitchQuantizerStates.set(nodeId, state);
         const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
         value = {
-          Pitch: this.pitchQuantizerSample(state, {
+          "0.1V/Oct": this.pitchQuantizerSample(state, {
             hasScaleInput: hasInput(nodeId, "Scale"),
-            pitch: mixInput(nodeId, "Pitch"),
+            pitch: mixInput(nodeId, "0.1V/Oct"),
             scaleChoice: read("scale", 1),
             scaleInput: mixInput(nodeId, "Scale"),
           }),

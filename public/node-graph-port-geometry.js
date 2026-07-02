@@ -157,10 +157,16 @@ function nodeGraphCssColor(property, fallback) {
 
 function nodeGraphPortWireColor(node, port, io) {
   const canonicalPort = nodeGraphCanonicalPortForNode(node, port, io);
-  // Digital signal (12-bit bitmask) ports get a solid white wire instead of
-  // the usual role color -- see the .node-io-row[data-digital-signal] CSS
-  // for the matching port tap color.
+  // Digital signal ports get a solid white wire instead of the usual role
+  // color -- see the .node-io-row[data-digital-signal] CSS for the matching
+  // port tap color. This covers any 0.1V/Oct pitch CV port (that's a fixed,
+  // quantized-representation signal, not a free-form analog one) plus the
+  // 12-bit pitch-class bitmask ports (Turing Machine's Scale output, Pitch
+  // Quantizer's Scale input).
   const patchNodeType = nodeGraphPatchNode(node)?.type;
+  if (canonicalPort === "0.1V/Oct") {
+    return "#ffffff";
+  }
   if (patchNodeType === "turingMachine" && canonicalPort === "Scale" && io === "output") {
     return "#ffffff";
   }

@@ -2910,9 +2910,9 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       runtime.pitchQuantizerStates.set(nodeId, state);
       const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
       value = {
-        Pitch: nodeGraphPitchQuantizerSample(state, {
+        "0.1V/Oct": nodeGraphPitchQuantizerSample(state, {
           hasScaleInput: hasInput(nodeId, "Scale"),
-          pitch: mixInput(nodeId, "Pitch"),
+          pitch: mixInput(nodeId, "0.1V/Oct"),
           scaleChoice: read("scale", 1),
           scaleInput: mixInput(nodeId, "Scale"),
         }),

@@ -715,8 +715,8 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   pitchQuantizer: {
-    inputs: ["Pitch", "Scale"],
-    outputs: ["Pitch"],
+    inputs: ["0.1V/Oct", "Scale"],
+    outputs: ["0.1V/Oct"],
     parameters: [
       {
         choices: ["Chromatic", "Major", "Minor", "Major Pentatonic", "Minor Pentatonic", "Whole Tone"],
