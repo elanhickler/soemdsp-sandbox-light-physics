@@ -244,6 +244,17 @@ bool sabrinaSmoothingNeedsWork(const SabrinaState& state) {
 // Advances the smoothed* fields one step toward their targets and reapplies
 // delay geometry. Call once per sample. No-ops once converged (see
 // sabrinaSmoothingNeedsWork) so a settled/unmodulated instance costs nothing.
+//
+// This is DSP safety smoothing, not UI/edit smoothing -- the caller's own
+// edit smoothing already handles ordinary parameter drags. delaySize and
+// diffusionSize still need it here because they feed a delay-line read
+// offset directly: a hard-step caller (patch load, script write, or
+// anything else that bypasses edit smoothing) would otherwise teleport the
+// read position and click, confirmed by direct A/B measurement (~5.5-7.6x
+// larger output discontinuity with this ramp bypassed vs. enabled on a hard
+// step; no measurable difference during an already-smoothed drag). The LFO
+// parameters are smoothed here too, but that's conservative legacy
+// behavior pending audio/render validation, not a confirmed safety need.
 void advanceSabrinaSmoothing(SabrinaState& state) {
   if (!sabrinaSmoothingNeedsWork(state)) {
     return;
