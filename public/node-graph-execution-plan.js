@@ -561,6 +561,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       type === "chuaAttractor" ||
       type === "ellipsoid" ||
       type === "macroKnob" ||
+      type === "impulseButton" ||
       type === "macroControls" ||
       type === "midiOut" ||
       type === "noiseGenerator" ||

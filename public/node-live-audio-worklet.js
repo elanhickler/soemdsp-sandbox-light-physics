@@ -197,6 +197,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.triggerDividerStates = new Map();
     this.triangleStates = new Map();
     this.vactrolEnvelopeStates = new Map();
+    this.impulseButtonStates = new Map();
     this.visualInputBuffers = new Map();
     this.visualSinks = [];
     this.resetVisualControls();
@@ -384,6 +385,19 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.setShootingStarExplosionEvent(message.speed);
       return;
     }
+    if (message.type === "impulseButtonTrigger") {
+      this.setImpulseButtonTrigger(message.nodeId, message.amplitude);
+      return;
+    }
+  }
+
+  setImpulseButtonTrigger(nodeId, amplitude) {
+    if (!nodeId) return;
+    const state = this.impulseButtonStates.get(nodeId) || this.createImpulseButtonState();
+    state.pulseSamples = Math.max(0, Number(state.pulseSamples) || 0) + 1;
+    const normalized = Number(amplitude);
+    state.amplitude = Number.isFinite(normalized) ? Math.max(0, Math.min(1, normalized)) : 1;
+    this.impulseButtonStates.set(nodeId, state);
   }
 
   async setNativeModuleWasm(message) {
@@ -785,6 +799,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.triggerDividerStates = new Map();
     this.triangleStates = new Map();
     this.vactrolEnvelopeStates = new Map();
+    this.impulseButtonStates = new Map();
     this.polyBlepStates = new Map();
     this.visualSinks = [];
     this.resetVisualControls();
@@ -1084,6 +1099,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if ((node?.type === "vactrolEnvelope" || node?.type === "vactrolEnvelopeC4") && !this.vactrolEnvelopeStates.has(id)) {
         this.vactrolEnvelopeStates.set(id, this.createVactrolEnvelopeState());
       }
+      if (node?.type === "impulseButton" && !this.impulseButtonStates.has(id)) {
+        this.impulseButtonStates.set(id, this.createImpulseButtonState());
+      }
       if (node?.type === "polyBlep" && !this.polyBlepStates.has(id)) {
         this.polyBlepStates.set(id, this.createPolyBlepState());
       }
@@ -1341,6 +1359,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (!ids.has(id)) {
         this.destroyVactrolEnvelopeNativeState(this.vactrolEnvelopeStates.get(id));
         this.vactrolEnvelopeStates.delete(id);
+      }
+    }
+    for (const id of [...this.impulseButtonStates.keys()]) {
+      if (!ids.has(id)) {
+        this.impulseButtonStates.delete(id);
       }
     }
     for (const id of [...this.polyBlepStates.keys()]) {
@@ -3226,6 +3249,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     };
   }
 
+  createImpulseButtonState() {
+    return {
+      amplitude: 1,
+      pulseSamples: 0,
+    };
+  }
+
   createPolyBlepState() {
     return {
       nativeHandle: 0,
@@ -3654,6 +3684,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.triggerDividerStates = new Map();
     runtime.triangleStates = new Map();
     runtime.vactrolEnvelopeStates = new Map();
+    runtime.impulseButtonStates = new Map();
     runtime.polyBlepStates = new Map();
     runtime.resetVisualControls();
     runtime.setNestedPlan(plan);
@@ -3727,6 +3758,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "triggerCounter") this.triggerCounterStates.set(id, this.createTriggerCounterState());
       if (node?.type === "triggerDivider") this.triggerDividerStates.set(id, this.createTriggerDividerState());
       if (node?.type === "vactrolEnvelope" || node?.type === "vactrolEnvelopeC4") this.vactrolEnvelopeStates.set(id, this.createVactrolEnvelopeState());
+      if (node?.type === "impulseButton") this.impulseButtonStates.set(id, this.createImpulseButtonState());
       if (node?.type === "polyBlep") this.polyBlepStates.set(id, this.createPolyBlepState());
       if (node?.type === "moduleGroup" && node.moduleGroupPlan) {
         this.moduleGroupRuntimes.set(id, this.createNestedRuntime(node.moduleGroupPlan));
@@ -7368,6 +7400,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           },
           safeRate,
         );
+      } else if (node?.type === "impulseButton") {
+        const state = this.impulseButtonStates.get(nodeId) || this.createImpulseButtonState();
+        this.impulseButtonStates.set(nodeId, state);
+        const pulseSamples = Math.max(0, Number(state.pulseSamples) || 0);
+        const amplitude = Math.max(0, Math.min(1, Number(state.amplitude ?? 1)));
+        state.pulseSamples = Math.max(0, pulseSamples - 1);
+        value = { Pulse: pulseSamples > 0 ? amplitude : 0 };
       } else if (node?.type === "flowerChildEnvelopeFollower") {
         const state = this.flowerChildEnvelopeFollowerStates.get(nodeId) ||
           this.createFlowerChildEnvelopeFollowerState();

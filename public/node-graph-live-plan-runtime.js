@@ -276,6 +276,7 @@ function createNodeGraphLiveRuntime(plan) {
   const triggerDividerStates = new Map();
   const triangleStates = new Map();
   const vactrolEnvelopeStates = new Map();
+  const impulseButtonStates = new Map();
   const visualControlState = createNodeGraphVisualControlState();
   for (const node of plan.nodes || []) {
     if (nodeGraphModuleIsRealtimeOscillatorType(node.type)) {
@@ -394,6 +395,9 @@ function createNodeGraphLiveRuntime(plan) {
     if (node.type === "vactrolEnvelope" || node.type === "vactrolEnvelopeC4") {
       vactrolEnvelopeStates.set(node.id, createNodeGraphVactrolEnvelopeState());
     }
+    if (node.type === "impulseButton") {
+      impulseButtonStates.set(node.id, createNodeGraphImpulseButtonState());
+    }
     if (node.type === "moduleGroup" && node.moduleGroup?.sourcePatch) {
       try {
         moduleGroupRuntimes.set(node.id, createNodeGraphLiveRuntime(nodeGraphBuildLivePlanForPatch(node.moduleGroup.sourcePatch)));
@@ -486,6 +490,7 @@ function createNodeGraphLiveRuntime(plan) {
     triggerDividerStates,
     triangleStates,
     vactrolEnvelopeStates,
+    impulseButtonStates,
     visualSinks: (plan.visualSinks || []).map((sink) => ({
       ...sink,
       bufferedInputs: [...(sink.bufferedInputs || [])],
@@ -654,6 +659,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   if (!runtime.vactrolEnvelopeStates) {
     runtime.vactrolEnvelopeStates = new Map();
   }
+  if (!runtime.impulseButtonStates) {
+    runtime.impulseButtonStates = new Map();
+  }
   resetNodeGraphRuntimeVisualControls(runtime);
   for (const node of plan.nodes || []) {
     if (!runtime.nodeOutputs.has(node.id)) {
@@ -778,6 +786,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     }
     if ((node.type === "vactrolEnvelope" || node.type === "vactrolEnvelopeC4") && !runtime.vactrolEnvelopeStates.has(node.id)) {
       runtime.vactrolEnvelopeStates.set(node.id, createNodeGraphVactrolEnvelopeState());
+    }
+    if (node.type === "impulseButton" && !runtime.impulseButtonStates.has(node.id)) {
+      runtime.impulseButtonStates.set(node.id, createNodeGraphImpulseButtonState());
     }
     if (node.type === "moduleGroup" && node.moduleGroup?.sourcePatch && !runtime.moduleGroupRuntimes.has(node.id)) {
       try {
@@ -1031,6 +1042,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.vactrolEnvelopeStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.vactrolEnvelopeStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.impulseButtonStates.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.impulseButtonStates.delete(id);
     }
   }
   for (const key of [...runtime.smoothers.keys()]) {

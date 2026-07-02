@@ -8866,7 +8866,7 @@ def require_node_graph_mvp_contract() -> None:
         "node-slider-widget-body",
         "node-slider-widget-row",
         "node-slider-widget-io-section",
-        "if (definition.parameters?.length && definition.layout !== \"sliderWidget\" && layout !== \"knobWidget\" && definition.layout !== \"led\")",
+        "if (definition.parameters?.length && definition.layout !== \"sliderWidget\" && layout !== \"knobWidget\" && definition.layout !== \"led\" && definition.layout !== \"buttonWidget\")",
         "node-header-actions",
         "node-header-title-row",
         "node-header-title",

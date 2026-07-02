@@ -226,6 +226,7 @@ var nodeGraphMvp = {
     valueSlider: 0,
     vactrolEnvelope: 0,
     vactrolEnvelopeC4: 0,
+    impulseButton: 0,
   },
   patch: cloneNodeGraphPatch(nodeGraphDefaultPatch),
   patchDirtyState: "untouched",

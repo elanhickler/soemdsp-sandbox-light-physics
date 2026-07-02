@@ -60,6 +60,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "macroKnob",
   "bipolarKnob",
   "valueSlider",
+  "impulseButton",
   "rangeSlider",
   "midiOut",
   "midiNotePitch",
@@ -597,6 +598,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "Resizable bias-output slider for manual control in the modular view and UI view.",
     label: "Value Slider",
     notes: ["bias output", "resizable widget", "manual control"],
+  },
+  impulseButton: {
+    category: "Controllers",
+    description: "Click to fire a single-sample impulse at the amplitude set by the adjacent slider (0 to 1). A manual, on-demand trigger for auditioning envelopes and other transient-driven modules.",
+    label: "Impulse Button",
+    notes: ["manual trigger", "one-sample pulse", "amplitude slider"],
   },
   rangeSlider: {
     category: "Controllers",

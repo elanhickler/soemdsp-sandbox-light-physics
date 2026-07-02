@@ -311,6 +311,13 @@ function createNodeGraphVactrolEnvelopeState() {
   };
 }
 
+function createNodeGraphImpulseButtonState() {
+  return {
+    amplitude: 1,
+    pulseSamples: 0,
+  };
+}
+
 function createNodeGraphFlowerChildEnvelopeFollowerState() {
   return {
     currentSlewedValue: 0,
@@ -3025,6 +3032,15 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         readNodeGraphLiveEffectiveParam(runtime, node, "lowRange", 6, frame, frames, frameValues),
         readNodeGraphLiveEffectiveParam(runtime, node, "highRange", 10, frame, frames, frameValues),
       );
+    } else if (node?.type === "impulseButton") {
+      const states = runtime.impulseButtonStates instanceof Map ? runtime.impulseButtonStates : new Map();
+      runtime.impulseButtonStates = states;
+      const state = states.get(nodeId) || createNodeGraphImpulseButtonState();
+      states.set(nodeId, state);
+      const pulseSamples = Math.max(0, Number(state.pulseSamples) || 0);
+      const amplitude = Math.max(0, Math.min(1, Number(state.amplitude ?? 1)));
+      state.pulseSamples = Math.max(0, pulseSamples - 1);
+      value = { Pulse: pulseSamples > 0 ? amplitude : 0 };
     } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
       const state = runtime.patchCommandStates.get(nodeId) || createNodeGraphPatchCommandState();
       runtime.patchCommandStates.set(nodeId, state);
