@@ -1,9 +1,15 @@
-# soemdsp-sandbox
+# soemdsp-sandbox 🔦 light-physics fork
 
 ## Live Demo: http://soundemote.io/sandbox
 
 Browser sandbox for trying `soemdsp` patching, generated artifacts, waveform
 views, Render Sample, and Live Audio.
+
+This fork tracks [`soundemote/soemdsp-sandbox`](https://github.com/soundemote/soemdsp-sandbox)
+and adds real-world light-physics grounding to the sandbox's optical modules
+(the `VTL5C3`/`VTL5C4` Vactrol Envelope pair). 👉 See **[`VACTROLS.md`](VACTROLS.md)**
+for the field guide: how a vactrol actually works, the datasheet numbers
+behind the module's knob readouts, diagrams, and cited sources.
 
 ## License
 
@@ -126,6 +132,7 @@ python tools\webui-clap-host\webui_clap_host.py --doctor --inspect-metadata
 Guides:
 
 ```text
+VACTROLS.md
 docs/ADDING_HARDCODED_SANDBOX_MODULE.md
 docs/OSC_MODULE_NON_UI_REFERENCE.md
 docs/WEBUI_CLAP_HOST_PLAN.md
