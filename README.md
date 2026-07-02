@@ -10,32 +10,45 @@ CRT-phosphor grounding: what a phosphor screen physically is, why analog
 scopes glow the way they do, how that maps onto this sandbox's `decay`
 settings, and where the visual language comes from.
 
-## 🖼️ Gallery: real phosphor oscilloscope demos
+## 🖼️ Reference material
 
 Reference gallery of phosphor-oscilloscope photography and captures — CRT
 persistence trails, Lissajous burn patterns, vectorscope glow, the whole
 "green line that refuses to fully die" aesthetic this fork is chasing:
 
-- 🎞️ **[imgur.com/gallery/design-guide-phosphor-oscilloscope-4kmlxXR](https://imgur.com/gallery/design-guide-phosphor-oscilloscope-4kmlxXR)**
+- 🎞️ **[imgur.com/gallery/design-guide-phosphor-oscilloscope-4kmlxXR](https://imgur.com/gallery/design-guide-phosphor-oscilloscope-4kmlxXR)** — primary reference gallery
+- 🎞️ **[imgur.com/gallery/kM2ThAa](https://imgur.com/gallery/kM2ThAa)** — supplementary "visual inspiration" gallery
+- 🎞️ **[imgur.com/gallery/RwoYt](https://imgur.com/gallery/RwoYt)** — bokeh/point-glow reference
 
-> ⚠️ Imgur isn't reachable from this environment's fetch tooling, so the
-> individual images/videos inside that gallery couldn't be enumerated,
-> captioned, or embedded directly here — this links to the gallery itself
-> rather than guessing at individual media URLs. If you want specific frames
-> pulled out and embedded inline (with captions matched to the sections
-> below), drop the individual `i.imgur.com` links here and they'll go in.
+> ⚠️ Imgur isn't reachable from this environment's fetch tooling, so individual
+> media inside these galleries couldn't be enumerated or embedded directly —
+> these link to the galleries themselves. A representative set was
+> hand-transferred and is described (not reproduced) throughout this doc,
+> attributed by subject rather than copied as image files, to keep this
+> fork free of outside IP.
+
+Individual video references gathered alongside the images:
+
+- 🎥 [Circular oscilloscope example](https://youtu.be/wDkG1CgREaQ)
+- 🎥 [Colorful image burn example](https://youtu.be/qeMWUlUBFbs)
+- 🎥 [Bloom example](https://youtu.be/mndaenaVClc)
+- 🎥 [Visual inspiration](https://youtu.be/7kI1d7DMbco)
+- 🎥 [Slow motion aesthetic](https://youtu.be/XOAsmd-FFb0)
+- 🎥 [Image burn example (concentric rainbow rings)](https://youtu.be/KaEy23DKG_A)
 
 ---
 
 ## 📖 Table of contents
 
-- [🖼️ Gallery: real phosphor oscilloscope demos](#️-gallery-real-phosphor-oscilloscope-demos)
+- [🖼️ Reference material](#️-reference-material)
 - [🕯️ What is a phosphor screen?](#️-what-is-a-phosphor-screen)
 - [🧪 The physics in one paragraph](#-the-physics-in-one-paragraph)
 - [📐 Anatomy of the glow](#-anatomy-of-the-glow)
 - [⏱️ Fluorescence vs. phosphorescence: why the line lingers](#️-fluorescence-vs-phosphorescence-why-the-line-lingers)
 - [🎛️ How this maps to the sandbox's scope renderers](#️-how-this-maps-to-the-sandboxs-scope-renderers)
 - [🧮 The DSP/render model](#-the-dsprender-model)
+- [🏺 Prior art: PrettyScope](#-prior-art-prettyscope)
+- [🌀 Chaos + phosphor: a natural pairing](#-chaos--phosphor-a-natural-pairing)
 - [📊 Common phosphor types (P-series)](#-common-phosphor-types-p-series)
 - [📚 References & primary sources](#-references--primary-sources)
 - [⚖️ A note on naming & IP](#️-a-note-on-naming--ip)
@@ -58,6 +71,11 @@ thin (the beam barely touched that spot before moving on), slow-moving or
 frequently-revisited parts look bright and thick (the phosphor keeps getting
 re-excited before it can fully decay). The brightness of every point on the
 screen is a *record of dwell time*, not just position.
+
+A real captured example of this: a chaotic, looping green trace on an actual
+CRT scope (tangled, multiple overlapping revolutions, graticule grid visible
+behind the glow) shows exactly this — segments the beam revisited often
+read brighter and thicker than segments it only passed through once.
 
 ## 🧪 The physics in one paragraph
 
@@ -94,6 +112,16 @@ before you can look at it).
   their true width, both a real optical effect (light scattering in the
   glass/coating) and a perceptual one (bright things look bigger to the
   eye than they measure).
+
+Two reference captures make the bloom point concretely: a dim scope trace
+(a thin teal zigzag on an otherwise dark screen) shows almost no bloom —
+just a clean line — while a saturated, overexposed shape on a small CRT
+shows the light visibly bleeding into the surrounding dark bezel. Bloom
+isn't a fixed visual property of "a glowing thing" — it only shows up once
+brightness crosses a threshold, which is exactly the kind of nonlinear,
+brightness-dependent behavior a flat `decay * brightness` model can't
+reproduce (see [Prior art](#-prior-art-prettyscope) below for a model that
+can).
 
 ## ⏱️ Fluorescence vs. phosphorescence: why the line lingers
 
@@ -134,6 +162,12 @@ next, i.e. how "long-persistence" vs. "fast/digital" the trace looks.
   glow" look: fast enough that the display stays legible and current, slow
   enough that motion leaves a visible trail.
 
+A real long-exposure capture of a radar-style sweep (concentric arcs
+radiating from a bright center, each pass fainter and wider than the last)
+is a clean visual example of `decay` pushed high on a polar/angular sweep
+rather than a Cartesian XY trace — worth keeping in mind as a rendering
+mode distinct from the burn/trace modes already listed.
+
 ## 🧮 The DSP/render model
 
 A minimal per-pixel phosphor model, matching what a `decay`-driven burn
@@ -152,6 +186,75 @@ same primitive already used all over this sandbox's audio DSP
 and an envelope follower's release stage are, mathematically, the same
 operation pointed at different data.
 
+That flat model is the *minimum viable* version — it treats every pixel's
+decay identically regardless of how bright it is. Real phosphor (and the
+bloom/afterglow references above) behaves nonlinearly: brighter spots drain
+faster, dim lingering spots get a relative boost, and the fade eventually
+reaches true black instead of asymptoting forever. See below for an
+already-built, in-house model that does exactly this.
+
+## 🏺 Prior art: PrettyScope
+
+[`prettyscope-revival`](https://github.com/soundemote/prettyscope-revival)
+and [`prettyscope-clap`](https://github.com/soundemote/prettyscope-clap) are
+soundemote's own prior work on a real OpenGL oscilloscope/signal
+visualizer — same org, MIT licensed, genuinely reusable, not outside IP.
+`prettyscope-revival`'s `src/visual/` already implements a working, tested
+"Phosphor" decay mode (as opposed to a simpler "Classic" flat-decay mode)
+with meaningfully more nuance than the flat model above:
+
+- **Separate trace and glow colors** — a sharp, bright "core" color plus a
+  distinct, softer "halo" color, rather than one flat hue. This is a direct
+  implementation of the fluorescence-vs-phosphorescence split described
+  above: the core is the fluorescent flash, the halo is the phosphorescent
+  tail, and they're allowed to be genuinely different colors — which lines
+  up with the real P7 color-shift-during-decay behavior described in the
+  P-series section below.
+- **Brightness-dependent decay** — brighter pixels lose intensity faster
+  than dim ones each frame, rather than every pixel decaying by the same
+  fraction. This matches how phosphor recombination actually behaves (more
+  excited states available to decay from at higher brightness) and is
+  exactly the mechanism that produces a bloom threshold instead of a
+  uniform glow.
+- **An afterglow boost specifically for dim, lingering pixels** — a
+  separate term that keeps faint trailing pixels alive longer than the
+  brightness-dependent drain alone would allow, which is what actually
+  produces a long, soft tail behind a fast-moving trace rather than a flat
+  fade.
+- **A hard floor plus gamma shaping** on the way to black — guarantees the
+  image actually reaches true black in finite time (a pure exponential
+  never quite gets there) and shapes the character of that final approach.
+- **Gaussian/error-function soft edges on line segments** (rather than hard
+  antialiased lines) — this is the mechanism behind the "DotBlur"/"LineBlur"
+  softness visible in PrettyScope's own UI, and it's what makes a bright
+  trace visually bloom outward instead of just being a wider hard stroke.
+
+If/when this sandbox's own phosphor renderers get upgraded past a flat
+`decay` value, `prettyscope-revival`'s shader source is the concrete
+reference implementation to study — not a from-scratch redesign. (Also
+worth a look, tangentially: the fork's own
+[`jerobeam-modules` branch](https://github.com/elanhickler/soemdsp-sandbox-phosphor/tree/jerobeam-modules)
+has active work touching the Jerobeam Spiral/Radar family, which a real
+long-exposure radar-sweep reference above connects to directly.)
+
+## 🌀 Chaos + phosphor: a natural pairing
+
+Two reference captures point at a specific, concrete rendering upgrade:
+a physical double-pendulum demo (the classic "sensitive to initial
+conditions" chaos-theory apparatus) shown alongside its own light-trail
+path, and a striking concentric rainbow ring-burn image explicitly
+generated by *a chaos sound generator driving the display while its line
+color was adjusted live*.
+
+That second one matters directly here: this sandbox already has a full
+Chaos category (Lorenz/Hénon/Chua attractors, the Logistic Map), and
+already has XY burn-style scope renderers (`scope2d`/`scope2dTrace`). What
+it doesn't have yet is color that evolves with time/iteration rather than
+staying a fixed hue — which is the one ingredient that turns "a chaotic
+attractor traced on a burn scope" into "a concentric rainbow ring shell."
+That's a concrete, validated rendering target, not a speculative one — the
+reference image proves it works and looks genuinely striking.
+
 ## 📊 Common phosphor types (P-series)
 
 Historic scope/CRT phosphors are cataloged by a **P-number**, each tuned
@@ -169,9 +272,13 @@ P7 is the one worth calling out specifically for a "beautiful phosphor
 glow" aesthetic — it's actually a *two-layer* phosphor (a fast blue-white
 layer on top of a slow yellow-green layer beneath), so a single bright
 event visibly **changes color as it decays**: bright blue-white at impact,
-fading through to a lingering green afterglow. That color-shift-during-decay
-effect is a further, tempting rendering target beyond a flat single-hue
-`decay` value.
+fading through to a lingering green afterglow. A reference capture of a
+very-low-frequency signal traced as a spiral shows exactly this in
+practice: the outer (newest) rings read bright magenta, the middle rings
+cool to white, and the innermost (oldest) rings fade to gray — a direct,
+photographed example of color-shift-during-decay, and independent visual
+confirmation of the same effect PrettyScope's trace/glow color split is
+built to reproduce.
 
 ## 📚 References & primary sources
 
@@ -181,6 +288,8 @@ effect is a further, tempting rendering target beyond a flat single-hue
 - Tektronix — [Digital Phosphor Oscilloscope (TDS784D datasheet)](https://www.tek.com/en/datasheet/tds784d)
 - Test & Measurement Tips — [Digital phosphor oscilloscopes, persistence, and eye patterns](https://www.testandmeasurementtips.com/digital-phosphor-oscilloscope-persistence-and-eye-patterns-faq/)
 - Electronic Design — [Super Phosphor Oscilloscope](https://www.electronicdesign.com/technologies/power/power-supply/power-electronics-systems/article/21197100/super-phosphor-oscilloscope)
+- soundemote — [`prettyscope-revival`](https://github.com/soundemote/prettyscope-revival) (in-house prior art, phosphor shader)
+- soundemote — [`prettyscope-clap`](https://github.com/soundemote/prettyscope-clap) (in-house prior art, CLAP plugin shell)
 
 ## ⚖️ A note on naming & IP
 
@@ -190,3 +299,8 @@ proprietary to any single manufacturer. Brand names referenced above
 (Tektronix, etc.) are used purely descriptively, to credit primary-source
 technical documentation — this fork is **not affiliated with, endorsed by,
 or sponsored by** any of the manufacturers or publications linked here.
+
+Reference photography/video gathered during research (oscilloscope
+captures, long-exposure light trails, bokeh photography) is described in
+this document rather than reproduced as image/video files, to keep this
+fork's own committed content free of third-party media.
