@@ -47,6 +47,7 @@ Individual video references gathered alongside the images:
 - [🏺 Prior art: PrettyScope](#-prior-art-prettyscope)
 - [🌀 Chaos + phosphor: a natural pairing](#-chaos--phosphor-a-natural-pairing)
 - [📊 Common phosphor types (P-series)](#-common-phosphor-types-p-series)
+- [🗺️ Roadmap](#️-roadmap)
 - [📚 References & primary sources](#-references--primary-sources)
 - [⚖️ A note on naming & IP](#️-a-note-on-naming--ip)
 
@@ -289,6 +290,24 @@ built to reproduce.
 
 <img src="media/long-exposure-light-trails.jpeg" width="420" alt="Long-exposure light trails showing color separation across multiple light sources">
 <img src="media/bokeh-color-shift.jpeg" width="280" alt="Defocused bokeh showing discrete color blobs, a point-glow/persistence reference">
+
+## 🗺️ Roadmap
+
+- **Phosphillator** — a mouse-drawn XY oscillator module (in progress, see the
+  `phosphillator` branch on [`soemdsp-sandbox`](https://github.com/soundemote/soemdsp-sandbox)).
+  Draw a shape with the mouse, it's smoothed (Papoulis filter, optionally
+  cubic) into a closed loop, and that loop is traced cyclically at a
+  controllable frequency — output as two CV signals (X and Y), 0.1V/Oct in,
+  phase control — with a heatmap-style phosphor display showing the trace
+  as it's drawn and played back.
+- **3D phosphor oscillator (VR)** — a follow-up to Phosphillator: draw a
+  line freehand in 3D space inside VR instead of on a 2D canvas, and hear
+  it — the drawn 3D path becomes a three-axis (X/Y/Z) oscillator the same
+  way Phosphillator turns a 2D stroke into an X/Y oscillator, with the
+  phosphor persistence/glow model rendered as an actual volumetric trail in
+  the headset rather than a flat heatmap. Not started — noted here so the
+  2D Phosphillator design stays forward-compatible with a third axis and a
+  VR-driven input source instead of mouse XY.
 
 ## 📚 References & primary sources
 
