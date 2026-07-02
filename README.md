@@ -13,7 +13,11 @@ domain, splash/quantize layers, and so on) as a self-contained
 `-nostdlib` WASM module, wired into both the realtime audio worklet and the
 offline preview evaluator.
 
-## Beaming Radar Signal to Jerobeam
+## ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⛧┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+##  ⚡▓▒░ 𝔟𝔢𝔞𝔪𝔦𝔫𝔤 ▓▒░ 𝔞 ░▒▓ 𝔯𝔞𝔡𝔞𝔯 ░▒▓ 𝔰𝔦𝔤𝔫𝔞𝔩 ▒░ 𝔱𝔬 ░▒▓ 𝔧𝔢𝔯𝔬𝔟𝔢𝔞𝔪 ▒░▓⚡
+## ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⛧┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+
+> ⟢ ⟣ ⟢ ✦ ⌁ SIGNAL DETECTED ⌁ ✦ ⟢ ⟣ ⟢ &nbsp; sweeping · 0°→360° · ϟϟϟ · lock acquired
 
 ![Radar, rendered through the prettyscope](docs/media/radar-prettyscope-render.png)
 
