@@ -1,250 +1,192 @@
-# 🔦 Vactrols — a light-physics field guide
+# 🟢 Phosphor — an oscilloscope glow field guide
 
-> *A vactrol is two components that have never touched, whispering to each*
-> *other in light instead of wire.*
+> *A phosphor screen doesn't draw a line. It remembers where the beam has*
+> *been, and forgets a little slower each moment you're not looking.*
 
 This is a fork of [`soemdsp-sandbox`](https://github.com/soundemote/soemdsp-sandbox)
-that gives its **Vactrol Envelope** modules (🐢 `VTL5C3` and 🐌 `VTL5C4`) real
-light-physics grounding: what a vactrol physically is, why it sounds the way
-it does, how that maps onto the module's knobs, and where the numbers came
-from.
+that gives its **phosphor-style scope renderers** (`lineBurnOscilloscope`,
+`scope2d`/`scope2dTrace`, `dotOscilloscope`, `valueOscilloscope`) real
+CRT-phosphor grounding: what a phosphor screen physically is, why analog
+scopes glow the way they do, how that maps onto this sandbox's `decay`
+settings, and where the visual language comes from.
 
-## 🔊 Listen: real-hardware vactrol recordings
+## 🖼️ Gallery: real phosphor oscilloscope demos
 
-Three takes on the same real vactrol under CV control — the fast turn-on /
-slow, lingering release you hear is exactly the asymmetric photoconductive
-persistence described below. Not a filter sweep, not an envelope generator —
-just a photoresistor genuinely taking its time to let go of the light it
-saw. 🎧
+Reference gallery of phosphor-oscilloscope photography and captures — CRT
+persistence trails, Lissajous burn patterns, vectorscope glow, the whole
+"green line that refuses to fully die" aesthetic this fork is chasing:
 
-- 🎛️ **[`vactrol_speed_test(cv).wav`](https://drive.google.com/file/d/1pIIddKLbYH8M8E1G6PcH-F1zifknBiIn/view?usp=drive_link)**
-  — driven directly by CV, the baseline response.
-- 🐌 **[`vactrol_speed_test(slow).wav`](https://drive.google.com/file/d/1q3_TV43KSkOH8tFBpTcoBHg0cgvoh4CY/view?usp=drive_link)**
-  — the same cell pushed toward its slow, swelling release.
-- 🐢 **[`vactrol_speed_test(fast).wav`](https://drive.google.com/file/d/11xbIYxlobjik55lM_NmLfSVu7C5XClt2/view?usp=drive_link)**
-  — and toward its fast, plucky release, for comparison.
+- 🎞️ **[imgur.com/gallery/design-guide-phosphor-oscilloscope-4kmlxXR](https://imgur.com/gallery/design-guide-phosphor-oscilloscope-4kmlxXR)**
 
-And two demos of the **Buchla-style resonant low-pass gate** ([why LPGs love
-vactrols](#️-why-lpgs-love-vactrols)) in its two modes — bandpass and
-lowpass — showing the same vactrol simultaneously shaping amplitude and
-timbre from one control signal:
-
-- 🎚️ **[`buchla_badpass.flac`](https://drive.google.com/file/d/1ZNMxsp3G-EnbpTmFFS3RJ9u1PjOVMTsJ/view?usp=drive_link)**
-  — Buchla-style bandpass LPG mode.
-- 🎚️ **[`Buchla-LoPass.flac`](https://drive.google.com/file/d/1ae_8SFkIKIuHRL0LX35xUoCySTBnDLQQ/view?usp=drive_link)**
-  — Buchla-style lowpass LPG mode.
-
-> ⚖️ "Buchla" is used here purely descriptively, to name a well-known circuit
-> topology (the resonant low-pass gate) associated with that historic design
-> style — not as a claim of association. This project and these recordings
-> are **not affiliated with, endorsed by, or sponsored by Buchla Electronic
-> Musical Instruments** or any successor entity.
+> ⚠️ Imgur isn't reachable from this environment's fetch tooling, so the
+> individual images/videos inside that gallery couldn't be enumerated,
+> captioned, or embedded directly here — this links to the gallery itself
+> rather than guessing at individual media URLs. If you want specific frames
+> pulled out and embedded inline (with captions matched to the sections
+> below), drop the individual `i.imgur.com` links here and they'll go in.
 
 ---
 
 ## 📖 Table of contents
 
-- [🔊 Listen: real-hardware vactrol recordings](#-listen-real-hardware-vactrol-recordings)
-- [🕯️ What is a vactrol?](#️-what-is-a-vactrol)
+- [🖼️ Gallery: real phosphor oscilloscope demos](#️-gallery-real-phosphor-oscilloscope-demos)
+- [🕯️ What is a phosphor screen?](#️-what-is-a-phosphor-screen)
 - [🧪 The physics in one paragraph](#-the-physics-in-one-paragraph)
-- [📐 Anatomy](#-anatomy)
-- [⏱️ Fast vs. slow: VTL5C3 vs VTL5C4](#️-fast-vs-slow-vtl5c3-vs-vtl5c4)
-- [📊 Full VTL5C-series comparison table](#-full-vtl5c-series-comparison-table)
-- [🎛️ How this maps to the sandbox module](#️-how-this-maps-to-the-sandbox-module)
-- [🧮 The DSP model](#-the-dsp-model)
-- [🎚️ Why LPGs love vactrols](#️-why-lpgs-love-vactrols)
-- [📚 Scientific papers & primary sources](#-scientific-papers--primary-sources)
-- [💬 Community references](#-community-references)
+- [📐 Anatomy of the glow](#-anatomy-of-the-glow)
+- [⏱️ Fluorescence vs. phosphorescence: why the line lingers](#️-fluorescence-vs-phosphorescence-why-the-line-lingers)
+- [🎛️ How this maps to the sandbox's scope renderers](#️-how-this-maps-to-the-sandboxs-scope-renderers)
+- [🧮 The DSP/render model](#-the-dsprender-model)
+- [📊 Common phosphor types (P-series)](#-common-phosphor-types-p-series)
+- [📚 References & primary sources](#-references--primary-sources)
 - [⚖️ A note on naming & IP](#️-a-note-on-naming--ip)
 
 ---
 
-## 🕯️ What is a vactrol?
+## 🕯️ What is a phosphor screen?
 
-A **vactrol** (portmanteau of *vacuum* + *photoresistor*, though there's no
-vacuum involved — the name just stuck) is an **opto-isolator built from an
-LED (or incandescent lamp) optically coupled to a CdS photoresistor (LDR)**,
-sealed together inside a light-tight tube with **zero electrical connection**
-between the two halves. 🚫🔌
+A CRT (cathode-ray tube) oscilloscope screen is coated in **phosphor** — a
+crystalline compound that **absorbs energy from an electron beam and
+re-emits it as visible light over time**, rather than instantaneously. The
+beam sweeps across the screen tracing the signal; the phosphor is what turns
+that invisible, momentary electron path into something you can actually
+*see* — and, crucially, into something you can still see for a while
+*after* the beam has already moved on. 🔦
 
-You drive the LED with a control-voltage-derived current. The LED glows. The
-photocell "sees" that light and its resistance drops. Nothing about that
-resistance change is instantaneous or linear — and that imperfection is
-*exactly* why synth designers love it.
+That lingering is not a flaw being tolerated. It's the entire reason analog
+scopes look the way they do: fast-moving parts of a waveform look dim and
+thin (the beam barely touched that spot before moving on), slow-moving or
+frequently-revisited parts look bright and thick (the phosphor keeps getting
+re-excited before it can fully decay). The brightness of every point on the
+screen is a *record of dwell time*, not just position.
 
 ## 🧪 The physics in one paragraph
 
-CdS (cadmium sulfide) photoresistors follow a **power-law relationship**
-between illuminance and resistance:
+Phosphor decay after excitation typically follows something close to an
+**exponential falloff**, though real phosphors often show a fast initial
+drop followed by a longer "afterglow" tail (a sum of multiple exponential
+components, not a single clean one):
 
 ```
-R(lux) ∝ Lux^(−γ)
+I(t) = I₀ · e^(−t / τ)
 ```
 
-...where `γ` (the *photoconductive gamma*) typically sits around **0.7–0.9**
-for real cells. But the *really* musically useful part is the **asymmetric
-time response**: charge carriers in the CdS crystal get freed almost
-instantly when light hits (fast **attack**), but *linger*, trapped in
-crystal defect states, for a comparatively long time after the light is gone
-(slow **release**). This is a real solid-state phenomenon called
-**photoconductive persistence** — it is not a capacitor, there is no RC
-network, and yet it behaves like a smoothing filter purely because of how
-charge carriers de-trap over time. ⚡➡️🐌
+where `I₀` is the initial emitted intensity right after the beam passes,
+`t` is elapsed time, and `τ` (tau) is the **decay time constant** — how
+long it takes brightness to fall to about 37% (1/e) of its initial value.
+Different phosphor compounds are engineered for wildly different `τ`,
+anywhere from microseconds (fast phosphors for high-refresh digital
+readouts) to multiple seconds (long-persistence phosphors built specifically
+so a human eye can study a single fast transient event without it vanishing
+before you can look at it).
 
-## 📐 Anatomy
+## 📐 Anatomy of the glow
 
-![Vactrol anatomy diagram](docs/vactrol-anatomy.svg)
+- **Beam** — the electron stream, positioned by deflection plates to trace
+  the signal in real time. It's either on (unblanked) or off (blanked)
+  moment to moment.
+- **Phosphor coating** — the actual light-emitting layer. Its chemistry
+  determines color, brightness-per-electron, and decay time.
+- **Persistence** — the umbrella term for "how long the trace stays
+  visible" — a mix of the phosphor's own decay time *and* how the human
+  visual system integrates brief flashes into an apparently-continuous
+  glow.
+- **Bloom** — bright/fast-moving trace segments visually "spreading" beyond
+  their true width, both a real optical effect (light scattering in the
+  glass/coating) and a perceptual one (bright things look bigger to the
+  eye than they measure).
 
-Two components, one tube, one beam of light between them. That's the whole
-circuit. The complete lack of electrical coupling is also why vactrols are
-prized for **galvanic isolation** in non-audio contexts (relays, medical
-equipment) — the audio/synth use is almost a happy side effect of a
-component designed for something else entirely. 🧰
+## ⏱️ Fluorescence vs. phosphorescence: why the line lingers
 
-## ⏱️ Fast vs. slow: VTL5C3 vs VTL5C4
+Two related-but-distinct light-emission mechanisms get lumped together
+under "glow-in-the-dark," and CRT phosphors actually rely on a mix of both:
 
-![VTL5C3 vs VTL5C4 release curves](docs/vactrol-release-curves.svg)
+- **Fluorescence** — near-instant re-emission (nanoseconds), stops the
+  moment excitation stops. This is what makes the *core* trace sharp and
+  bright exactly where the beam currently is.
+- **Phosphorescence** — emission continues well after excitation stops
+  (milliseconds to seconds+), because the absorbed energy gets trapped in
+  metastable electron states before it can radiate. This is the *tail* —
+  the part that makes a fast one-shot transient still readable a moment
+  after it happened.
 
-| | 🐢 VTL5C3 | 🐌 VTL5C4 |
-|---|---|---|
-| **Character** | Fast, percussive, "plucky" | Slow, swelling, "breathing" |
-| **Turn-on (attack, 63%)** | ~2.5 ms | ~6.0 ms |
-| **Turn-off (release, to 100 kΩ)** | ~35 ms | **~1.5 s** (≈40× slower) |
-| **Dark resistance (min)** | 10 MΩ | 400 kΩ |
-| **Typical use** | Buchla/Serge-style resonant LPG "pop" | Long pads, compressor-like glide |
-| **Synth-DIY reputation** | *The* standard LPG vactrol | *The* slow alternative |
+A "phosphor look" in a rendered oscilloscope display is really asking for
+both effects at once: an instantaneously bright leading edge, and a slower
+fading tail behind it.
 
-The eye-catching number is the release time: **VTL5C4 takes roughly 40×
-longer than VTL5C3 to let go of a sound.** Same physical mechanism, same
-package, wildly different musical personality — just because the CdS cell
-inside was doped/processed differently. 🎨
+## 🎛️ How this maps to the sandbox's scope renderers
 
-## 📊 Full VTL5C-series comparison table
+This sandbox already models this — the scope rendering pipeline
+(`node-graph-module-scopes.js`) carries a literal `phosphorFrame` state
+object per burn-style scope, and every burn/trace renderer
+(`lineBurnOscilloscope`, `scope2d`/`scope2dTrace`, `dotOscilloscope`) has a
+`decay` setting (default `0.12`) controlling exactly the `τ` behavior
+described above: how much of each frame's brightness survives into the
+next, i.e. how "long-persistence" vs. "fast/digital" the trace looks.
 
-All figures below are drawn from the official **PerkinElmer Optoelectronics**
-datasheets for the VTL5C-series axial vactrols (see
-[Sources](#-scientific-papers--primary-sources)). "Turn-on" is time to 63% of
-final `R_ON` after a 40 mA drive pulse; "turn-off" is time to reach 100 kΩ
-(or as noted) after the pulse ends.
+- `decay → 0` — no afterglow at all, every frame is drawn fresh. This is
+  the "digital storage scope, refresh-rate-limited" look, not a phosphor
+  look.
+- `decay → 1` — the trace essentially never fades, building up a permanent
+  burn-in image over time (useful deliberately for things like Lissajous
+  figures or long-exposure-style captures, closer to a genuinely
+  long-persistence P7-style phosphor).
+- Somewhere in between (the `0.12` default) — the everyday "green scope
+  glow" look: fast enough that the display stays legible and current, slow
+  enough that motion leaves a visible trail.
 
-| Part | R_ON @1/10/40 mA | R_OFF (dark, min) | Dynamic range | Turn-on (63%) | Turn-off |
-|---|---|---|---|---|---|
-| VTL5C1 | 20 kΩ / 600 Ω / 200 Ω | 50 MΩ | 100 dB | 2.5 ms | 35 ms |
-| VTL5C2 | 5.5 kΩ / 800 Ω / 200 Ω | 1 MΩ | 69 dB | 3.5 ms | 500 ms |
-| **VTL5C3** | 30 kΩ / 5 Ω / 1.5 Ω | 10 MΩ | 75 dB | **2.5 ms** | **35 ms** |
-| **VTL5C4** | 1.2 kΩ / 125 Ω / 75 Ω | 400 kΩ | 72 dB | **6.0 ms** | **1.5 s** |
-| VTL5C6 | 75 kΩ / 10 kΩ / 2 kΩ | 100 MΩ | 88 dB | 3.5 ms | 50 ms (→1 MΩ) |
-| VTL5C7 | 5 kΩ@0.4mA / 1.1 kΩ@2mA | 1 MΩ | 75 dB | 6 ms | 1 s (→100 kΩ) |
-| VTL5C8 | 4.8 kΩ / 1.8 kΩ / 1 kΩ | 10 MΩ | 80 dB | 4 ms | 60 ms |
-| VTL5C9 | 630 Ω @ 2 mA | 50 MΩ | **112 dB** | 4 ms | 50 ms |
-| VTL5C10 | 400 Ω @ 1 mA | 400 kΩ | 75 dB | 1 ms | 1.5 s |
+## 🧮 The DSP/render model
 
-> 🐢 = fast-decay family (VTL5C1, C3, C6, C8, C9) — the "pluck" vactrols.
-> 🐌 = slow-decay family (VTL5C2, C4, C7, C10) — the "swell" vactrols.
-
-## 🎛️ How this maps to the sandbox module
-
-Both `VTL5C3` and `VTL5C4` in the module browser share **one WASM DSP
-implementation** (`native_modules/vactrol_envelope`) — they're not two
-separate circuits, they're one envelope-follower parameterized differently,
-exactly like the real parts are one CdS-cell design binned into different
-speed grades. 🏭
-
-| Knob (0–1 normalized, unchanged) | Readout shows | Real-world meaning |
-|---|---|---|
-| **Attack** | milliseconds | Time constant while the target gets *brighter* |
-| **Release** | milliseconds | Time constant while the target gets *dimmer* |
-| **Curve** | γ (LDR gamma) | Photoconductive exponent shaping the response |
-| **Sensitivity** | lux full-drive | Illuminance needed to hit 100% conductance |
-| **Light Offset** | lux bias | Ambient light added before the target is clamped |
-| **Dark Current** | kΩ dark R | Leakage / floor when the cell sees no light at all |
-
-The knobs themselves stay plain 0–1 automation values (so patches, MIDI
-mapping, and macros all keep working normally) — only the **readout text**
-translates them into numbers a vactrol datasheet reader would recognize.
-See [`node-graph-module-definitions.js`](public/node-graph-module-definitions.js)
-for the `displayTransform` functions that do this.
-
-## 🧮 The DSP model
+A minimal per-pixel phosphor model, matching what a `decay`-driven burn
+buffer is actually doing each frame:
 
 ```
-target       = clamp(light × sensitivity + lightOffset, 0, 1)
-coefficient  = target > raw  ?  1 − e^(−1 / (attack  × sampleRate))
-                              :  1 − e^(−1 / (release × sampleRate))
-raw         += (target − raw) × coefficient
-shaped       = raw ^ curve
-out          = clamp(darkCurrent + shaped × (1 − darkCurrent), 0, 1)
+brightness[pixel] = brightness[pixel] * decay + newHit[pixel] * intensity
 ```
 
-This is a standard **one-pole exponential follower with separate attack/
-release coefficients**, plus a power-law shaping stage (`raw ^ curve`) that
-stands in for the CdS cell's photoconductive gamma, and a floor term
-(`darkCurrent`) for the cell's non-zero dark leakage. It's the same overall
-shape used by the DAFx-2013 Buchla LPG model below, simplified for real-time
-use. The native WASM build uses a fast bit-manipulation `pow()`
-approximation (accurate to a few percent — plenty for a *shaping curve*, not
-a measurement instrument) since a `-nostdlib` freestanding build has no
-`libm` to call into.
+Run every frame, this is a **one-pole IIR lowpass applied to brightness in
+the time domain** — the exact same math as an audio one-pole smoothing
+filter, just operating on light instead of sound. `decay` closer to 1 =
+lower cutoff frequency = slower to respond = longer visual "tail." It's the
+same primitive already used all over this sandbox's audio DSP
+(`onePoleLowpassSample`, envelope followers, etc.) — phosphor persistence
+and an envelope follower's release stage are, mathematically, the same
+operation pointed at different data.
 
-## 🎚️ Why LPGs love vactrols
+## 📊 Common phosphor types (P-series)
 
-A **low-pass gate** (LPG) — the signature Buchla/Serge sound-shaping element
-— uses a *single* vactrol to simultaneously control **amplitude and filter
-cutoff** from one control signal, because both effects come from the exact
-same physical resistance change. Turn down the light, the cell resists more,
-and *both* loudness and brightness fall together — the way a **struck,
-damped physical object** naturally loses volume and brightness at the same
-time. That's why LPG-driven plucks sound so organic compared to a separate
-VCA + VCF: it's one physical process, not two circuits pretending to agree.
-🔔➡️🔕
+Historic scope/CRT phosphors are cataloged by a **P-number**, each tuned
+for a different application:
 
-## 📚 Scientific papers & primary sources
+| P-type | Color | Persistence | Typical use |
+|--------|-------|-------------|-------------|
+| P1 | Green | Medium | General-purpose scopes (the classic "scope green") |
+| P4 | White | Medium-short | TV/monitor CRTs |
+| P7 | Blue-white → yellow-green afterglow | Long (seconds) | Radar displays, long-persistence storage scopes |
+| P11 | Blue | Short | Photographic scope traces (fast film needs a fast, bright flash, not lingering glow) |
+| P31 | Green | Short-medium | High-brightness general purpose, later replaced P1 in many designs |
 
-- **PerkinElmer Optoelectronics** — *Low Cost Axial Vactrols VTL5C1, VTL5C2*
-  datasheet.
-  [farnell.com/datasheets/87223.pdf](https://www.farnell.com/datasheets/87223.pdf)
-- **PerkinElmer Optoelectronics** — *Low Cost Axial Vactrols VTL5C3, VTL5C4*
-  datasheet.
-  [Xvive/Synthrotek mirror](https://store.synthrotek.com/assets/images/XVIVE-VTL5C3-VTL5C4-Vactrol-Data-Sheet.pdf)
-- **PerkinElmer Optoelectronics** — *Analog Optical Isolators — VTL5C Series*
-  full-family summary table.
-  [uk-electronic.de/PDF/VTL.pdf](http://www.uk-electronic.de/PDF/VTL.pdf)
-- **Silonex** — NSL-32SR2 datasheet (a modern successor part in the same
-  photoresistor lineage after Silonex acquired the vactrol product line).
-- Parker, J., Esqueda, F., Bilbao, S. — *"A Digital Model of the Buchla
-  Lowpass-Gate"*, **Proc. of the 16th Int. Conference on Digital Audio
-  Effects (DAFx-13)**, Maynooth, Ireland, 2013. Measured a real VTL5C3/2 at
-  ~12 ms rise / ~250 ms decay — notably slower than the PerkinElmer spec,
-  likely due to unit-to-unit variance or a different-generation part; a good
-  reminder that datasheet *typicals* and *real components* diverge. 🔬
-- General background: **Kasap, S. O.**, *Optoelectronics and Photonics:
-  Principles and Practices* — standard reference for photoconductor gain,
-  persistence, and trap-state physics in CdS/CdSe cells.
+P7 is the one worth calling out specifically for a "beautiful phosphor
+glow" aesthetic — it's actually a *two-layer* phosphor (a fast blue-white
+layer on top of a slow yellow-green layer beneath), so a single bright
+event visibly **changes color as it decays**: bright blue-white at impact,
+fading through to a lingering green afterglow. That color-shift-during-decay
+effect is a further, tempting rendering target beyond a flat single-hue
+`decay` value.
 
-## 💬 Community references
+## 📚 References & primary sources
 
-- [ModWiggler — "Vactrols: slow or fast?"](https://www.modwiggler.com/forum/viewtopic.php?t=58076)
-- [ModWiggler — "Speed/decay-tail of VTL5C3/2 (particularly Xvive)"](https://www.modwiggler.com/forum/viewtopic.php?t=222441)
-- [clsound.com — VC Resonant LPG build doc](http://clsound.com/vcresonantlpg.html)
-  (explicit VTL5C3 "fast"/VTL5C4-2 "slow" build guidance — the source for
-  calling these "the" standard fast/slow pair)
-- [modularsynthesis.com — hand-measured VTL5C3/VTL5C4 samples](https://modularsynthesis.com/vactrols/vactrols.htm)
+- Tektronix — [Oscilloscope Basics: Reading & Operating Tutorial](https://www.tek.com/en/documents/primer/oscilloscope-basics)
+- Tektronix — [Oscilloscope Types](https://www.tek.com/en/documents/primer/oscilloscope-types)
+- Tektronix — [Digital Phosphor Oscilloscopes](https://www.tek.com/en/datasheet/digital-phosphor-oscilloscopes)
+- Tektronix — [Digital Phosphor Oscilloscope (TDS784D datasheet)](https://www.tek.com/en/datasheet/tds784d)
+- Test & Measurement Tips — [Digital phosphor oscilloscopes, persistence, and eye patterns](https://www.testandmeasurementtips.com/digital-phosphor-oscilloscope-persistence-and-eye-patterns-faq/)
+- Electronic Design — [Super Phosphor Oscilloscope](https://www.electronicdesign.com/technologies/power/power-supply/power-electronics-systems/article/21197100/super-phosphor-oscilloscope)
 
 ## ⚖️ A note on naming & IP
 
-`VTL5C3`/`VTL5C4` are PerkinElmer/Excelitas part numbers, used here purely
-as **descriptive, nominative labels** — the same way a pedal calling itself
-"808-style" or "Moog-style" is describing a sound, not claiming to *be* the
-original part. No PerkinElmer code, schematics, or datasheet artwork is
-reproduced anywhere in this repository; the DSP model and both diagrams on
-this page are original work built from publicly published timing and
-resistance figures. This project is **not affiliated with or endorsed by
-PerkinElmer or Excelitas**. 🙏
-
----
-
-*Made with 🔦, ☕, and an unreasonable amount of respect for a component*
-*that does audio-rate envelope following by literally glowing at itself.*
-
----
-
+"Phosphor," "P1–P31," and related terminology describe well-documented,
+decades-old, industry-standard CRT display technology and are not
+proprietary to any single manufacturer. Brand names referenced above
+(Tektronix, etc.) are used purely descriptively, to credit primary-source
+technical documentation — this fork is **not affiliated with, endorsed by,
+or sponsored by** any of the manufacturers or publications linked here.
