@@ -14,7 +14,7 @@ domain, splash/quantize layers, and so on) as a self-contained
 offline preview evaluator.
 
 ## ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⛧┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-##  ⚡▓▒░ 𝔟𝔢𝔞𝔪𝔦𝔫𝔤 ▓▒░ 𝔞 ░▒▓ 𝔯𝔞𝔡𝔞𝔯 ░▒▓ 𝔰𝔦𝔤𝔫𝔞𝔩 ▒░ 𝔱𝔬 ░▒▓ 𝔧𝔢𝔯𝔬𝔟𝔢𝔞𝔪 ▒░▓⚡
+##  ⚡ 𝔟𝔢𝔞𝔪𝔦𝔫𝔤 𝔞 𝔯𝔞𝔡𝔞𝔯 𝔰𝔦𝔤𝔫𝔞𝔩 𝔱𝔬 𝔧𝔢𝔯𝔬𝔟𝔢𝔞𝔪 ⚡
 ## ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⛧┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
 
 > ⟢ ⟣ ⟢ ✦ ⌁ SIGNAL DETECTED ⌁ ✦ ⟢ ⟣ ⟢ &nbsp; sweeping · 0°→360° · ϟϟϟ · lock acquired
