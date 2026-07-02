@@ -27,7 +27,7 @@ above to the full galleries.
 Individual video references gathered alongside the images:
 
 - 🎥 [Circular oscilloscope example](https://youtu.be/wDkG1CgREaQ)
-- 🎥 [Colorful image burn example](https://youtu.be/qeMWUlUBFbs)
+- 🎥 [Colorful image burn example](https://youtu.be/qeMWUlUBFbs) — hand-transferred clip: [`media/colorful-image-burn.mp4`](media/colorful-image-burn.mp4)
 - 🎥 [Bloom example](https://youtu.be/mndaenaVClc)
 - 🎥 [Visual inspiration](https://youtu.be/7kI1d7DMbco)
 - 🎥 [Slow motion aesthetic](https://youtu.be/XOAsmd-FFb0)
