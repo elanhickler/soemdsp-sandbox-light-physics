@@ -5,3 +5,5 @@ sandbox-preview.png
 .python-version
 .DS_Store
 *.bak
+public/presets/useruisettings.json
+public/presets/useruisettings.js
