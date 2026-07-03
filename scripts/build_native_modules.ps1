@@ -95,6 +95,7 @@ if (!(Test-Path -LiteralPath $clang)) {
 & $clang `
   --target=wasm32 `
   -O3 `
+  -msimd128 `
   -nostdlib `
   -fno-exceptions `
   -fno-rtti `
@@ -105,6 +106,10 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export=soemdsp_noise_generator_left" `
   "-Wl,--export=soemdsp_noise_generator_right" `
   "-Wl,--export=soemdsp_noise_generator_version" `
+  "-Wl,--export=soemdsp_noise_generator_process_block" `
+  "-Wl,--export=soemdsp_noise_generator_block_output_left_ptr" `
+  "-Wl,--export=soemdsp_noise_generator_block_output_right_ptr" `
+  "-Wl,--export=soemdsp_noise_generator_max_block_frames" `
   "-Wl,--export-memory" `
   -o "$root\native_modules\noise_generator\noise_generator.wasm" `
   "$root\native_modules\noise_generator\noise_generator.cpp"

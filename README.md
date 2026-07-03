@@ -42,6 +42,7 @@ up front.
 | **Fourth SIMD kernel: Fractal Brownian Noise, biggest win yet** | Restructured X/Y/Z axis computation to share position math (was computed 3x redundantly, now once) and vectorized the ALU-bound integer hash chain across axes. **~2.76x faster (median)**, bit-exact. See [Fractal Brownian Noise SIMD kernel](#fractal-brownian-noise-simd-kernel-the-biggest-win-so-far) below. |
 | **First block-processing proof: FBM** | `soemdsp_fbm_process_block` — params resolved once, `frameCount` samples computed, scalar and SIMD implementations behind one dispatch shape. Bit-exact, wired into the real AudioWorklet via a 128-sample cache. See [Block-processing proof](#block-processing-proof-fbm-as-the-first-simd-compatible-modular-execution-boundary) below. |
 | **Second block-processing proof: Sabrina Reverb** | Same `(state, in, out, frameCount, useSimd)` shape applied to a structurally different module — a streaming effect, not a generator — reusing its already-shipping kernels. Bit-exact vs. the live per-sample API. Deliberately **not** wired into the live worklet (would add real latency to a live effect). See [Second proof](#second-proof-sabrina-reverb-through-the-same-block-boundary) below. |
+| **Third block-processing proof: Noise Generator** | Same shape applied to a second generator, picked using the Findings section's own classification rules (generator + ALU-bound). New paired-SIMD kernel, **~1.45x** SIMD-math win / **~2.58x** combined with the block boundary — second-best result on the branch. Wired into the live worklet (safe per the Findings decision). See [Third proof](#third-proof-noise-generator-chosen-from-the-findings-decision-above) below. |
 
 ### Why this is a separate branch
 
@@ -98,35 +99,32 @@ not a repeat of a lesson already learned.
    crossing, not from vector instructions. This means block-processing is
    worth doing even for modules that turn out to be poor SIMD candidates.
 
-**Open — needs a decision before more modules get wired live, not more
-engineering:**
+**Decided:**
 
-4. **Streaming effects hit a real latency tradeoff generators don't.** A
+4. **Streaming effects do not get added latency by default.** A
    generator's block cache can refill transparently (no audible cost). An
    effect with external input needs `frameCount` samples of input to exist
    *before* it can produce output — Sabrina's proof deliberately stopped at
    "verified at the native level" rather than wiring this into the live
    worklet, because doing so adds up to one block's worth of real latency
-   to a live effect. **This needs an explicit answer, not another proof**:
-   is some fixed added latency (e.g. one 128-sample render quantum, ~2.9ms)
-   acceptable for effect-class modules in exchange for the ~1.17x boundary
-   win plus whatever SIMD win a given effect's math supports? If yes, name
-   which modules it's acceptable for; if no, block-processing for
-   streaming effects stays native-only/offline-only.
+   to a live effect. **Decision: no.** Block-processing for streaming
+   effects (Sabrina and anything shaped like it) stays native-only /
+   verified-but-not-live until someone can evaluate the added latency by
+   ear and explicitly opts a specific module in. This is a reversible,
+   conservative default — nothing currently shipping changes — not a
+   permanent rule; revisit per-module if there's a concrete reason to.
 
-**Suggested next module, conditional on the answer to #4:**
+**Next module direction, following from that decision:**
 
-- If added latency is acceptable for effects: extend Sabrina's proof into
-  the live worklet, or pick another effect with real SIMD headroom
-  (check #2's ALU-bound test first — a mono resonant filter's serial IIR
-  state has no independent lanes within one instance, so it would need
-  voice-parallelism across simultaneous instances, a different axis than
-  anything proven so far, not a rerun of Sabrina's proof).
-- If added latency is not acceptable for effects: block-processing work
-  should focus on other generator-class or offline-only modules next,
-  where FBM's transparent-refill pattern applies directly, rather than
-  spending more effort on streaming effects under a constraint that rules
-  out shipping it live.
+Block-processing work continues on generator-class and offline-only
+modules, where FBM's transparent-refill pattern applies directly, not on
+streaming effects. From the survey table's "not investigated" row
+(`polyblep`, `noise_generator`, `vactrol_envelope`,
+`shooting_star_explosion`, `ellipsoid`), the next candidate is chosen by
+the same test used for FBM and Sabrina: does it generate rather than
+consume external input, and does its hot loop do independent, ALU-bound
+per-lane work (not memory-bound buffer reads)? See below for which one
+was picked and why.
 
 ## Working SIMD example: Sabrina Reverb diffusion geometry
 
@@ -520,3 +518,116 @@ effects is a distinct, larger decision than this proof.
 kernels + dispatch boundary + pointer getters), `scripts/build_native_modules.ps1`
 (added the 6 new exports to Sabrina's stanza). No JS integration file
 changed for this proof — see the latency note above.
+
+## Third proof: Noise Generator, chosen from the "Findings" decision above
+
+The [Findings so far](#findings-so-far--what-this-should-decide-next)
+section above decided that streaming effects don't get added latency by
+default, and pointed at generator-class modules for the next candidate.
+Noise Generator was picked from the survey's "not investigated" row by
+applying the same two tests used for FBM and Sabrina:
+
+1. **Generator, not effect** — `soemdsp_noise_generator_sample` takes no
+   external audio input, only a seed and mode/mean/deviation/level
+   params. Its block cache can refill transparently, same as FBM, with no
+   added latency.
+2. **ALU-bound, not memory-bound** — each channel's state is a 32-bit LCG
+   seed plus (for pink noise) 7 IIR filter taps, all register arithmetic.
+   Unlike Sabrina, there is no delay buffer at all — nothing to gather,
+   nothing for WASM SIMD128's missing gather instruction to bottleneck.
+   This is the same profile that made FBM the biggest win so far.
+
+By contrast, `ellipsoid` (also unvisited) was ruled out at inspection: it's
+stateless and cheap per call (a few trig approximations, no persistent
+recursion) — the same "too cheap, pack/unpack overhead would dominate"
+profile that sank the rejected `readDelay` kernel, so it wasn't built.
+
+**Files inspected**: `native_modules/noise_generator/noise_generator.cpp`
+(the existing per-sample `soemdsp_noise_generator_sample`, its independent
+per-channel `NoiseChan` state, and the 5-mode `channelSample` function —
+uniform, gaussian, brown, pink, crackle), and
+`native_modules/ellipsoid/ellipsoid.cpp` (ruled out, see above).
+
+**Implementation strategy**: same shape as FBM and Sabrina — fixed-size
+static output buffers (`blockOutLeft/Right`, `kMaxBlockFrames = 2048`)
+added to `NoiseGenState`, a
+`soemdsp_noise_generator_process_block(handle, seed, mode, mean,
+deviation, level, frameCount, useSimd)` dispatch boundary, and two block
+kernels:
+
+- `noiseProcessBlockScalar` — calls the original `channelSample` twice per
+  frame (once per channel), unchanged.
+- `noiseProcessBlockSimd` — pairs L/R into one f64x2/i32x4 lane each via
+  new `*PairSimd` helpers: `lcgNextPairSimd` (both channels' 32-bit LCG
+  step in one `i32x4` multiply-add), `nextBipolarPairSimd`/
+  `nextUnipolarPairSimd`, `nextGaussianPairSimd` (12-draw sum, vectorized
+  accumulator), and `channelSamplePairSimd` covering all 5 modes. Both
+  paths always draw the "white" LCG value first, exactly matching the
+  scalar function's own order, so the RNG stream is consumed identically
+  regardless of path — required for bit-exactness, not just similar
+  output.
+- **Mode 4 (crackle) is the one exception**: its branch
+  (`abs(white) > 0.94`) depends on each lane's own random draw, so L and R
+  can genuinely take different branches within the same call. Rather than
+  forcing a false vector shape onto real per-lane-divergent control flow,
+  this one mode's final branch is scalar per lane after the shared
+  vectorized LCG step — everything upstream of the branch is still
+  vectorized.
+
+**Output equivalence method**: ran the live per-sample API
+(`soemdsp_noise_generator_sample` + `_left`/`_right`) as the reference
+against a 500-sample run, across all 5 modes × 4 seeds (0, 7, 42, 99999):
+
+- **Modes 0 (uniform), 1 (gaussian), 3 (pink), 4 (crackle): bit-exact
+  (0 difference)** for both block-SIMD and block-scalar, across every
+  seed.
+- **Mode 2 (brown): ~2.2e-16 max difference for block-SIMD only**
+  (machine epsilon, i.e. the smallest representable floating-point step) —
+  from `wasm_f64x2_pmin`/`pmax` clamping both lanes in one instruction vs.
+  the scalar version's separate `<`/`>` comparisons touching the same
+  values in a different order. Not a correctness bug — the same category
+  of floating-point reordering noise already documented for Sabrina and
+  FBM's non-hash-chain paths, at the smallest possible magnitude.
+
+**Benchmark**: median of 5 runs, 3.072M samples (1024-sample blocks × 3000
+iterations, pink noise mode — the heaviest per-sample cost of the 5):
+
+- *Block-SIMD vs. block-scalar* (holding the block boundary constant):
+  **~1.45x faster** — a real, substantial SIMD-math win, the second
+  largest on this branch after FBM's 2.76x, consistent with this module's
+  ALU-bound, gather-free profile.
+- *Block-SIMD vs. the per-sample API* (SIMD math + block boundary
+  combined): **~2.58x faster** — both dimensions compounding in the same
+  direction here, unlike Sabrina where the SIMD-math dimension showed no
+  win.
+
+**Wired into the live worklet**: unlike Sabrina, this is safe by the
+Findings decision above — added a 128-sample `blockCache` to
+`NodeGraphLiveAudioProcessor`'s noise generator state (same pattern as
+FBM's cache), rewrote `noiseGeneratorSample`'s native branch to call
+`soemdsp_noise_generator_process_block` once per 128 calls instead of
+`soemdsp_noise_generator_sample` once per call, with the old per-sample
+path kept as an untouched fallback. Verified live: added a real Noise
+Generator node to a patch, wired it to Output, ran 3+ seconds of
+continuous live audio (many cache refill cycles) with zero console errors,
+then changed the node's mode (uniform → pink) and seed mid-stream to force
+an early cache invalidation — also zero errors. Test node and wiring
+removed before committing; no patch state was persisted from this test.
+
+**How this proves the modular execution boundary, concretely**: this is
+the first case where the Findings section's own decision rule (generator
+→ safe to wire live, ALU-bound → real SIMD win) was applied *before*
+writing any code, correctly predicted both outcomes (transparent live
+wiring worked, SIMD produced the branch's second-best win), and also
+correctly predicted a *rejection* (`ellipsoid`, too cheap to be worth
+converting) without needing to implement and benchmark it first. The
+boundary shape and the two classification rules are now doing real
+predictive work, not just describing results after the fact.
+
+**Files**: `native_modules/noise_generator/noise_generator.cpp` (pair-SIMD
+helpers + block kernels + dispatch boundary + pointer getters),
+`scripts/build_native_modules.ps1` (added `-msimd128` and the 4 new
+exports to Noise Generator's stanza, which had neither before),
+`public/node-live-audio-worklet.js` (block cache wiring in
+`noiseGeneratorSample`), `public/node-graph-live-runtime.js` (cache-bust
+tag).

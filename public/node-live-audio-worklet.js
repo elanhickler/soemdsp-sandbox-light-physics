@@ -72,6 +72,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   // per sample; see fractalBrownianNoiseVector.
   static FBM_NATIVE_BLOCK_SIZE = 128;
 
+  // Same block-processing boundary pattern for Noise Generator
+  // (soemdsp_noise_generator_process_block) -- a pure generator like FBM,
+  // so its block cache also refills transparently with no added latency.
+  static NOISE_NATIVE_BLOCK_SIZE = 128;
+
   constructor() {
     super();
     this.inputConnections = new Map();
@@ -3259,7 +3264,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   createNoiseGeneratorState() {
-    return { left: this.createNoiseGeneratorChannelState(), nativeHandle: 0, right: this.createNoiseGeneratorChannelState() };
+    return {
+      left: this.createNoiseGeneratorChannelState(), nativeHandle: 0, right: this.createNoiseGeneratorChannelState(),
+      blockCache: { cursor: 0, size: 0, left: null, right: null },
+    };
   }
 
   destroyNoiseGeneratorNativeState(state) {
@@ -5247,8 +5255,32 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     if (this.nativeNoiseGeneratorReady) {
       if (!state.nativeHandle) {
         state.nativeHandle = this.nativeNoiseGenerator.soemdsp_noise_generator_create();
+        if (state.blockCache) {
+          state.blockCache.cursor = 0;
+          state.blockCache.size = 0;
+        }
       }
       if (state.nativeHandle) {
+        if (this.nativeNoiseGenerator.soemdsp_noise_generator_process_block) {
+          const cache = state.blockCache || (state.blockCache = { cursor: 0, size: 0, left: null, right: null });
+          if (cache.cursor >= cache.size) {
+            const blockSize = NodeLiveAudioProcessor.NOISE_NATIVE_BLOCK_SIZE;
+            this.nativeNoiseGenerator.soemdsp_noise_generator_process_block(state.nativeHandle, seed, mode, mean, deviation, level, blockSize, 1);
+            const memory = this.nativeNoiseGenerator.memory;
+            const leftPtr = this.nativeNoiseGenerator.soemdsp_noise_generator_block_output_left_ptr(state.nativeHandle);
+            const rightPtr = this.nativeNoiseGenerator.soemdsp_noise_generator_block_output_right_ptr(state.nativeHandle);
+            cache.left = new Float64Array(memory.buffer, leftPtr, blockSize);
+            cache.right = new Float64Array(memory.buffer, rightPtr, blockSize);
+            cache.size = blockSize;
+            cache.cursor = 0;
+          }
+          const index = cache.cursor;
+          cache.cursor += 1;
+          return {
+            "Left Out": this.safeFilterNumber(cache.left[index], null),
+            "Right Out": this.safeFilterNumber(cache.right[index], null),
+          };
+        }
         this.nativeNoiseGenerator.soemdsp_noise_generator_sample(state.nativeHandle, seed, mode, mean, deviation, level);
         return {
           "Left Out": this.safeFilterNumber(this.nativeNoiseGenerator.soemdsp_noise_generator_left(state.nativeHandle), null),
