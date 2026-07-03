@@ -163,7 +163,42 @@ both kernels together is that the parallelism has to be found in what
 recompute was easy to vectorize (12 independent lanes) but often skipped
 entirely; the stereo channel pairing was less obvious (only 2 lanes, and the
 per-line cascade itself stays serial) but touches work that always runs.
-A further win, not yet attempted, would be interpolating `readDelay`'s
-fractional read itself in SIMD (the `before`/`after` sample blend), though
-the gather-free buffer indexing limits how much of that can actually
-vectorize.
+
+## Attempted third kernel: readDelay's fractional blend (rejected, not merged)
+
+The obvious next candidate was vectorizing `readDelay`'s final interpolation
+(`buffer[before]*(1-mix) + buffer[after]*mix`) across the stereo pair, same
+pattern as the other two kernels. Implemented it as `readDelayPairSimd`,
+wired into both paired callers, and ran it through the same process:
+
+**Correctness**: bit-exact, zero deviation across all 7 presets. Expected,
+in hindsight — this kernel has no cross-lane reduction (each lane's result
+depends only on that lane's own inputs), so packing two independent scalar
+computations into one SIMD op doesn't reorder any floating-point operations
+relative to doing them separately.
+
+**Benchmark**: median of 6 runs, **0.98x — very slightly *slower*, not
+faster**, with the two distributions overlapping heavily (noise-level, not
+a real regression, but definitely not a win).
+
+**Why it didn't help, and why that's the right outcome to expect**: the
+vectorized portion here is only 2 multiplies and an add — the wraparound
+branches, the float-to-int truncation, the modulo index arithmetic, and the
+scalar buffer gather all stay scalar regardless (WASM SIMD128 has no
+gather and no int64x2 modulo), and dominate the real cost. Packing two
+scalars into a `v128_t` and unpacking the result back out has its own small
+cost that, for a kernel this thin, isn't paid back by the couple of FLOPs
+it saves. This is the same shape as the geometry kernel's honest result
+(genuinely correct, not a genuine win) but weaker — this one doesn't even
+show the "faster in isolation" result the geometry kernel had.
+
+**Decision**: reverted from `sabrina_reverb.cpp`, not merged. Recording it
+here rather than silently discarding it, since a negative result reached
+by the same rigorous process (baseline, correctness diff, honest benchmark)
+is exactly as valuable as a positive one — it closes off a candidate
+instead of leaving it as an untested assumption. The real remaining
+opportunity, if there is one, is in the parts of `readDelay` that *can't*
+vectorize on this ISA (the gather, the branchy wraparound) — which would
+need a different approach (e.g. restructuring delay-line storage to make
+the gather avoidable) rather than more SIMD intrinsics on the current
+layout.
