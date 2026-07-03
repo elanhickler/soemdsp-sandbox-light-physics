@@ -5398,6 +5398,17 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     if (this.nativeFbmReady) {
       if (!state.nativeHandle) {
         state.nativeHandle = this.nativeFbm.soemdsp_fbm_create();
+        // A stale cache here would replay up to one block's worth of
+        // samples read from a detached WASM memory buffer belonging to a
+        // module instance that no longer exists -- most likely after a
+        // native-module hot-reload (see the "fractal_brownian_noise"
+        // reload handler above, which destroys the handle but doesn't
+        // touch this Map entry). Matches the same reset already applied
+        // in noiseGeneratorSample.
+        if (state.blockCache) {
+          state.blockCache.cursor = 0;
+          state.blockCache.size = 0;
+        }
       }
       if (state.nativeHandle && this.nativeFbm?.soemdsp_fbm_process_block) {
         const cache = state.blockCache;
