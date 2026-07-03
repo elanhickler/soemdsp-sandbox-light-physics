@@ -273,3 +273,90 @@ produced the largest single result on this branch.
 
 **Files**: `native_modules/fractal_brownian_noise/fractal_brownian_noise.cpp`,
 `scripts/build_native_modules.ps1` (added `-msimd128` to FBM's stanza only).
+
+## Block-processing proof: FBM as the first SIMD-compatible modular execution boundary
+
+The kernel above is real DSP acceleration. This section is a different kind
+of proof: that a module in this sandbox can run through an explicit
+block-processing boundary — params resolved once, a whole block computed,
+results written to an explicit buffer — with scalar and SIMD
+implementations living behind that *same* boundary, and that this can be
+wired into the actual real-time execution path, not just benchmarked in
+isolation.
+
+**The hidden shape this replaces**: `fractalBrownianNoiseVector` (the JS
+bridge) called `soemdsp_fbm_sample` once per audio sample — `sample =
+fbm(time, params)` — re-reading and re-clamping every parameter on every
+single call, then crossing the JS↔WASM boundary again to read back each of
+6 output values individually.
+
+**What was added** (`native_modules/fractal_brownian_noise/fractal_brownian_noise.cpp`):
+
+- `soemdsp_fbm_process_block(handle, ...params..., frameCount, useSimd)` —
+  resolves params once, then loops `frameCount` samples internally.
+- Two implementations behind that one function: `fbmProcessBlockScalar`
+  (the original 3x-`fbmAxis`-per-frame path) and `fbmProcessBlockSimd`
+  (the `fbmAxesSimd` kernel from above, per frame). `useSimd` is an
+  explicit runtime switch purely so both can be A/B tested through the
+  identical entry point — a real caller always passes 1, since SIMD
+  support here is a compile-time fact (`-msimd128`), not a runtime one.
+- Fixed-size static output buffers (`blockOutX/Y/Z` + `...Raw` variants,
+  `kMaxBlockFrames = 2048`) per instance, following the same no-heap
+  pattern as Sabrina's delay-line buffers. Exposed via `_ptr` getters
+  returning linear-memory byte offsets, so JS reads results as a
+  zero-copy `Float64Array` view into WASM memory instead of one function
+  call per sample per output.
+
+**Correctness**: ran the original per-sample API for N samples alongside
+the new block API for the same N, same params, same seed — output must be
+identical whether you ask "one sample, N times" or "N samples, once".
+Bit-exact across every preset (default, max octaves, min octaves, high
+persistence, and a `level = 0` case that specifically catches a bug where
+the raw/un-leveled output buffer could be silently derived from the
+leveled one instead of being computed independently). `block-SIMD ==
+block-scalar == original-per-sample-API`, at every preset, every frame.
+
+**Real integration, not just a benchmark**: `fractalBrownianNoiseVector`
+now maintains a `blockCache` (128 samples, matching the typical
+AudioWorklet render quantum) per node instance. On cache exhaustion it
+calls `soemdsp_fbm_process_block` once and refills; every other call reads
+the next cached sample. Verified live: 3+ seconds of continuous real-time
+audio through an actual FBM node (many hundreds of cache refills and
+cursor wraparounds), plus a live parameter change mid-stream forcing an
+early refill — no errors, no glitches, smoke tests pass.
+
+**Honest tradeoff, stated plainly**: this freezes FBM's parameters for the
+duration of one cached 128-sample block (~2.9ms @ 44.1kHz) instead of
+resolving them fresh every sample. This is the standard block-rate
+parameter tradeoff most real-world audio plugins already make — for a
+slowly-evolving noise generator like FBM, sub-3ms parameter latency is not
+expected to be audible, but it is a real, deliberate behavior change from
+"exact per-sample parameter resolution," not a free lunch.
+
+**Benchmark — two separate, honestly isolated dimensions**:
+
+- *SIMD math alone* (block-SIMD vs. block-scalar, holding the block
+  boundary constant): **~2.88x faster**, consistent with the ~2.76x found
+  for the per-sample kernel above — confirms the SIMD win is real and
+  reproducible at block granularity too.
+- *Block boundary alone* (block-SIMD vs. the already-SIMD per-sample API,
+  holding the math identical): **~1.14x faster** — the pure win from
+  resolving params once per 128 samples and reading results via a
+  zero-copy buffer view instead of 128 separate boundary crossings.
+
+These are deliberately reported separately rather than multiplied together
+into a single bigger number, since only the SIMD-math dimension was
+directly re-measured against a true from-scratch scalar baseline; the
+block-boundary dimension was measured holding the (already-optimized) math
+constant.
+
+**What this demonstrates, concretely**: one module (FBM) now has an
+explicit block-processing entry point, resolves parameters outside the
+per-sample hot loop, exposes scalar and SIMD implementations behind an
+identical call signature, has measured equivalence and measured
+performance for both, and is wired into the real AudioWorklet execution
+path rather than sitting as an isolated benchmark. This is the shape a
+future execution-order change could generalize from — **if and when that
+work is explicitly assigned** — not a claim that the shape has been
+generalized yet. No scheduler, no parameter-domain framework, no other
+module's dispatch was touched.

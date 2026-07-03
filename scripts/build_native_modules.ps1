@@ -137,6 +137,14 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export=soemdsp_fbm_y_raw" `
   "-Wl,--export=soemdsp_fbm_z_raw" `
   "-Wl,--export=soemdsp_fbm_version" `
+  "-Wl,--export=soemdsp_fbm_process_block" `
+  "-Wl,--export=soemdsp_fbm_block_output_x_ptr" `
+  "-Wl,--export=soemdsp_fbm_block_output_y_ptr" `
+  "-Wl,--export=soemdsp_fbm_block_output_z_ptr" `
+  "-Wl,--export=soemdsp_fbm_block_output_x_raw_ptr" `
+  "-Wl,--export=soemdsp_fbm_block_output_y_raw_ptr" `
+  "-Wl,--export=soemdsp_fbm_block_output_z_raw_ptr" `
+  "-Wl,--export=soemdsp_fbm_max_block_frames" `
   "-Wl,--export-memory" `
   -o "$root\native_modules\fractal_brownian_noise\fractal_brownian_noise.wasm" `
   "$root\native_modules\fractal_brownian_noise\fractal_brownian_noise.cpp"

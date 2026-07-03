@@ -66,6 +66,12 @@ function nodeLiveSineCosWavetableSample(phaseRadians, frequency, amplitude, samp
 }
 
 class NodeLiveAudioProcessor extends AudioWorkletProcessor {
+  // Block size for the FBM native block-processing boundary
+  // (soemdsp_fbm_process_block) -- matches the typical AudioWorklet render
+  // quantum. Params are resolved once per this many samples instead of once
+  // per sample; see fractalBrownianNoiseVector.
+  static FBM_NATIVE_BLOCK_SIZE = 128;
+
   constructor() {
     super();
     this.inputConnections = new Map();
@@ -3332,12 +3338,25 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   createFractalBrownianNoiseState() {
-    return { axes: {}, nativeHandle: 0, resetWasHigh: false };
+    return {
+      axes: {},
+      nativeHandle: 0,
+      resetWasHigh: false,
+      // Block-processing cache: resolves params once per
+      // FBM_NATIVE_BLOCK_SIZE calls via soemdsp_fbm_process_block instead of
+      // once per sample via soemdsp_fbm_sample. cursor >= size means the
+      // cache is empty/exhausted and the next read triggers a refill.
+      blockCache: { cursor: 0, size: 0, x: null, y: null, z: null, xRaw: null, yRaw: null, zRaw: null },
+    };
   }
 
   resetFractalBrownianNoiseState(state) {
     for (const axisState of Object.values(state.axes || {})) {
       axisState.time = 0;
+    }
+    if (state.blockCache) {
+      state.blockCache.cursor = 0;
+      state.blockCache.size = 0;
     }
     if (state.nativeHandle && this.nativeFbm?.soemdsp_fbm_reset) {
       this.nativeFbm.soemdsp_fbm_reset(state.nativeHandle);
@@ -5347,6 +5366,54 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     if (this.nativeFbmReady) {
       if (!state.nativeHandle) {
         state.nativeHandle = this.nativeFbm.soemdsp_fbm_create();
+      }
+      if (state.nativeHandle && this.nativeFbm?.soemdsp_fbm_process_block) {
+        const cache = state.blockCache;
+        if (cache.cursor >= cache.size) {
+          // Block-processing boundary: resolve params ONCE for the whole
+          // block instead of once per sample, run the native block kernel
+          // (SIMD internally), and cache the results for the next
+          // FBM_NATIVE_BLOCK_SIZE reads. Params are frozen for the
+          // duration of one cached block (128 samples, ~2.9ms @ 44.1kHz) --
+          // the standard block-rate tradeoff, well below audible for a
+          // slowly-evolving noise generator like FBM.
+          const seed = Math.max(0, Math.round(this.safeFilterNumber(params.seed, null)));
+          const octaves = Math.max(1, Math.min(8, Math.round(this.safeFilterNumber(params.octaves, null))));
+          const persistence = this.clampValue(this.safeFilterNumber(params.persistence, null), 0, 0.99);
+          const scale = Math.max(0.000001, this.safeFilterNumber(params.scale, null));
+          const frequency = Math.max(0, this.safeFilterNumber(params.frequency, null));
+          const level = this.safeFilterNumber(params.level, null);
+          const blockSize = NodeLiveAudioProcessor.FBM_NATIVE_BLOCK_SIZE;
+          this.nativeFbm.soemdsp_fbm_process_block(state.nativeHandle, seed, octaves, persistence, scale, frequency, level, safeRate, blockSize, 1);
+          const memory = this.nativeFbm.memory;
+          const xPtr = this.nativeFbm.soemdsp_fbm_block_output_x_ptr(state.nativeHandle);
+          const yPtr = this.nativeFbm.soemdsp_fbm_block_output_y_ptr(state.nativeHandle);
+          const zPtr = this.nativeFbm.soemdsp_fbm_block_output_z_ptr(state.nativeHandle);
+          const xRawPtr = this.nativeFbm.soemdsp_fbm_block_output_x_raw_ptr(state.nativeHandle);
+          const yRawPtr = this.nativeFbm.soemdsp_fbm_block_output_y_raw_ptr(state.nativeHandle);
+          const zRawPtr = this.nativeFbm.soemdsp_fbm_block_output_z_raw_ptr(state.nativeHandle);
+          cache.x = new Float64Array(memory.buffer, xPtr, blockSize);
+          cache.y = new Float64Array(memory.buffer, yPtr, blockSize);
+          cache.z = new Float64Array(memory.buffer, zPtr, blockSize);
+          cache.xRaw = new Float64Array(memory.buffer, xRawPtr, blockSize);
+          cache.yRaw = new Float64Array(memory.buffer, yRawPtr, blockSize);
+          cache.zRaw = new Float64Array(memory.buffer, zRawPtr, blockSize);
+          cache.size = blockSize;
+          cache.cursor = 0;
+        }
+        const index = cache.cursor;
+        cache.cursor += 1;
+        const outX = this.safeFilterNumber(cache.x[index], null);
+        const outY = this.safeFilterNumber(cache.y[index], null);
+        const outZ = this.safeFilterNumber(cache.z[index], null);
+        return {
+          "Out X": outX,
+          "Out Y": outY,
+          "Out Z": outZ,
+          "Out X Raw": this.safeFilterNumber(cache.xRaw[index], null),
+          "Out Y Raw": this.safeFilterNumber(cache.yRaw[index], null),
+          "Out Z Raw": this.safeFilterNumber(cache.zRaw[index], null),
+        };
       }
       if (state.nativeHandle) {
         const seed = Math.max(0, Math.round(this.safeFilterNumber(params.seed, null)));
