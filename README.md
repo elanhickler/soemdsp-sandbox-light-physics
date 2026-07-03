@@ -40,6 +40,8 @@ up front.
 | **Second SIMD kernel: Sabrina Reverb stereo delay/diffusion** | Pairs left/right channels (independent within a call) through the serial 6-stage diffusion cascade, one SIMD lane each. Real end-to-end win: ~1.09x (8.3% less time), because unlike geometry this path always runs. |
 | **Third kernel attempted, rejected**: `readDelay`'s fractional blend — bit-exact but 0.98x (no win); documented and reverted rather than merged. |
 | **Fourth SIMD kernel: Fractal Brownian Noise, biggest win yet** | Restructured X/Y/Z axis computation to share position math (was computed 3x redundantly, now once) and vectorized the ALU-bound integer hash chain across axes. **~2.76x faster (median)**, bit-exact. See [Fractal Brownian Noise SIMD kernel](#fractal-brownian-noise-simd-kernel-the-biggest-win-so-far) below. |
+| **First block-processing proof: FBM** | `soemdsp_fbm_process_block` — params resolved once, `frameCount` samples computed, scalar and SIMD implementations behind one dispatch shape. Bit-exact, wired into the real AudioWorklet via a 128-sample cache. See [Block-processing proof](#block-processing-proof-fbm-as-the-first-simd-compatible-modular-execution-boundary) below. |
+| **Second block-processing proof: Sabrina Reverb** | Same `(state, in, out, frameCount, useSimd)` shape applied to a structurally different module — a streaming effect, not a generator — reusing its already-shipping kernels. Bit-exact vs. the live per-sample API. Deliberately **not** wired into the live worklet (would add real latency to a live effect). See [Second proof](#second-proof-sabrina-reverb-through-the-same-block-boundary) below. |
 
 ### Why this is a separate branch
 
@@ -66,6 +68,65 @@ DspExecution           — the actual audio processing
 Nothing above this line is committed as a generic framework — it's a map for
 where future scoped extractions (like the ones above) should land, not a
 spec for a rewrite.
+
+## Findings so far — what this should decide next
+
+Two real modules (FBM, a generator, and Sabrina Reverb, a streaming
+effect) have now been run through the identical block-processing boundary
+shape: `params/state in, output buffer out, frameCount, useSimd`. This
+section is the standing summary of what that evidence actually supports —
+read this before starting a third module, so the next step is a decision,
+not a repeat of a lesson already learned.
+
+**Proven — treat as settled unless new evidence contradicts it:**
+
+1. **The boundary shape generalizes.** It held unchanged across a
+   self-generating module and an input-consuming effect. A future module
+   should default to this shape (`process_block(params, state, output,
+   frameCount, useSimd)`, static fixed-size buffers, pointer getters for
+   zero-copy JS access) rather than re-deriving one.
+2. **SIMD payoff is conditional on the work being ALU-bound, not
+   memory-bound.** FBM (pure integer hash chain, no buffer access): ~2.76x.
+   Sabrina (delay-buffer reads dominate): ~0.96x, no win. Before converting
+   a new module, check which category its hot loop falls into — WASM
+   SIMD128 has no gather/scatter, so anything indexing a buffer per-lane
+   with a per-lane-different offset won't vectorize well regardless of
+   effort spent.
+3. **The block boundary itself is worth ~1.1–1.2x independent of SIMD**
+   (FBM ~1.14x, Sabrina ~1.17x, both isolated from the SIMD-math dimension)
+   — from resolving params once per block and batching the JS↔WASM
+   crossing, not from vector instructions. This means block-processing is
+   worth doing even for modules that turn out to be poor SIMD candidates.
+
+**Open — needs a decision before more modules get wired live, not more
+engineering:**
+
+4. **Streaming effects hit a real latency tradeoff generators don't.** A
+   generator's block cache can refill transparently (no audible cost). An
+   effect with external input needs `frameCount` samples of input to exist
+   *before* it can produce output — Sabrina's proof deliberately stopped at
+   "verified at the native level" rather than wiring this into the live
+   worklet, because doing so adds up to one block's worth of real latency
+   to a live effect. **This needs an explicit answer, not another proof**:
+   is some fixed added latency (e.g. one 128-sample render quantum, ~2.9ms)
+   acceptable for effect-class modules in exchange for the ~1.17x boundary
+   win plus whatever SIMD win a given effect's math supports? If yes, name
+   which modules it's acceptable for; if no, block-processing for
+   streaming effects stays native-only/offline-only.
+
+**Suggested next module, conditional on the answer to #4:**
+
+- If added latency is acceptable for effects: extend Sabrina's proof into
+  the live worklet, or pick another effect with real SIMD headroom
+  (check #2's ALU-bound test first — a mono resonant filter's serial IIR
+  state has no independent lanes within one instance, so it would need
+  voice-parallelism across simultaneous instances, a different axis than
+  anything proven so far, not a rerun of Sabrina's proof).
+- If added latency is not acceptable for effects: block-processing work
+  should focus on other generator-class or offline-only modules next,
+  where FBM's transparent-refill pattern applies directly, rather than
+  spending more effort on streaming effects under a constraint that rules
+  out shipping it live.
 
 ## Working SIMD example: Sabrina Reverb diffusion geometry
 
