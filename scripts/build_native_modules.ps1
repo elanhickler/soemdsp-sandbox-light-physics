@@ -326,3 +326,21 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export-memory" `
   -o "$root\native_modules\jerobeam_wirdo_spiral\jerobeam_wirdo_spiral.wasm" `
   "$root\native_modules\jerobeam_wirdo_spiral\jerobeam_wirdo_spiral.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_jbblubb_create" `
+  "-Wl,--export=soemdsp_jbblubb_destroy" `
+  "-Wl,--export=soemdsp_jbblubb_reset" `
+  "-Wl,--export=soemdsp_jbblubb_sample" `
+  "-Wl,--export=soemdsp_jbblubb_x" `
+  "-Wl,--export=soemdsp_jbblubb_y" `
+  "-Wl,--export=soemdsp_jbblubb_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\jerobeam_blubb\jerobeam_blubb.wasm" `
+  "$root\native_modules\jerobeam_blubb\jerobeam_blubb.cpp"

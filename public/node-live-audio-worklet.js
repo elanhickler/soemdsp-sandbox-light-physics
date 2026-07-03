@@ -164,6 +164,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.henonMapStates = new Map();
     this.chuaAttractorStates = new Map();
     this.wirdoSpiralStates = new Map();
+    this.blubbStates = new Map();
     this.chordMemoryStates = new Map();
     this.turingMachineStates = new Map();
     this.pitchQuantizerStates = new Map();
@@ -643,6 +644,24 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "jerobeam_blubb" || targetType === "blubb") {
+        for (const state of this.blubbStates.values()) {
+          this.destroyBlubbNativeState(state);
+        }
+        this.nativeBlubb = exports;
+        this.nativeBlubbReady = Boolean(
+          this.nativeBlubb?.soemdsp_jbblubb_create &&
+          this.nativeBlubb?.soemdsp_jbblubb_sample &&
+          this.nativeBlubb?.soemdsp_jbblubb_x &&
+          this.nativeBlubb?.soemdsp_jbblubb_y,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "jerobeam_blubb",
+          status: this.nativeBlubbReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       if (name === "pitch_quantizer" || targetType === "pitchQuantizer") {
         for (const state of this.pitchQuantizerStates.values()) {
           this.destroyPitchQuantizerNativeState(state);
@@ -771,6 +790,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.henonMapStates = new Map();
     this.chuaAttractorStates = new Map();
     this.wirdoSpiralStates = new Map();
+    this.blubbStates = new Map();
     this.chordMemoryStates = new Map();
     this.turingMachineStates = new Map();
     this.pitchQuantizerStates = new Map();
@@ -1011,6 +1031,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "wirdoSpiral" && !this.wirdoSpiralStates.has(id)) {
         this.wirdoSpiralStates.set(id, this.createWirdoSpiralState());
       }
+      if (node?.type === "blubb" && !this.blubbStates.has(id)) {
+        this.blubbStates.set(id, this.createBlubbState());
+      }
       if (node?.type === "chordMemory" && !this.chordMemoryStates.has(id)) {
         this.chordMemoryStates.set(id, this.createChordMemoryState());
       }
@@ -1205,6 +1228,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (!ids.has(id)) {
         this.destroyWirdoSpiralNativeState(this.wirdoSpiralStates.get(id));
         this.wirdoSpiralStates.delete(id);
+      }
+    }
+    for (const id of [...this.blubbStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroyBlubbNativeState(this.blubbStates.get(id));
+        this.blubbStates.delete(id);
       }
     }
     for (const id of [...this.chordMemoryStates.keys()]) {
@@ -3679,6 +3708,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.henonMapStates = new Map();
     runtime.chuaAttractorStates = new Map();
     runtime.wirdoSpiralStates = new Map();
+    runtime.blubbStates = new Map();
     runtime.chordMemoryStates = new Map();
     runtime.turingMachineStates = new Map();
     runtime.pitchQuantizerStates = new Map();
@@ -3728,6 +3758,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "henonMap") this.henonMapStates.set(id, this.createHenonMapState());
       if (node?.type === "chuaAttractor") this.chuaAttractorStates.set(id, this.createChuaAttractorState());
       if (node?.type === "wirdoSpiral") this.wirdoSpiralStates.set(id, this.createWirdoSpiralState());
+      if (node?.type === "blubb") this.blubbStates.set(id, this.createBlubbState());
       if (node?.type === "chordMemory") this.chordMemoryStates.set(id, this.createChordMemoryState());
       if (node?.type === "turingMachine") this.turingMachineStates.set(id, this.createTuringMachineState());
       if (node?.type === "pitchQuantizer") this.pitchQuantizerStates.set(id, this.createPitchQuantizerState());
@@ -6078,6 +6109,107 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return this.wirdoSpiralSampleJs(state, options);
   }
 
+  createBlubbState() {
+    return { phase: 0, resetWasHigh: false, nativeHandle: 0 };
+  }
+
+  destroyBlubbNativeState(state) {
+    if (state?.nativeHandle && this.nativeBlubb?.soemdsp_jbblubb_destroy) {
+      this.nativeBlubb.soemdsp_jbblubb_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
+  blubbBipolarTriangle(phase) {
+    const p = phase - Math.floor(phase);
+    return p < 0.5 ? (4 * p - 1) : (3 - 4 * p);
+  }
+
+  blubbSampleJs(state, options = {}) {
+    const safeRate = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+    const frequency = Number(options.frequency) || 0;
+    const shape = Number(options.shape) || 0;
+    const rotX = Number(options.rotX) || 0;
+    const rotY = Number(options.rotY) || 0;
+    const zDepth = Number(options.zDepth) || 0;
+
+    const phase = state.phase;
+    let chX, chY;
+    if (shape >= 0.5) {
+      chX = this.blubbBipolarTriangle(phase + 0.125);
+      chY = this.blubbBipolarTriangle(phase + 0.375);
+    } else {
+      chX = Math.sin(phase * Math.PI * 2);
+      chY = Math.cos(phase * Math.PI * 2);
+    }
+
+    const sinRotX = Math.sin(rotX * Math.PI * 2);
+    const cosRotX = Math.cos(rotX * Math.PI * 2);
+    const help11 = chX * cosRotX - chY * sinRotX;
+    const help12 = chX * sinRotX + chY * cosRotX;
+    const sinRotY = Math.sin(rotY * Math.PI * 2);
+    const cosRotY = Math.cos(rotY * Math.PI * 2);
+    const help21 = help11 * cosRotY;
+    const z = help11 * sinRotY;
+
+    const formula = zDepth * 1.25 * (z * 0.05 + 0.5);
+    const m = 1 + zDepth;
+    const x = (help21 - formula * help21) * m;
+    const y = (help12 - formula * help12) * m;
+
+    const nextPhase = state.phase + frequency / safeRate;
+    state.phase = nextPhase - Math.floor(nextPhase);
+
+    return { x, y };
+  }
+
+  blubbSample(state, options = {}) {
+    const resetHigh = Number(options.reset) > 0.5;
+    if (resetHigh && !state.resetWasHigh) {
+      state.phase = 0;
+      if (state.nativeHandle && this.nativeBlubb?.soemdsp_jbblubb_reset) {
+        this.nativeBlubb.soemdsp_jbblubb_reset(state.nativeHandle);
+      }
+    }
+    state.resetWasHigh = resetHigh;
+    if (
+      this.nativeBlubbReady &&
+      this.nativeBlubb?.soemdsp_jbblubb_create &&
+      this.nativeBlubb?.soemdsp_jbblubb_sample
+    ) {
+      try {
+        if (!state.nativeHandle) {
+          state.nativeHandle = this.nativeBlubb.soemdsp_jbblubb_create();
+        }
+        if (state.nativeHandle) {
+          const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+          this.nativeBlubb.soemdsp_jbblubb_sample(
+            state.nativeHandle,
+            Number(options.frequency) || 0,
+            Number(options.shape) || 0,
+            Number(options.rotX) || 0,
+            Number(options.rotY) || 0,
+            Number(options.zDepth) || 0,
+            sampleRateValue,
+          );
+          return {
+            x: this.safeFilterNumber(this.nativeBlubb.soemdsp_jbblubb_x(state.nativeHandle), null),
+            y: this.safeFilterNumber(this.nativeBlubb.soemdsp_jbblubb_y(state.nativeHandle), null),
+          };
+        }
+      } catch (error) {
+        this.nativeBlubbReady = false;
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "jerobeam_blubb",
+          status: "disabled",
+          message: String(error?.message || error || "native Jerobeam Blubb failed"),
+        });
+      }
+    }
+    return this.blubbSampleJs(state, options);
+  }
+
   createChuaAttractorState() {
     return { resetWasHigh: false, x: 0.1, y: 0, z: 0, nativeHandle: 0 };
   }
@@ -7101,6 +7233,24 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         value = {
           X: wirdo.x * wirdoLevel,
           Y: wirdo.y * wirdoLevel,
+        };
+      } else if (node?.type === "blubb") {
+        const state = this.blubbStates.get(nodeId) || this.createBlubbState();
+        this.blubbStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        const blubb = this.blubbSample(state, {
+          frequency: read("frequency", 8),
+          reset: mixInput(nodeId, "Reset"),
+          rotX: read("rotX", 0),
+          rotY: read("rotY", 0),
+          sampleRate: safeRate,
+          shape: read("shape", 0),
+          zDepth: read("zDepth", 0),
+        });
+        const blubbLevel = read("level", 1);
+        value = {
+          X: blubb.x * blubbLevel,
+          Y: blubb.y * blubbLevel,
         };
       } else if (node?.type === "chuaAttractor") {
         const state = this.chuaAttractorStates.get(nodeId) || this.createChuaAttractorState();

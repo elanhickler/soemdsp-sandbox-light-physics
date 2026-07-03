@@ -2921,6 +2921,25 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         X: wirdo.x * wirdoLevel,
         Y: wirdo.y * wirdoLevel,
       };
+    } else if (node?.type === "blubb") {
+      const state = runtime.blubbStates.get(nodeId) || createNodeGraphBlubbState();
+      runtime.blubbStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      const blubb = nodeGraphBlubbSample({
+        frequency: read("frequency", 8),
+        reset: mixInput(nodeId, "Reset"),
+        rotX: read("rotX", 0),
+        rotY: read("rotY", 0),
+        sampleRate,
+        shape: read("shape", 0),
+        state,
+        zDepth: read("zDepth", 0),
+      });
+      const blubbLevel = read("level", 1);
+      value = {
+        X: blubb.x * blubbLevel,
+        Y: blubb.y * blubbLevel,
+      };
     } else if (node?.type === "chordMemory") {
       const state = runtime.chordMemoryStates.get(nodeId) || createNodeGraphChordMemoryState();
       runtime.chordMemoryStates.set(nodeId, state);
