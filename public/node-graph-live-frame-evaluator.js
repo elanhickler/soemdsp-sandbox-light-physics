@@ -2999,6 +2999,38 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         X: boing.x * boingLevel,
         Y: boing.y * boingLevel,
       };
+    } else if (node?.type === "torus") {
+      const state = runtime.torusStates.get(nodeId) || createNodeGraphTorusState();
+      runtime.torusStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      const torus = nodeGraphTorusSample({
+        balance: read("balance", 0),
+        darkAngle: read("darkAngle", 0),
+        darkIntensity: read("darkIntensity", 0),
+        density: read("density", 1),
+        frequency: read("frequency", 8),
+        length: read("length", 0),
+        quantizeDensity: read("quantizeDensity", 1),
+        quantizeSubDensity: read("quantizeSubDensity", 1),
+        reset: mixInput(nodeId, "Reset"),
+        rotX: read("rotX", 0),
+        rotY: read("rotY", 0),
+        rotZ: read("rotZ", 0),
+        sampleRate,
+        sharp: read("sharp", 0.5),
+        size: read("size", 1),
+        state,
+        subdensity: read("subdensity", 0),
+        wander: read("wander", 0),
+        zAngleX: read("zAngleX", 0),
+        zAngleY: read("zAngleY", 0),
+        zDepth: read("zDepth", 0),
+      });
+      const torusLevel = read("level", 1);
+      value = {
+        X: torus.x * torusLevel,
+        Y: torus.y * torusLevel,
+      };
     } else if (node?.type === "chordMemory") {
       const state = runtime.chordMemoryStates.get(nodeId) || createNodeGraphChordMemoryState();
       runtime.chordMemoryStates.set(nodeId, state);

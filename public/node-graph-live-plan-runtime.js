@@ -254,6 +254,7 @@ function createNodeGraphLiveRuntime(plan) {
   const blubbStates = new Map();
   const mushroomStates = new Map();
   const boingStates = new Map();
+  const torusStates = new Map();
   const chordMemoryStates = new Map();
   const turingMachineStates = new Map();
   const pitchQuantizerStates = new Map();
@@ -316,6 +317,9 @@ function createNodeGraphLiveRuntime(plan) {
     }
     if (node.type === "boing") {
       boingStates.set(node.id, createNodeGraphBoingState());
+    }
+    if (node.type === "torus") {
+      torusStates.set(node.id, createNodeGraphTorusState());
     }
     if (node.type === "chordMemory") {
       chordMemoryStates.set(node.id, createNodeGraphChordMemoryState());
@@ -452,6 +456,7 @@ function createNodeGraphLiveRuntime(plan) {
     blubbStates,
     mushroomStates,
     boingStates,
+    torusStates,
     chordMemoryStates,
     turingMachineStates,
     pitchQuantizerStates,
@@ -602,6 +607,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   if (!runtime.boingStates) {
     runtime.boingStates = new Map();
   }
+  if (!runtime.torusStates) {
+    runtime.torusStates = new Map();
+  }
   if (!runtime.chordMemoryStates) {
     runtime.chordMemoryStates = new Map();
   }
@@ -729,6 +737,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     }
     if (node.type === "boing" && !runtime.boingStates.has(node.id)) {
       runtime.boingStates.set(node.id, createNodeGraphBoingState());
+    }
+    if (node.type === "torus" && !runtime.torusStates.has(node.id)) {
+      runtime.torusStates.set(node.id, createNodeGraphTorusState());
     }
     if (node.type === "chordMemory" && !runtime.chordMemoryStates.has(node.id)) {
       runtime.chordMemoryStates.set(node.id, createNodeGraphChordMemoryState());
@@ -935,6 +946,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.boingStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.boingStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.torusStates.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.torusStates.delete(id);
     }
   }
   for (const id of [...runtime.chordMemoryStates.keys()]) {
