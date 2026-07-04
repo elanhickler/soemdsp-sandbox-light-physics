@@ -222,74 +222,18 @@ function nodeGraphClearAllTrackedModuleSilence() {
 // worklet or the current patch, so it works whether or not live audio is
 // running and can't be confused by whatever happens to be wired up.
 //
-// Two depths, by design (see the "Check depth" choice this feature was
-// built from): every module gets a load check (fetch its .wasm, attempt
-// WebAssembly.instantiate -- this alone would have caught the
-// keplerBouwkamp catalog bug). The 8 Jerobeam modules additionally get a
-// full create->sample(defaults)x2000->x/y read->destroy signal-sanity
-// check, since their raw export convention
-// (_create/_destroy/_reset/_sample/_x/_y/_version) and exact per-module
-// default parameter order are both known precisely (they were all authored
-// this way, on purpose, in this repo). The other 17 pre-existing native
-// modules use call conventions specific to each one (different export
-// names, different per-module option shapes) that aren't safe to guess
-// generically, so they get the load check only -- reported as such, not
-// silently treated as equivalent.
-const nodeGraphJerobeamSelfTestManifest = Object.freeze([
-  {
-    targetType: "wirdoSpiral",
-    exportPrefix: "soemdsp_jbwirdo",
-    // frequency, sharp, cross, density, length, rotate, splashDepth, splashDensity, cut, scrap, ringCut, splashSpeed, syncCut
-    args: [8, 0, 0, 0.8, 1, 0, 0, 0, 1000, 1, 10, 0, 1],
-  },
-  {
-    targetType: "blubb",
-    exportPrefix: "soemdsp_jbblubb",
-    // frequency, shape, rotX, rotY, zDepth
-    args: [8, 0, 0, 0, 0],
-  },
-  {
-    targetType: "mushroom",
-    exportPrefix: "soemdsp_jbmushroom",
-    // frequency, phaseOffset, numMushrooms, grow, density, capRotation, stemRotationSpeed, head, spread, wobble, clusterRotation, clusterRotationSpeed, sharp, width, stem, apart, capStemTransition
-    args: [8, 0, 1, 1, 3, 0, 0, 0.6667, 0.5, 0.0625, 0, 0, 0, 1, 0, 0, 0.1],
-  },
-  {
-    targetType: "boing",
-    exportPrefix: "soemdsp_jbboing",
-    // frequency, density, sharpness, rotX, rotY, zDepth, zAmount, ends, boing, boingStrength, dir, shape, volume, volumePreJump
-    args: [8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-  },
-  {
-    targetType: "torus",
-    exportPrefix: "soemdsp_jbtorus",
-    // frequency, density, quantizeDensity, subdensity, quantizeSubDensity, sharp, size, length, balance, wander, darkAngle, darkIntensity, rotX, rotY, rotZ, zAngleX, zAngleY, zDepth
-    args: [8, 1, 1, 0, 1, 0.5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  },
-  {
-    targetType: "keplerBouwkamp",
-    exportPrefix: "soemdsp_jbkepler",
-    // frequency, start, length, circles, zoom, rotation, tri
-    args: [8, 3, 1, 0.5, 0, 0, 0],
-  },
-  {
-    targetType: "nyquistShannon",
-    exportPrefix: "soemdsp_jbnyquist",
-    // frequencyA, midiNoteRaw, rate, sampleDots, phaseOffset, frequencyB, subPhase, subPhaseRotationSpeed, tone, toneSmoothTime, artifact, enableToneModPitch, enableToneModFreq, enableToneModNote
-    args: [440, 48, 20, 0, 0, 5, 0, 0, 0, 0.01, 0, 1, 0, 0],
-  },
-  {
-    targetType: "radar",
-    exportPrefix: "soemdsp_jbradar",
-    // frequency, phaseOffset, density, sharp, fade, rotation, direction, shade, lap, ringcut, pow1Up, pow1Down, pow2Bend, phaseInv, tunnelInv, spiralReturn, length, ratio, frontring, zoom, zDepth, inner, x, y
-    args: [1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-  },
-]);
+// One depth on this branch: every native module gets a load check
+// (fetch its .wasm, attempt WebAssembly.instantiate). A deeper
+// create->sample->x/y->destroy signal-sanity check is available for
+// modules whose raw export convention and default parameters are known
+// precisely, but that per-module manifest is deliberately not part of
+// this branch (kept in the separate product repo it belongs to).
+const nodeGraphDeepSelfTestManifest = Object.freeze([]);
 
 const nodeGraphModuleSelfTestSampleCount = 2000;
 const nodeGraphModuleSelfTestSampleRate = 44100;
 
-async function nodeGraphRunJerobeamModuleSelfTest(entry, manifestEntry) {
+async function nodeGraphRunDeepModuleSelfTest(entry, manifestEntry) {
   try {
     const response = await fetch(entry.wasmUrl, { cache: "no-store" });
     if (!response.ok) {
@@ -407,8 +351,8 @@ async function runNodeGraphModuleSelfTest() {
   }
   try {
     nodeGraphShowModuleSelfTestReport({ running: true, results: [] });
-    const jerobeamManifestByTargetType = new Map(
-      nodeGraphJerobeamSelfTestManifest.map((entry) => [entry.targetType, entry]),
+    const deepManifestByTargetType = new Map(
+      nodeGraphDeepSelfTestManifest.map((entry) => [entry.targetType, entry]),
     );
     let catalog;
     try {
@@ -419,9 +363,9 @@ async function runNodeGraphModuleSelfTest() {
     const modules = Array.isArray(catalog?.modules) ? catalog.modules : [];
     const results = [];
     for (const entry of modules) {
-      const manifestEntry = jerobeamManifestByTargetType.get(entry.targetType);
+      const manifestEntry = deepManifestByTargetType.get(entry.targetType);
       const result = manifestEntry
-        ? await nodeGraphRunJerobeamModuleSelfTest(entry, manifestEntry)
+        ? await nodeGraphRunDeepModuleSelfTest(entry, manifestEntry)
         : await nodeGraphRunGenericModuleLoadCheck(entry);
       results.push({
         depth: manifestEntry ? "load + signal check" : "load check only",
