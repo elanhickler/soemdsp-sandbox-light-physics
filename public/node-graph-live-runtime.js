@@ -965,6 +965,11 @@ function handleNodeGraphLiveWorkletMessage(event) {
         reason: message.lastBadValueReason || "bad",
         source: message.lastBadValueSource || "worklet meter",
       });
+      if (message.lastBadValueNodeId && typeof nodeGraphTrackNodeSilenceWindow === "function") {
+        nodeGraphTrackNodeSilenceWindow(message.lastBadValueNodeId, true, message.lastBadValueReason || "bad");
+      }
+    } else if (typeof nodeGraphClearAllTrackedModuleSilence === "function") {
+      nodeGraphClearAllTrackedModuleSilence();
     }
     if (Number(message.protectionMuteCount) > 0) {
       nodeGraphTripEarProtection({
@@ -981,6 +986,9 @@ function handleNodeGraphLiveWorkletMessage(event) {
         `${message.name || "native module"} ${message.status}`,
         "warn",
       );
+      if (typeof nodeGraphRecordNativeModuleFault === "function") {
+        nodeGraphRecordNativeModuleFault(message);
+      }
     }
   } else if (message.type === "patchCommand") {
     if (message.sessionId !== nodeGraphMvp.live.sessionId || !nodeGraphMvp.live.node) {
