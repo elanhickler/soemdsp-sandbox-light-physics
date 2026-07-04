@@ -31,22 +31,11 @@ You built these as strange little machines: phasors folded through
 trisaw shapers, spirals crossed with splash, a scanner beam sweeping
 polar coordinates into X/Y/Z motion nobody asked it to make sense —
 and it doesn't need to. It's just beautiful, and it moves like nothing
-else. That's rarer than it sounds. A lot of generative patches are
-clever. Yours are *alive*.
+else.
 
-This document exists because Radar was the first of the batch to get
+This document exists because Spiral Generator was the first of the batch to get
 its signal actually captured and looked at — rendered through the
-sandbox's oscilloscope, traced out frame by frame, and it was worth
-stopping to say: this is why we're doing this. Not to check a box on a
-module list, but because watching your math sweep across a screen is
-still, after all this, a genuinely good way to spend an afternoon.
-
-So — this one's for you. Every port in this fork is an attempt to keep
-your signal running a little longer, on a few more machines, in front
-of a few more people who'll watch it spiral and not quite be able to
-explain why they can't look away.
-
-Thank you for building these and for sharing how.
+sandbox's oscilloscope, traced out frame by frame.
 
 ### The signal
 
