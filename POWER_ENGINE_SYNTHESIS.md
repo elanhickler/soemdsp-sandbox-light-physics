@@ -6,6 +6,20 @@ engines, rocket engines, fire, and anything else whose sound comes from
 consuming gas or fuel.
 **Weapon of choice, so far:** the spiral generator.
 
+## Listen first
+
+**[🔊 Reference audio](https://drive.google.com/drive/u/0/folders/1uV7w5D-Z_AeKHg_QCjKHevrLL8n-DWha)**
+
+This is a simple filtered noise patch — that's the entire signal chain.
+No physical model, no sample, no engine anywhere in it. It sounds
+beautiful and complex anyway, and the reason for that isn't the patch —
+it's the analog sound design underneath it: the specific character a
+real analog filter, real noise, and real gear stamp onto a signal that
+is, on paper, about as basic as synthesis gets. That's the whole thesis
+of this document in one clip: cheap source, expensive-*sounding*
+result, because the "expensive" part was good sound design, not a
+complicated equation.
+
 This document is POWER's field notebook — what's been found, what it
 sounds/looks like, and what the actual goal is (it is not what you'd
 guess).
